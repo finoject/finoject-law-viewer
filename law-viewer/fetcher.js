@@ -55,6 +55,7 @@ const KB = {'万':1e4,'億':1e8,'兆':1e12};
 const NUMCHARS = '〇零一二三四五六七八九十百千万億兆';
 const COUNTERS = '条項号年月日時秒円人件倍割種章節款目編回度歳名個所点通'; // 「分・厘」は十分(=じゅうぶん)等の語を守るため除外
 const BLOCKWORDS = new Set(['万一']);                                       // 数でない慣用語
+const REFCOUNTERS = '条項号章節款目編';                                      // 枝番(○の二)が付く参照単位
 function parseKan(s){
   if (/^[〇零一二三四五六七八九]+$/.test(s)) return [...s].map(c=>KD[c]).join(''); // 桁なし(例 二〇二六→2026)
   let total=0, sec=0, cur=0;
@@ -68,15 +69,61 @@ function parseKan(s){
 function kanjiNum(text){
   if (!text) return text;
   const re = new RegExp('['+NUMCHARS+']+', 'g');
-  return text.replace(re, (m, off, str) => {
+  let out = text.replace(re, (m, off, str) => {
     if (BLOCKWORDS.has(m)) return m;
-    const prev = str[off-1] || '', next = str[off+m.length] || '';
-    // 変換条件: 2文字以上の数のかたまり / 「第」直後 / 直後が数詞
-    let convert = m.length >= 2 || prev === '第' || COUNTERS.includes(next);
-    // 「数十年」「何十」等の概数語は1文字数字を守る
+    const prev = str[off-1] || '', next = str[off+m.length] || '', prev2 = str[off-2] || '';
+    // 変換条件: 2文字以上の数のかたまり / 直後が数詞(第三条→第3条,五年→5年) /
+    //           枝番「(条項号等)の二」（の直前が参照単位の時だけ→「業務の一部」等は保護）
+    let convert = m.length >= 2 || COUNTERS.includes(next) || (prev === 'の' && REFCOUNTERS.includes(prev2));
+    // 「数十年」「何十」「第三者(者は数詞でない)」等は1文字数字を守る
     if (m.length === 1 && (prev === '数' || prev === '何' || prev === '幾')) convert = false;
     return convert ? parseKan(m) : m;
   });
+  // 全角数字 → 半角（項番号 ２→2 等）
+  out = out.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
+  return out;
+}
+// 号・項の番号(一二三/十二 等)は必ず数字化
+function forceNum(s){ return /^[〇零一二三四五六七八九十百千万億兆]+$/.test(s) ? parseKan(s) : s; }
+// 指定タグの見出しテキスト
+function childTitle(node, tag){ const c=(node.children||[]).find(x=>x&&x.tag===tag); return c?nodeText(c).trim():''; }
+// この階層の文だけ（下位の項・号・各種Title・番号は除外）
+function levelSentence(node){
+  let s='';
+  for(const c of (node.children||[])){
+    if(typeof c==='string'){ s+=c; continue; }
+    const t=c.tag||'';
+    if(/^(Item|Subitem\d+|Paragraph)$/.test(t)) continue;
+    if(/Title$/.test(t) || t==='ParagraphNum') continue;
+    s+=nodeText(c);
+  }
+  return s.replace(/[ \t　]*\n[ \t　]*/g,'').replace(/[ \t]+/g,'').trim();
+}
+// 条文を 項・号・イロハ ごとに改行し、階層インデント付きで整形
+function articleBody(article){
+  const lines=[];
+  const IND={ Item:'　', Subitem1:'　　', Subitem2:'　　　', Subitem3:'　　　　', Subitem4:'　　　　　' };
+  (function walk(node){
+    if(!node || typeof node==='string') return;
+    const tag=node.tag;
+    if(tag==='Paragraph'){
+      const num=forceNum(childTitle(node,'ParagraphNum'));
+      const body=levelSentence(node);
+      const line=((num && num!=='1') ? num+' ' : '') + body;
+      if(line.trim()) lines.push(line);
+      (node.children||[]).forEach(walk); return;
+    }
+    if(tag==='Item'){
+      lines.push(IND.Item + forceNum(childTitle(node,'ItemTitle')) + ' ' + levelSentence(node));
+      (node.children||[]).forEach(walk); return;
+    }
+    if(/^Subitem\d+$/.test(tag)){
+      lines.push((IND[tag]||'　　') + childTitle(node, tag+'Title') + ' ' + levelSentence(node));
+      (node.children||[]).forEach(walk); return;
+    }
+    (node.children||[]).forEach(walk);
+  })(article);
+  return lines.join('\n');
 }
 // 条文・見出しを文書順に blocks 化
 function extractBlocks(root){
@@ -92,13 +139,12 @@ function extractBlocks(root){
     if (tag === 'Article'){
       const at  = (n.children||[]).find(c => c && c.tag === 'ArticleTitle');
       const cap = (n.children||[]).find(c => c && c.tag === 'ArticleCaption');
-      const paras = [];
-      (function rec(m){
-        if (!m || typeof m === 'string') return;
-        if (m.tag === 'Paragraph'){ paras.push(nodeText(m).replace(/[ \t]+/g,' ').replace(/\s*\n\s*/g,'\n').trim()); return; }
-        (m.children||[]).forEach(rec);
-      })(n);
-      blocks.push({ t:'a', num:kanjiNum(nodeText(at).trim()), cap:cap?kanjiNum(nodeText(cap).replace(/\s+/g,'').trim()):'', body:kanjiNum(paras.join('\n')) });
+      blocks.push({
+        t:'a',
+        num: kanjiNum(nodeText(at).trim()),
+        cap: cap ? kanjiNum(nodeText(cap).replace(/\s+/g,'').trim()) : '',
+        body: kanjiNum(articleBody(n)),
+      });
       return; // 条文内はこれ以上降りない
     }
     (n.children||[]).forEach(walk);
