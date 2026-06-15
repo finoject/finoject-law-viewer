@@ -71,17 +71,23 @@ function kanjiNum(text){
   const re = new RegExp('['+NUMCHARS+']+', 'g');
   let out = text.replace(re, (m, off, str) => {
     if (BLOCKWORDS.has(m)) return m;
-    const prev = str[off-1] || '', next = str[off+m.length] || '', prev2 = str[off-2] || '';
+    const prev = str[off-1]||'', next = str[off+m.length]||'', prev2 = str[off-2]||'';
+    const next2 = str[off+m.length+1]||'', next3 = str[off+m.length+2]||'', prev3 = str[off-3]||'';
     // 変換条件: 2文字以上の数のかたまり / 直後が数詞(第三条→第3条,五年→5年) /
-    //           枝番「(条項号等)の二」（の直前が参照単位の時だけ→「業務の一部」等は保護）
+    //           枝番「(条項号等)の二」（の直前が参照単位/数字の時。「業務の一部」等は保護）/
+    //           分数・歩合「百分の二・三分の二」（分子/分母とも。「十分な」は分の後が数字でないので保護）
     let convert = m.length >= 2 || COUNTERS.includes(next)
-      || (prev === 'の' && (REFCOUNTERS.includes(prev2) || NUMCHARS.includes(prev2))); // 第29条の4の二 等の連鎖枝番
+      || (prev === 'の' && (REFCOUNTERS.includes(prev2) || NUMCHARS.includes(prev2)))
+      || (next === '分' && next2 === 'の' && NUMCHARS.includes(next3))
+      || (prev === 'の' && prev2 === '分' && NUMCHARS.includes(prev3));
     // 「数十年」「何十」「第三者(者は数詞でない)」等は1文字数字を守る
     if (m.length === 1 && (prev === '数' || prev === '何' || prev === '幾')) convert = false;
     return convert ? parseKan(m) : m;
   });
   // 全角数字 → 半角（項番号 ２→2 等）
   out = out.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
+  // 5桁以上の数値に3桁区切りカンマ（実務上の視認性優先。10000000→10,000,000）
+  out = out.replace(/\d{5,}/g, s => s.replace(/\B(?=(\d{3})+(?!\d))/g, ','));
   return out;
 }
 // 号・項の番号は必ず数字化（"三の二"→"3の2"、"十の五"→"10の5"。イ/ロ/（１）等の非数字はそのまま）
