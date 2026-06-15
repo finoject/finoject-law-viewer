@@ -56,6 +56,8 @@ const NUMCHARS = '〇零一二三四五六七八九十百千万億兆';
 const COUNTERS = '条項号年月日時秒円人件倍割種章節款目編回度歳名個所点通'; // 「分・厘」は十分(=じゅうぶん)等の語を守るため除外
 const BLOCKWORDS = new Set(['万一']);                                       // 数でない慣用語
 const REFCOUNTERS = '条項号章節款目編';                                      // 枝番(○の二)が付く参照単位
+// 複数文字の単位語（数字+語＝数量。「四半期」等の語頭が数字の語は含めない）
+const COUNTERWORDS = ['事業年度','会計年度','営業年度','営業日','取引日','受渡日','暦日','暦月','暦年','箇月','か月','ヶ月','ケ月','箇年','か年','ヶ年','週間','日以内','年以内','月以内'];
 function parseKan(s){
   if (/^[〇零一二三四五六七八九]+$/.test(s)) return [...s].map(c=>KD[c]).join(''); // 桁なし(例 二〇二六→2026)
   let total=0, sec=0, cur=0;
@@ -77,6 +79,7 @@ function kanjiNum(text){
     //           枝番「(条項号等)の二」（の直前が参照単位/数字の時。「業務の一部」等は保護）/
     //           分数・歩合「百分の二・三分の二」（分子/分母とも。「十分な」は分の後が数字でないので保護）
     let convert = m.length >= 2 || COUNTERS.includes(next)
+      || COUNTERWORDS.some(w => str.startsWith(w, off + m.length))   // 三事業年度→3事業年度 等
       || (prev === 'の' && (REFCOUNTERS.includes(prev2) || NUMCHARS.includes(prev2)))
       || (next === '分' && next2 === 'の' && NUMCHARS.includes(next3))
       || (prev === 'の' && prev2 === '分' && NUMCHARS.includes(prev3));
