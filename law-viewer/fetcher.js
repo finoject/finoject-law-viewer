@@ -74,7 +74,8 @@ function kanjiNum(text){
     const prev = str[off-1] || '', next = str[off+m.length] || '', prev2 = str[off-2] || '';
     // 変換条件: 2文字以上の数のかたまり / 直後が数詞(第三条→第3条,五年→5年) /
     //           枝番「(条項号等)の二」（の直前が参照単位の時だけ→「業務の一部」等は保護）
-    let convert = m.length >= 2 || COUNTERS.includes(next) || (prev === 'の' && REFCOUNTERS.includes(prev2));
+    let convert = m.length >= 2 || COUNTERS.includes(next)
+      || (prev === 'の' && (REFCOUNTERS.includes(prev2) || NUMCHARS.includes(prev2))); // 第29条の4の二 等の連鎖枝番
     // 「数十年」「何十」「第三者(者は数詞でない)」等は1文字数字を守る
     if (m.length === 1 && (prev === '数' || prev === '何' || prev === '幾')) convert = false;
     return convert ? parseKan(m) : m;
@@ -83,8 +84,12 @@ function kanjiNum(text){
   out = out.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
   return out;
 }
-// 号・項の番号(一二三/十二 等)は必ず数字化
-function forceNum(s){ return /^[〇零一二三四五六七八九十百千万億兆]+$/.test(s) ? parseKan(s) : s; }
+// 号・項の番号は必ず数字化（"三の二"→"3の2"、"十の五"→"10の5"。イ/ロ/（１）等の非数字はそのまま）
+function forceNum(s){
+  if (!s) return s;
+  return s.replace(new RegExp('['+NUMCHARS+']+','g'), m => parseKan(m))
+          .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
+}
 // 指定タグの見出しテキスト
 function childTitle(node, tag){ const c=(node.children||[]).find(x=>x&&x.tag===tag); return c?nodeText(c).trim():''; }
 // この階層の文だけ（下位の項・号・各種Title・番号は除外）
