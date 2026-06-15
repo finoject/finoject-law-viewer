@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>finoject 法令ビューア｜資金決済・犯収法・金商法</title>
+<style>
+  :root{ --bg:#0b1220; --panel:#111a2c; --line:#26334d; --fg:#e8eefb; --muted:#8da3c6; --accent:#2e6cf0; --hi:#fde68a; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--bg); color:var(--fg);
+    font-family:"Segoe UI","Hiragino Sans","Meiryo",sans-serif; -webkit-text-size-adjust:100%; }
+  #app{ display:flex; height:100vh; overflow:hidden; }
+
+  /* サイドバー */
+  #side{ width:300px; flex:none; background:var(--panel); border-right:1px solid var(--line);
+    overflow-y:auto; padding:12px; }
+  #side h1{ font-size:15px; margin:2px 4px 2px; }
+  #side .sub{ font-size:11px; color:var(--muted); margin:0 4px 12px; }
+  .grp{ font-size:11px; color:var(--muted); margin:14px 6px 6px; letter-spacing:.04em; border-left:3px solid var(--accent); padding-left:8px; }
+  .law{ display:block; width:100%; text-align:left; cursor:pointer; border:1px solid var(--line);
+    background:#16223a; color:#cfe0ff; border-radius:8px; padding:9px 10px; margin:6px 0; font-size:13px; line-height:1.4; }
+  .law:hover{ border-color:var(--accent); }
+  .law.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .law .tag{ font-size:10px; color:var(--muted); }
+  .law.active .tag{ color:#dbe8ff; }
+  .law .upd{ display:inline-block; font-size:10px; background:#fbbf24; color:#0b1220; border-radius:4px; padding:0 5px; margin-left:4px; }
+
+  /* 本体 */
+  #main{ flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  #top{ flex:none; background:rgba(11,18,32,.96); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); padding:12px 18px; }
+  #burger{ display:none; }
+  #lawTitle{ font-size:17px; font-weight:700; margin:0; }
+  #lawMeta{ font-size:11px; color:var(--muted); margin:3px 0 0; }
+  #lawMeta a{ color:#7fb0ff; }
+  #search{ margin-top:9px; width:100%; max-width:520px; padding:8px 11px; border-radius:8px; border:1px solid var(--line);
+    background:#0e1626; color:var(--fg); font-size:13px; }
+  #doc{ flex:1; overflow-y:auto; padding:8px 22px 80px; }
+  #doc .wrap{ max-width:860px; margin:0 auto; }
+  .h{ font-weight:700; color:#bcd0f0; margin:20px 0 6px; }
+  .h.lv1{ font-size:16px; } .h.lv2{ font-size:15px; } .h.lv3,.h.lv4,.h.lv5{ font-size:13px; color:#9fb4d6; }
+  .art{ border-bottom:1px solid var(--line); padding:12px 4px; }
+  .art .num{ font-weight:700; color:#7fb0ff; }
+  .art .cap{ color:var(--muted); font-size:13px; margin-left:6px; }
+  .art .body{ margin-top:6px; font-size:14px; line-height:1.85; white-space:pre-wrap; }
+  .art.target{ background:rgba(46,108,240,.12); border-radius:8px; }
+  mark{ background:var(--hi); color:#0b1220; border-radius:2px; padding:0 1px; }
+  .hint{ color:var(--muted); text-align:center; margin-top:60px; font-size:14px; line-height:1.8; }
+  .hidden{ display:none; }
+
+  @media(max-width:760px){
+    #side{ position:fixed; z-index:20; height:100%; left:0; top:0; transform:translateX(-105%); transition:transform .25s; box-shadow:0 0 40px rgba(0,0,0,.6); }
+    #side.open{ transform:translateX(0); }
+    #burger{ display:inline-block; background:#16223a; color:#cfe0ff; border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:16px; cursor:pointer; margin-bottom:8px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="side">
+    <h1>⚖️ finoject 法令ビューア</h1>
+    <p class="sub">資金決済・犯収法・金商法 ／ e-Gov法令API v2</p>
+    <div id="lawList"></div>
+  </nav>
+
+  <div id="main">
+    <div id="top">
+      <button id="burger">☰ 法令一覧</button>
+      <h2 id="lawTitle">法令を選択してください</h2>
+      <p id="lawMeta"></p>
+      <input id="search" placeholder="この法令内をキーワード検索…（例：暗号資産、本人確認、登録）" class="hidden">
+    </div>
+    <div id="doc"><div class="wrap"><div class="hint">
+      左の一覧から法令を選ぶと、条文が表示されます。<br>
+      条文内はキーワード検索でき、各条はe-Govの原文ともつながっています。<br>
+      （毎朝07:30に自動更新。改正があった法令には <span style="background:#fbbf24;color:#0b1220;border-radius:4px;padding:0 5px;">更新</span> が付きます）
+    </div></div></div>
+  </div>
+</div>
+
+<script>
+const G_ORDER = ['資金決済','犯収法','金商法'];
+let INDEX=null, CUR=null, cache={};
+
+const $ = s => document.querySelector(s);
+function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+async function boot(){
+  INDEX = await (await fetch('./data/index.json?t='+Date.now())).json();
+  renderSidebar();
+  // ディープリンク: ?law=ID&art=第九条
+  const q = new URLSearchParams(location.search);
+  const law = q.get('law'); const art = q.get('art');
+  if (law) await openLaw(law, art);
+}
+
+function renderSidebar(){
+  const byG = {};
+  for (const l of INDEX.laws){ (byG[l.group]=byG[l.group]||[]).push(l); }
+  let html='';
+  for (const g of G_ORDER){
+    if(!byG[g]) continue;
+    html += `<div class="grp">${g}</div>`;
+    for (const l of byG[g]){
+      const upd = (INDEX.changed||[]).includes(l.title) ? '<span class="upd">更新</span>' : '';
+      html += `<button class="law" data-id="${l.law_id}">
+        <div>${esc(l.title)}${upd}</div>
+        <div class="tag">${l.type}・${l.law_num}・${l.article_count}条</div></button>`;
+    }
+  }
+  const el = $('#lawList'); el.innerHTML = html;
+  el.querySelectorAll('.law').forEach(b => b.addEventListener('click', ()=> openLaw(b.dataset.id)));
+}
+
+async function loadLaw(id){
+  if (cache[id]) return cache[id];
+  const d = await (await fetch(`./data/${id}.json?t=`+Date.now())).json();
+  cache[id] = d; return d;
+}
+
+async function openLaw(id, artNum){
+  const d = await loadLaw(id);
+  CUR = d;
+  document.querySelectorAll('.law').forEach(b => b.classList.toggle('active', b.dataset.id===id));
+  $('#lawTitle').textContent = d.title;
+  const updated = (d.updated||'').slice(0,10);
+  $('#lawMeta').innerHTML = `${d.type}・${esc(d.law_num)}　|　施行/更新: ${updated||'—'}　|　`
+    + `<a href="${d.egov_url}" target="_blank" rel="noopener">e-Govで原文を見る ↗</a>`;
+  const s = $('#search'); s.classList.remove('hidden'); s.value='';
+  renderDoc('');
+  $('#side').classList.remove('open');
+  // 条文ジャンプ
+  if (artNum){
+    const dec = decodeURIComponent(artNum);
+    requestAnimationFrame(()=>{
+      const t = [...document.querySelectorAll('.art')].find(a => a.dataset.num===dec);
+      if (t){ t.classList.add('target'); t.scrollIntoView({block:'start'}); }
+    });
+  } else { $('#doc').scrollTop = 0; }
+}
+
+function renderDoc(kw){
+  const k = (kw||'').trim();
+  let html='';
+  for (const b of CUR.blocks){
+    if (b.t==='h'){ html += `<div class="h lv${b.lv}">${esc(b.x)}</div>`; }
+    else {
+      const text = (b.num+' '+b.cap+' '+b.body);
+      if (k && !text.includes(k)) continue;          // 検索ヒットのみ表示
+      const body = k ? esc(b.body).split(esc(k)).join('<mark>'+esc(k)+'</mark>') : esc(b.body);
+      const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
+      html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}<div class="body">${body}</div></div>`;
+    }
+  }
+  if (k && !/class="art"/.test(html)) html = `<div class="hint">「${esc(k)}」に一致する条文はありません</div>`;
+  $('#doc').innerHTML = `<div class="wrap">${html}</div>`;
+}
+
+$('#search').addEventListener('input', e => renderDoc(e.target.value));
+$('#burger').addEventListener('click', ()=> $('#side').classList.toggle('open'));
+
+boot().catch(e => { $('#doc').innerHTML = '<div class="wrap"><div class="hint">データの読み込みに失敗しました</div></div>'; });
+</script>
+</body>
+</html>

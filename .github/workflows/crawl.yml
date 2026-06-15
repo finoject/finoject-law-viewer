@@ -1,0 +1,46 @@
+name: fetch-laws-and-publish
+
+on:
+  schedule:
+    - cron: '35 22 * * *'   # 22:35 UTC = 毎朝 07:35 JST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-law
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: e-Gov法令APIから取得し条文化（更新分を差分検出）
+        working-directory: law-viewer
+        run: node fetcher.js
+
+      - name: 差分データをコミット（蓄積を永続化）
+        run: |
+          git config user.name "law-viewer-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add law-viewer-site/data
+          git commit -m "chore: update law data ($(date -u +%FT%TZ))" || echo "変更なし"
+          git push || echo "push対象なし"
+
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: law-viewer-site
+      - id: deployment
+        uses: actions/deploy-pages@v4
