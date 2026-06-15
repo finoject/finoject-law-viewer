@@ -47,6 +47,37 @@ function nodeText(n){
   if (Array.isArray(n.children)) return n.children.map(nodeText).join('');
   return '';
 }
+
+// ===== 漢数字 → 算用数字（実用優先・誤変換ガード付き） =====
+const KD = {'〇':0,'零':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
+const KS = {'十':10,'百':100,'千':1000};
+const KB = {'万':1e4,'億':1e8,'兆':1e12};
+const NUMCHARS = '〇零一二三四五六七八九十百千万億兆';
+const COUNTERS = '条項号年月日時秒円人件倍割種章節款目編回度歳名個所点通'; // 「分・厘」は十分(=じゅうぶん)等の語を守るため除外
+const BLOCKWORDS = new Set(['万一']);                                       // 数でない慣用語
+function parseKan(s){
+  if (/^[〇零一二三四五六七八九]+$/.test(s)) return [...s].map(c=>KD[c]).join(''); // 桁なし(例 二〇二六→2026)
+  let total=0, sec=0, cur=0;
+  for (const ch of s){
+    if (ch in KD) cur = KD[ch];
+    else if (ch in KS){ sec += (cur||1)*KS[ch]; cur=0; }
+    else if (ch in KB){ sec += cur; total += sec*KB[ch]; sec=0; cur=0; }
+  }
+  return String(total + sec + cur);
+}
+function kanjiNum(text){
+  if (!text) return text;
+  const re = new RegExp('['+NUMCHARS+']+', 'g');
+  return text.replace(re, (m, off, str) => {
+    if (BLOCKWORDS.has(m)) return m;
+    const prev = str[off-1] || '', next = str[off+m.length] || '';
+    // 変換条件: 2文字以上の数のかたまり / 「第」直後 / 直後が数詞
+    let convert = m.length >= 2 || prev === '第' || COUNTERS.includes(next);
+    // 「数十年」「何十」等の概数語は1文字数字を守る
+    if (m.length === 1 && (prev === '数' || prev === '何' || prev === '幾')) convert = false;
+    return convert ? parseKan(m) : m;
+  });
+}
 // 条文・見出しを文書順に blocks 化
 function extractBlocks(root){
   const blocks = [];
@@ -56,7 +87,7 @@ function extractBlocks(root){
     const tag = n.tag;
     if (LV[tag]){
       const t = (n.children||[]).find(c => c && c.tag && /Title$/.test(c.tag));
-      if (t) blocks.push({ t:'h', lv:LV[tag], x:nodeText(t).replace(/\s+/g,' ').trim() });
+      if (t) blocks.push({ t:'h', lv:LV[tag], x:kanjiNum(nodeText(t).replace(/\s+/g,' ').trim()) });
     }
     if (tag === 'Article'){
       const at  = (n.children||[]).find(c => c && c.tag === 'ArticleTitle');
@@ -67,7 +98,7 @@ function extractBlocks(root){
         if (m.tag === 'Paragraph'){ paras.push(nodeText(m).replace(/[ \t]+/g,' ').replace(/\s*\n\s*/g,'\n').trim()); return; }
         (m.children||[]).forEach(rec);
       })(n);
-      blocks.push({ t:'a', num:nodeText(at).trim(), cap:cap?nodeText(cap).replace(/\s+/g,'').trim():'', body:paras.join('\n') });
+      blocks.push({ t:'a', num:kanjiNum(nodeText(at).trim()), cap:cap?kanjiNum(nodeText(cap).replace(/\s+/g,'').trim()):'', body:kanjiNum(paras.join('\n')) });
       return; // 条文内はこれ以上降りない
     }
     (n.children||[]).forEach(walk);
@@ -95,7 +126,7 @@ function main(){
       const articleCount = blocks.filter(b => b.t === 'a').length;
       const rec = {
         law_id: id, title, group: tgt.group, type: tgt.type,
-        law_num: (j.law_info && j.law_info.law_num) || '',
+        law_num: kanjiNum((j.law_info && j.law_info.law_num) || ''),
         revision_id: ri.law_revision_id || '', updated: ri.updated || '',
         article_count: articleCount,
         egov_url: `https://laws.e-gov.go.jp/law/${id}`,
