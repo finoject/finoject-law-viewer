@@ -266,7 +266,20 @@ function fetchGuidelines(prevRec, nowIso, laws, changed, report){
   }
 }
 
+function lookupIds(){   // 一時: ランナーでe-Gov v1一覧から対象法令の正確なIDを抽出してログ出力
+  const re = /^(銀行法|会社法|会社計算規則|電子公告規則|個人情報)/;
+  for (const type of [2,3,4]){
+    try {
+      const xml = execFileSync('curl',['-sL','--max-time','120','-A',UA,`https://laws.e-gov.go.jp/api/1/lawlists/${type}`],{encoding:'utf8',maxBuffer:300*1024*1024});
+      const m = [...xml.matchAll(/<LawId>([^<]+)<\/LawId>\s*<LawName>([^<]+)<\/LawName>/g)];
+      let n=0;
+      for (const x of m){ if (re.test(x[2].trim())){ console.log(`LOOKUP t${type}: ${x[1]}  ${x[2].trim()}`); n++; } }
+      console.log(`LOOKUP type${type} 一致${n}件 / 全${m.length}件`);
+    } catch(e){ console.log(`LOOKUP type${type} 失敗: ${String(e.message).slice(0,80)}`); }
+  }
+}
 function main(){
+  lookupIds();   // 一時: ID照会ログ（次回コミットで除去）
   if (!fs.existsSync(DATA)) fs.mkdirSync(DATA, { recursive:true });
   const idxPath = path.join(DATA, 'index.json');
   let prev = { laws:[] };
