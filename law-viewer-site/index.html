@@ -72,6 +72,16 @@
   .body .p4{ background:rgba(147,51,234,.62); }   /* 紫 */
   .body .p5{ background:rgba(190,24,93,.64); }    /* 赤 */
   .body .p6{ background:rgba(13,148,136,.62); }   /* 青緑 */
+  /* カッコの深さ別 折り畳み（「（…）」表示） */
+  .body .el{ display:none; opacity:.7; }
+  .body .p.cl > .pz{ display:none; }
+  .body .p.cl > .el{ display:inline; }
+  .body .p.cl{ opacity:.85; }
+  /* カッコ深さ操作バー */
+  #pctl{ margin-top:9px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+  #pctl button{ background:#16223a; color:#cfe0ff; border:1px solid var(--line); border-radius:7px; padding:4px 9px; font-size:12px; cursor:pointer; }
+  #pctl button:hover{ border-color:var(--accent); }
+  #pctl-state{ color:#9fd0ff; font-weight:700; }
   /* 本文中の法令参照リンク（法第N条…） */
   .body a.rf{ color:inherit; text-decoration:none; cursor:pointer; border-bottom:1px dashed rgba(127,176,255,.55); }
   .body a.rf:hover{ color:#cfe7ff; border-bottom-color:#7fb0ff; background:rgba(127,176,255,.18); border-radius:2px; }
@@ -111,6 +121,14 @@
       <h2 id="lawTitle">法令を選択してください</h2>
       <p id="lawMeta"></p>
       <input id="search" placeholder="📄 この法令内だけをキーワード検索…（例：暗号資産、本人確認、登録）" class="hidden">
+      <div id="pctl" class="hidden">
+        <span>（ ）の表示:</span>
+        <button data-pa="all">全部</button>
+        <button data-pa="less">－ 深い所から隠す</button>
+        <button data-pa="more">＋ 戻す</button>
+        <button data-pa="skel">基本構造のみ</button>
+        <span id="pctl-state"></span>
+      </div>
     </div>
     <div id="doc"><div class="wrap"><div class="hint">
       左の一覧から法令を選ぶと、条文が表示されます。<br>
@@ -190,6 +208,7 @@ async function openLaw(id, artNum, para){
   $('#lawMeta').innerHTML = `${d.type}・${esc(d.law_num)}　|　施行/更新: ${updated||'—'}　|　`
     + `<a href="${d.egov_url}" target="_blank" rel="noopener">e-Govで原文を見る ↗</a>`;
   const s = $('#search'); s.classList.remove('hidden'); s.value='';
+  $('#pctl').classList.remove('hidden');
   renderDoc('');
   $('#side').classList.remove('open');
   // 条文ジャンプ（大きな法令の描画完了を待ってリトライ）
@@ -262,14 +281,14 @@ function render(raw, k, artNum){
     if (ch==='（' || ch==='('){
       MARKER.lastIndex = i; const mk = MARKER.exec(text);
       if (mk && mk.index === i){ out += mk[0]; i += mk[0].length; continue; }   // 番号カッコは無色のまま
-      depth++; out += '<span class="p p'+((depth-1)%6+1)+'">' + ch;
+      depth++; out += '<span class="p p'+((depth-1)%6+1)+'" data-d="'+depth+'">' + ch + '<span class="pz">';  // pz=内側（折り畳み対象）
     }
-    else if ((ch==='）' || ch===')') && depth>0){ out += ch + '</span>'; depth--; }
+    else if ((ch==='）' || ch===')') && depth>0){ out += '</span><i class="el">…</i>' + ch + '</span>'; depth--; }  // el=省略時の「…」
     else if (ch==='。'){ out += '。'; const nx=text[i+1]; if (depth===0 && nx && nx!=='\n' && !/[」』）)】］〕]/.test(nx)) out += '\n'; }  // 文ごとに改行（カッコ内の文・閉じ括弧/鉤括弧の直前では改行しない）
     else out += ch;
     i++;
   }
-  while (depth-- > 0) out += '</span>';
+  while (depth-- > 0) out += '</span></span>';   // 未閉じカッコ: pz と p を閉じる
   return out;
 }
 // 表データを本物のHTMLテーブルに（e-Govの構造を忠実再現）。セルも render() で整形（カッコ色分け・条文リンク）
@@ -353,6 +372,7 @@ function renderDoc(kw){
   }
   if (k && !/class="art"/.test(html)) html = `<div class="hint">「${esc(k)}」に一致する条文はありません</div>`;
   $('#doc').innerHTML = `<div class="wrap">${html}</div>`;
+  applyParen();   // 再描画後にカッコ折り畳み状態を再適用
 }
 
 // 本文中の法令参照リンクのクリック → 即時リロードせずアプリ内ジャンプ（ホバーでリンク表示・クリックで移動）
@@ -420,6 +440,7 @@ function goHome(){
   $('#lawTitle').textContent = '法令を選択してください';
   $('#lawMeta').innerHTML = '';
   const s = $('#search'); s.classList.add('hidden'); s.value = '';
+  $('#pctl').classList.add('hidden');
   $('#gsearch').value = '';
   $('#side').classList.remove('open');
   showHome();
@@ -427,6 +448,24 @@ function goHome(){
 }
 $('#home').addEventListener('click', goHome);
 $('#brand').addEventListener('click', goHome);   // 左上タイトルもトップへ
+
+// ===== カッコの深さ別 折り畳み（クリックで深度を変化）=====
+let pDepth = 99;   // 深さが pDepth 以上の（）を「（…）」に折り畳む（99=全表示）
+function maxParenDepth(){ let mx=0; document.querySelectorAll('#doc .body .p[data-d]').forEach(s=>{ const d=+s.getAttribute('data-d'); if(d>mx)mx=d; }); return mx; }
+function applyParen(){
+  document.querySelectorAll('#doc .body .p[data-d]').forEach(s=>{ s.classList.toggle('cl', (+s.getAttribute('data-d')) >= pDepth); });
+  const mx = maxParenDepth(), st = $('#pctl-state');
+  if (st) st.textContent = (pDepth > mx) ? '全部表示' : (pDepth <= 1 ? '基本構造（カッコ省略）' : ('深さ '+(pDepth-1)+' まで'));
+}
+$('#pctl').addEventListener('click', e => {
+  const a = e.target.getAttribute('data-pa'); if (!a) return;
+  const mx = maxParenDepth();
+  if (a==='all') pDepth = mx + 1;
+  else if (a==='skel') pDepth = 1;
+  else if (a==='less') pDepth = Math.max(1, (pDepth > mx ? mx + 1 : pDepth) - 1);
+  else if (a==='more') pDepth = Math.min(mx + 1, pDepth + 1);
+  applyParen();
+});
 $('#burger').addEventListener('click', ()=> $('#side').classList.toggle('open'));
 
 boot().catch(e => { $('#doc').innerHTML = '<div class="wrap"><div class="hint">データの読み込みに失敗しました</div></div>'; });
