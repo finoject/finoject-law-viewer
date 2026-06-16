@@ -271,44 +271,49 @@ function render(raw, k, artNum){
   while (depth-- > 0) out += '</span>';
   return out;
 }
-// 表データ（行×列）を本物のHTMLテーブルに。セルも render() で整形（カッコ色分け・条文リンク）
-// 結合セル(ct=上と継続)はrowspanで上のセルに統合し、空の継続行を作らない
+// 表データを本物のHTMLテーブルに（e-Govの構造を忠実再現）。セルも render() で整形（カッコ色分け・条文リンク）
+// e-Govの結合は2方式: ①rowspan/colspan属性（継続行は被覆列を省略）②罫線(空セル+BorderTop:none)。両方に対応
 function tableHtml(table, k){
-  let rows = (table && table.rows) ? table.rows : (table || []);
-  // 読替表（直前文に「読み替え」）で既存ヘッダが無ければ、列の意味を示す見出しを補う
-  if (table && table.yomikae && rows.length){
-    const f0 = (rows[0].cells && rows[0].cells[0] && rows[0].cells[0].t) || '';
-    const hasHeader = rows[0].header || /読(み)?替|規定|字句|上欄|中欄|下欄/.test(f0);
-    if (!hasHeader){
-      const nc = rows.reduce((m,r)=>Math.max(m,(r.cells||[]).length),0);
-      const labels = nc>=3 ? ['読み替える規定','読み替えられる字句','読み替える字句'] : ['読み替えられる字句','読み替える字句'];
-      const hc = []; for (let i=0;i<nc;i++) hc.push({ t: labels[i]||'', ct:false });
-      rows = [{ header:true, cells:hc }].concat(rows);
-    }
-  }
+  const rows = (table && table.rows) ? table.rows : (table || []);
   const n = rows.length;
-  const span = rows.map(r => (r.cells||[]).map(()=>1));
-  const skip = rows.map(r => (r.cells||[]).map(()=>false));
-  for (let i=1;i<n;i++){
-    const cells = rows[i].cells||[];
-    for (let ci=0; ci<cells.length; ci++){
-      if (cells[ci] && cells[ci].ct){                       // 上と結合
-        let j=i-1; while (j>=0 && (skip[j]||[])[ci]) j--;    // このセルを所有する上行
-        if (j>=0 && rows[j].cells && rows[j].cells[ci]!==undefined){ span[j][ci]++; skip[i][ci]=true; }
+  const cellHtml = (c, tg) => {
+    const rs = (c && c.rs>1) ? ' rowspan="'+c.rs+'"' : '';
+    const cs = (c && c.cs>1) ? ' colspan="'+c.cs+'"' : '';
+    return '<'+tg+rs+cs+'>' + render((c && c.t) || '', k) + '</'+tg+'>';
+  };
+  const hasAttrSpan = rows.some(r => (r.cells||[]).some(c => (c.rs>1) || (c.cs>1)));
+  let h = '<table class="lawtbl">';
+  if (hasAttrSpan){
+    // ①rowspan/colspan属性方式：各行のセルを属性付きでそのまま描画（被覆列は元から省略されている）
+    for (const r of rows){
+      const tg = r.header ? 'th' : 'td';
+      h += '<tr>';
+      for (const c of (r.cells||[])) h += cellHtml(c, tg);
+      h += '</tr>';
+    }
+  } else {
+    // ②罫線方式：空セル＋ct(BorderTop:none)を上のセルにrowspan統合し、空の継続セルを出さない
+    const span = rows.map(r => (r.cells||[]).map(()=>1));
+    const skip = rows.map(r => (r.cells||[]).map(()=>false));
+    for (let i=1;i<n;i++){
+      const cells = rows[i].cells||[];
+      for (let ci=0; ci<cells.length; ci++){
+        if (cells[ci] && cells[ci].ct){
+          let j=i-1; while (j>=0 && (skip[j]||[])[ci]) j--;
+          if (j>=0 && rows[j].cells && rows[j].cells[ci]!==undefined){ span[j][ci]++; skip[i][ci]=true; }
+        }
       }
     }
-  }
-  let h = '<table class="lawtbl">';
-  for (let i=0;i<n;i++){
-    const r = rows[i], tg = r.header ? 'th' : 'td', cells = r.cells||[];
-    h += '<tr>';
-    for (let ci=0; ci<cells.length; ci++){
-      if (skip[i][ci]) continue;
-      const rs = span[i][ci] > 1 ? ' rowspan="'+span[i][ci]+'"' : '';
-      const cell = cells[ci];
-      h += '<'+tg+rs+'>' + render((cell && cell.t) || '', k) + '</'+tg+'>';
+    for (let i=0;i<n;i++){
+      const r = rows[i], tg = r.header ? 'th' : 'td', cells = r.cells||[];
+      h += '<tr>';
+      for (let ci=0; ci<cells.length; ci++){
+        if (skip[i][ci]) continue;
+        const rs = span[i][ci] > 1 ? ' rowspan="'+span[i][ci]+'"' : '';
+        h += '<'+tg+rs+'>' + render((cells[ci] && cells[ci].t) || '', k) + '</'+tg+'>';
+      }
+      h += '</tr>';
     }
-    h += '</tr>';
   }
   return h + '</table>';
 }

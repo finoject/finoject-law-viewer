@@ -131,9 +131,14 @@ function tableData(node){
     if(!n || typeof n!=='object') return;
     if(n.tag==='TableRow' || n.tag==='TableHeaderRow'){
       const header = (n.tag==='TableHeaderRow');
-      // セル={t:整形済テキスト, ct:上のセルと結合(継続)か}。e-Govは罫線属性で結合を表現（継続セルは空＋BorderTop:none）
+      // セル={t:整形済テキスト, rs:rowspan, cs:colspan, ct:罫線方式の継続(BorderTop:none)}。e-Govは①rowspan/colspan属性 ②罫線(空セル+BorderTop:none) の2方式で結合を表現するので両方保持
       const cells=(n.children||[]).filter(c=>c&&(c.tag==='TableColumn'||c.tag==='TableHeaderColumn'))
-        .map(c=>({ t: kanjiNum(nodeText(c).replace(/[\s　]+/g,'').trim()), ct: !!(c.attr && c.attr.BorderTop === 'none') }));
+        .map(c=>{ const a=c.attr||{}; return {
+          t: kanjiNum(nodeText(c).replace(/[\s　]+/g,'').trim()),
+          rs: Math.max(1, parseInt(a.rowspan||'1',10)||1),
+          cs: Math.max(1, parseInt(a.colspan||'1',10)||1),
+          ct: a.BorderTop === 'none' };
+        });
       rows.push({ header, cells });
       return;                                   // 行内はこれ以上降りない
     }
