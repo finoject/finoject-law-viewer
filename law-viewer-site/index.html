@@ -47,6 +47,14 @@
   .art .body{ margin-top:6px; font-size:14px; line-height:1.85; white-space:pre-wrap; }
   .art.target{ background:rgba(46,108,240,.12); border-radius:8px; }
   mark{ background:var(--hi); color:#0b1220; border-radius:2px; padding:0 1px; }
+  /* カッコの入れ子の深さで背景色を変える */
+  .body .p{ border-radius:2px; }
+  .body .p1{ background:rgba(56,132,255,.22); }
+  .body .p2{ background:rgba(245,179,66,.26); }
+  .body .p3{ background:rgba(52,211,153,.24); }
+  .body .p4{ background:rgba(232,121,249,.26); }
+  .body .p5{ background:rgba(248,113,113,.26); }
+  .body .p6{ background:rgba(45,212,191,.24); }
   .hint{ color:var(--muted); text-align:center; margin-top:60px; font-size:14px; line-height:1.8; }
   .hidden{ display:none; }
 
@@ -145,6 +153,21 @@ async function openLaw(id, artNum){
   } else { $('#doc').scrollTop = 0; }
 }
 
+// カッコ（）()の入れ子の深さで背景色を変える＋検索語ハイライト（エスケープ後に1パスで処理。制御文字不要）
+function paint(raw, k){
+  const s = esc(raw), kk = k ? esc(k) : '';
+  let out='', depth=0, i=0;
+  while (i < s.length){
+    if (kk && s.startsWith(kk, i)){ out += '<mark>'+kk+'</mark>'; i += kk.length; continue; }
+    const ch = s[i];
+    if (ch==='（' || ch==='('){ depth++; out += '<span class="p p'+((depth-1)%6+1)+'">' + ch; }
+    else if ((ch==='）' || ch===')') && depth>0){ out += ch + '</span>'; depth--; }
+    else out += ch;
+    i++;
+  }
+  while (depth-- > 0) out += '</span>';
+  return out;
+}
 function renderDoc(kw){
   const k = (kw||'').trim();
   let html='';
@@ -153,7 +176,7 @@ function renderDoc(kw){
     else {
       const text = (b.num+' '+b.cap+' '+b.body);
       if (k && !text.includes(k)) continue;          // 検索ヒットのみ表示
-      const body = k ? esc(b.body).split(esc(k)).join('<mark>'+esc(k)+'</mark>') : esc(b.body);
+      const body = paint(b.body, k);
       const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
       html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}<div class="body">${body}</div></div>`;
     }
