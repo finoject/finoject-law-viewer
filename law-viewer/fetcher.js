@@ -185,9 +185,12 @@ const GUIDELINES = [
   { key:'fsa-guide-05', file:'05.pdf', title:'事務ガイドライン 第三分冊：5 前払式支払手段発行者関係' },
   { key:'fsa-guide-17', file:'17.pdf', title:'事務ガイドライン 第三分冊：17 電子決済手段等取引業者関係' },
 ];
-const G_HEAD = /^([Ⅰ-Ⅹ](?:[－\-−][０-９\d〇一二三四五六七八九十]+)+)\s*(.*)$/; // Ⅰ－１－２…
+const G_HEAD = /^([Ⅰ-Ⅹ](?:[－\-−][０-９\d〇一二三四五六七八九十]+)+)\s*(.*)$/; // Ⅰ－１－２…（節見出し）
+const G_CHAP = /^([Ⅰ-Ⅹ])([^\d０-９\-－−\s].*)$/;                              // Ⅱ全ての…（章見出し＝ローマ数字＋ダッシュ/数字以外で始まる題）
 const G_DOTS = /[．\.]{4,}|…/;
 function parseGuideline(text){
+  // 本文に連結された章見出し（例:「…該当する。Ⅱ全ての…」）を独立行に分離（ローマ数字の直後がダッシュ/数字でない＝章見出し）
+  text = text.replace(/。[ \t　]*([Ⅰ-Ⅹ][^\d０-９\-－−\s])/g, '。\n$1');
   const lines = text.split('\n');
   let lastToc = -1; for (let i=0;i<lines.length;i++) if (G_DOTS.test(lines[i])) lastToc = i; // 目次(ドットリーダー)末尾
   const body = lines.slice(lastToc+1);
@@ -200,10 +203,15 @@ function parseGuideline(text){
       const num = m[1];
       if (cur && cur.num === num) continue;             // ランニングヘッダの重複は無視
       cur = { t:'a', num, cap:m[2].trim(), lines:[] }; blocks.push(cur);
-    } else if (cur) cur.lines.push(t);
+    } else {
+      const c = !G_DOTS.test(t) && t.match(G_CHAP);     // 章見出し（Ⅱ全ての…）
+      if (c){
+        if (!(cur && cur.num === c[1])){ cur = { t:'a', num:c[1], cap:c[2].trim(), lines:[] }; blocks.push(cur); }
+      } else if (cur) cur.lines.push(t);
+    }
   }
   // 箇条書きマーカー(①〜⑳ / イ．ロ． / ・ / ○● / （注） / （数字）)で始まる行で改行、折り返し行は前行に連結
-  const MARK = /^(?:[①-⑳]|[ァ-ヴ][．.]|[・○●]|（注|（参考|（別[紙表添]|（[0-9０-９〇一二三四五六七八九十]+）)/;
+  const MARK = /^(?:[①-⑳]|[⑴-⒇]|[ァ-ヴ][．.]|[・○●]|（注|（参考|（別[紙表添]|（[0-9０-９〇一二三四五六七八九十]+）)/;
   const BARE = /^（(?:注|参考|別[紙表添])[0-9０-９]*）?$/;  // 「（注4）」等ラベルのみの行（内容は次行）
   for (const b of blocks){
     const merged = [];
@@ -214,7 +222,8 @@ function parseGuideline(text){
       else merged.push(ln);
     }
     b.num  = kanjiNum(b.num);                                    // Ⅱ－２－１－３ → Ⅱ-2-1-3
-    b.body = kanjiNum(merged.join('\n').replace(/[ \t　]/g,''));
+    // ⑴⑵…⑽（括弧付き数字）の前で改行（pdftotextが1行に連結するケースに対応）
+    b.body = kanjiNum(merged.join('\n').replace(/([^\n])([⑴-⒇])/g,'$1\n$2').replace(/[ \t　]/g,''));
     b.cap  = kanjiNum(b.cap.replace(/[ \t　]/g,''));
     delete b.lines;
   }
