@@ -275,11 +275,14 @@ function render(raw, k, artNum){
 // e-Govの結合は2方式: ①rowspan/colspan属性（継続行は被覆列を省略）②罫線(空セル+BorderTop:none)。両方に対応
 function tableHtml(table, k){
   let rows = (table && table.rows) ? table.rows : (table || []);
-  // 読替表（条文に「読み替え」）で列見出しが無ければ、置換前/置換後の意味を示す見出しを補う
-  if (table && table.yomikae && rows.length){
+  // 読替表なら置換前/置換後の意味を示す列見出しを補う。判定は ①yomikaeフラグ or ②第1列が条項参照中心（語句に依存しない）
+  if (table && rows.length){
     const f0 = (rows[0].cells && rows[0].cells[0] && rows[0].cells[0].t) || '';
     const hasHeader = rows[0].header || /読(み)?替|規定|字句|上欄|中欄|下欄/.test(f0);
-    if (!hasHeader){
+    const col1 = rows.filter(r=>!r.header).map(r=>(r.cells && r.cells[0] && r.cells[0].t) || '').filter(Boolean);
+    const refLike = col1.filter(t=>/^(第\d+(条|項|号)|附則|前[条項]|同[条項表項])/.test(t)).length;
+    const isYomikae = (table && table.yomikae) || (col1.length>=3 && refLike >= Math.ceil(col1.length*0.5));
+    if (isYomikae && !hasHeader){
       const nc = rows.reduce((m,r)=>Math.max(m,(r.cells||[]).reduce((a,c)=>a+(c.cs||1),0)),0);
       const labels = nc>=3 ? ['読み替える規定','読み替えられる字句','読み替える字句'] : ['読み替えられる字句','読み替える字句'];
       const hc = []; for (let i=0;i<Math.min(nc,labels.length);i++) hc.push({ t:labels[i], rs:1, cs:1 });
