@@ -208,7 +208,11 @@ function extractBlocks(root){
         cap: cap ? kanjiNum(nodeText(cap).replace(/\s+/g,'').trim()) : '',
         body,
       };
-      if (_tables.length) rec.tables = _tables;
+      if (_tables.length){
+        const yk = /読(み)?替/.test(body);          // この条が読替規定か（列見出し補完の判定に使う）
+        _tables.forEach(t => { t.yomikae = !!(t.yomikae || yk); });
+        rec.tables = _tables;
+      }
       blocks.push(rec);
       return; // 条文内はこれ以上降りない
     }
