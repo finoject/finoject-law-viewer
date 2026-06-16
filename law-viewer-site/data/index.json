@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-16T16:17:47.492Z",
+  "generatedAt": "2026-06-16T16:29:55.926Z",
   "laws": [
     {
       "law_id": "429M60000002007",
@@ -141,7 +141,7 @@
       "law_num": "",
       "revision_id": "7033459ae29c2950",
       "updated": "2026-06-16",
-      "article_count": 142,
+      "article_count": 151,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/14.pdf"
     },
     {
@@ -152,7 +152,7 @@
       "law_num": "",
       "revision_id": "7ba3e0bdd127087c",
       "updated": "2026-06-16",
-      "article_count": 120,
+      "article_count": 123,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/16.pdf"
     },
     {
@@ -163,7 +163,7 @@
       "law_num": "",
       "revision_id": "e4c97dfe892bac10",
       "updated": "2026-06-16",
-      "article_count": 75,
+      "article_count": 76,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/17.pdf"
     },
     {
@@ -174,7 +174,7 @@
       "law_num": "",
       "revision_id": "f6fb0e7502b4662a",
       "updated": "2026-06-16",
-      "article_count": 101,
+      "article_count": 104,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/05.pdf"
     }
   ],
