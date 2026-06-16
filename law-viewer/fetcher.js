@@ -213,8 +213,9 @@ function parseGuideline(text){
       if (!(cur && cur.num === c[1])){ cur = { t:'a', num:c[1], cap:c[2].trim(), lines:[] }; blocks.push(cur); headIndent = indent; headCont = !ENDP.test(c[2].trim()); }
       continue;
     }
-    // 見出しタイトルの折り返し（pdftotext -layoutで続き行は大きく字下げされる）→ 本文でなく見出しcapに連結
-    if (cur && headCont && indent >= headIndent + 12 && indent >= 16){
+    // 見出しタイトルの折り返し（pdftotext -layoutで続き行は見出しより深く字下げされる。本文は見出しと同程度の浅い字下げ）→ 本文でなく見出しcapに連結
+    // 環境によりインデント量が異なる（ローカル≈33/ランナー≈13、本文≈2-6）ため「見出しより8以上深い」を閾値にする
+    if (cur && headCont && indent >= headIndent + 8){
       cur.cap += t;
       if (ENDP.test(t)) headCont = false;
       continue;
@@ -250,12 +251,6 @@ function fetchGuidelines(prevRec, nowIso, laws, changed, report){
       execFileSync('curl', ['-sL','--max-time','90','-A',UA,'-o',pdf, GBASE+g.file], { maxBuffer:300*1024*1024 });
       execFileSync('pdftotext', ['-enc','UTF-8','-layout','-nopgbrk', pdf, txt]);
       const text = fs.readFileSync(txt,'utf8');
-      if (g.key==='fsa-guide-16'){   // 一時デバッグ: ランナーのpdftotext出力（見出し折返し付近のインデント）
-        const ls = text.split('\n');
-        for (let i=0;i<ls.length;i++){ if (/存在す$|る場合の主な着眼点/.test(ls[i].trim())){
-          for (let k=i-1;k<=i+3 && k<ls.length;k++){ const ind=(ls[k].match(/^[ \t]*/)[0]||'').length; console.log(`DBG L${k} ind=${ind} :: ${ls[k].trim().slice(0,30)}`); }
-          console.log('DBG ---'); break; } }
-      }
       const blocks = parseGuideline(text);
       if (!blocks.length) throw new Error('章節抽出ゼロ');
       const hash = crypto.createHash('sha1').update(text).digest('hex').slice(0,16);
