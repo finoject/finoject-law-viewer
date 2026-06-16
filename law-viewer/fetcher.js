@@ -26,6 +26,17 @@ const TARGETS = [
   { law_id:'323AC0000000025', group:'金商法',   type:'法律' },     // 金融商品取引法
   { law_id:'340CO0000000321', group:'金商法',   type:'政令' },     // 同 施行令
   { law_id:'419M60000002052', group:'金商法',   type:'内閣府令' }, // 金融商品取引業等に関する内閣府令
+  { law_id:'356AC0000000059', group:'銀行法',   type:'法律' },     // 銀行法
+  { law_id:'357CO0000000040', group:'銀行法',   type:'政令' },     // 銀行法施行令
+  { law_id:'357M50000040010', group:'銀行法',   type:'省令' },     // 銀行法施行規則
+  { law_id:'417AC0000000086', group:'会社法',   type:'法律' },     // 会社法
+  { law_id:'417CO0000000364', group:'会社法',   type:'政令' },     // 会社法施行令
+  { law_id:'418M60000010012', group:'会社法',   type:'省令' },     // 会社法施行規則
+  { law_id:'418M60000010013', group:'会社法',   type:'省令' },     // 会社計算規則
+  { law_id:'418M60000010014', group:'会社法',   type:'省令' },     // 電子公告規則
+  { law_id:'415AC0000000057', group:'個人情報', type:'法律' },     // 個人情報の保護に関する法律
+  { law_id:'415CO0000000507', group:'個人情報', type:'政令' },     // 同 施行令
+  { law_id:'428M60020000003', group:'個人情報', type:'規則' },     // 個人情報の保護に関する法律施行規則
 ];
 
 function curlText(url){
@@ -266,20 +277,7 @@ function fetchGuidelines(prevRec, nowIso, laws, changed, report){
   }
 }
 
-function lookupIds(){   // 一時: ランナーでe-Gov v1一覧から対象法令の正確なIDを抽出してログ出力
-  const re = /^(銀行法|会社法|会社計算規則|電子公告規則|個人情報)/;
-  for (const type of [2,3,4]){
-    try {
-      const xml = execFileSync('curl',['-sL','--max-time','120','-A',UA,`https://laws.e-gov.go.jp/api/1/lawlists/${type}`],{encoding:'utf8',maxBuffer:300*1024*1024});
-      const m = [...xml.matchAll(/<LawId>([^<]+)<\/LawId>\s*<LawName>([^<]+)<\/LawName>/g)];
-      let n=0;
-      for (const x of m){ if (re.test(x[2].trim())){ console.log(`LOOKUP t${type}: ${x[1]}  ${x[2].trim()}`); n++; } }
-      console.log(`LOOKUP type${type} 一致${n}件 / 全${m.length}件`);
-    } catch(e){ console.log(`LOOKUP type${type} 失敗: ${String(e.message).slice(0,80)}`); }
-  }
-}
 function main(){
-  lookupIds();   // 一時: ID照会ログ（次回コミットで除去）
   if (!fs.existsSync(DATA)) fs.mkdirSync(DATA, { recursive:true });
   const idxPath = path.join(DATA, 'index.json');
   let prev = { laws:[] };
@@ -316,9 +314,18 @@ function main(){
 
   const isFirst = !prev.laws.length;
   // グループ順を固定
-  const G = ['資金決済','犯収法','金商法','ガイドライン'];
-  const gi = x => (G.indexOf(x.group) + 1) || 99;   // 未知グループ(会社法等)は末尾
-  laws.sort((a,b)=> (gi(a)-gi(b)) || a.title.localeCompare(b.title,'ja'));
+  const G = ['資金決済','犯収法','金商法','銀行法','会社法','個人情報','ガイドライン'];
+  const gi = x => (G.indexOf(x.group) + 1) || 99;   // 未知グループは末尾
+  // グループ内の並び: 法律 → 施行令(政令) → 規則 → 府令・省令（上から下へ）
+  const tr = x => {
+    const t = x.title || '';
+    if (x.type === '法律') return 1;
+    if (x.type === '政令' || /施行令/.test(t)) return 2;
+    if (/規則/.test(t)) return 3;
+    if (x.type === '内閣府令' || x.type === '省令' || x.type === '命令' || /府令|省令/.test(t)) return 4;
+    return 5;
+  };
+  laws.sort((a,b)=> (gi(a)-gi(b)) || (tr(a)-tr(b)) || a.title.localeCompare(b.title,'ja'));
   fs.writeFileSync(idxPath, JSON.stringify({ generatedAt: nowIso, laws, changed, isFirst }, null, 2), 'utf8');
 
   console.log('=== 取得結果 ==='); report.forEach(r => console.log(' - ' + r));
