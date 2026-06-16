@@ -123,17 +123,35 @@ function forceNum(s){
 }
 // 指定タグの見出しテキスト
 function childTitle(node, tag){ const c=(node.children||[]).find(x=>x&&x.tag===tag); return c?nodeText(c).trim():''; }
-// この階層の文だけ（下位の項・号・各種Title・番号は除外）
+// 表（TableStruct/Table）を「行＝改行・列＝｜区切り」で整形（読替表等が平坦に連結されるのを防ぐ）
+function tableLines(node){
+  const rows=[];
+  (function walk(n){
+    if(!n || typeof n!=='object') return;
+    if(n.tag==='TableRow' || n.tag==='TableHeaderRow'){
+      const cols=(n.children||[]).filter(c=>c&&(c.tag==='TableColumn'||c.tag==='TableHeaderColumn'))
+        .map(c=>nodeText(c).replace(/[\s　]+/g,'').trim());
+      const row=cols.filter(x=>x!=='').join('　｜　');
+      if(row) rows.push(row);
+      return;                                   // 行内はこれ以上降りない
+    }
+    (n.children||[]).forEach(walk);
+  })(node);
+  return rows;
+}
+// この階層の文だけ（下位の項・号・各種Title・番号は除外）。表は行ごとに改行して末尾に付す
 function levelSentence(node){
-  let s='';
+  let s='', tbl='';
   for(const c of (node.children||[])){
     if(typeof c==='string'){ s+=c; continue; }
     const t=c.tag||'';
     if(/^(Item|Subitem\d+|Paragraph)$/.test(t)) continue;
     if(/Title$/.test(t) || t==='ParagraphNum') continue;
+    if(t==='TableStruct' || t==='Table'){ const r=tableLines(c); if(r.length) tbl+='\n'+r.join('\n'); continue; }
     s+=nodeText(c);
   }
-  return s.replace(/[ \t　]*\n[ \t　]*/g,'').replace(/[ \t]{2,}/g,' ').trim(); // 単独スペース(Column区切り)は保持
+  s = s.replace(/[ \t　]*\n[ \t　]*/g,'').replace(/[ \t]{2,}/g,' ').trim(); // 単独スペース(Column区切り)は保持
+  return s + tbl;   // 表の改行は保持
 }
 // 条文を 項・号・イロハ ごとに改行し、階層インデント付きで整形
 function articleBody(article){
