@@ -122,7 +122,7 @@ function levelSentence(node){
     if(/Title$/.test(t) || t==='ParagraphNum') continue;
     s+=nodeText(c);
   }
-  return s.replace(/[ \t　]*\n[ \t　]*/g,'').replace(/[ \t]+/g,'').trim();
+  return s.replace(/[ \t　]*\n[ \t　]*/g,'').replace(/[ \t]{2,}/g,' ').trim(); // 単独スペース(Column区切り)は保持
 }
 // 条文を 項・号・イロハ ごとに改行し、階層インデント付きで整形
 function articleBody(article){
