@@ -186,11 +186,11 @@ const GUIDELINES = [
   { key:'fsa-guide-17', file:'17.pdf', title:'事務ガイドライン 第三分冊：17 電子決済手段等取引業者関係' },
 ];
 const G_HEAD = /^([Ⅰ-Ⅹ](?:[－\-−][０-９\d〇一二三四五六七八九十]+)+)\s*(.*)$/; // Ⅰ－１－２…（節見出し）
-const G_CHAP = /^([Ⅰ-Ⅹ])([^\d０-９\-－−\s].*)$/;                              // Ⅱ全ての…（章見出し＝ローマ数字＋ダッシュ/数字以外で始まる題）
+const G_CHAP = /^([Ⅰ-Ⅹ])[ 　\t]*([^\d０-９\-－−\s].*)$/;                       // Ⅱ全ての…（章見出し＝ローマ数字[+空白]＋ダッシュ/数字以外で始まる題）
 const G_DOTS = /[．\.]{4,}|…/;
 function parseGuideline(text){
   // 本文に連結された章見出し（例:「…該当する。Ⅱ全ての…」）を独立行に分離（ローマ数字の直後がダッシュ/数字でない＝章見出し）
-  text = text.replace(/。[ \t　]*([Ⅰ-Ⅹ][^\d０-９\-－−\s])/g, '。\n$1');
+  text = text.replace(/。[ \t　]*([Ⅰ-Ⅹ])[ \t　]*([^\d０-９\-－−\s])/g, '。\n$1$2');
   const lines = text.split('\n');
   let lastToc = -1; for (let i=0;i<lines.length;i++) if (G_DOTS.test(lines[i])) lastToc = i; // 目次(ドットリーダー)末尾
   const body = lines.slice(lastToc+1);
