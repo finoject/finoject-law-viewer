@@ -455,7 +455,7 @@ function maxParenDepth(){ let mx=0; document.querySelectorAll('#doc .body .p[dat
 function applyParen(){
   document.querySelectorAll('#doc .body .p[data-d]').forEach(s=>{ s.classList.toggle('cl', (+s.getAttribute('data-d')) >= pDepth); });
   const mx = maxParenDepth(), st = $('#pctl-state');
-  if (st) st.textContent = (pDepth > mx) ? '全部表示' : (pDepth <= 1 ? '基本構造（カッコ省略）' : ('深さ '+(pDepth-1)+' まで'));
+  if (st) st.textContent = '［状態: ' + ((pDepth > mx) ? '全部表示' : (pDepth <= 1 ? '基本構造（カッコ省略）' : ('深さ '+(pDepth-1)+' まで'))) + '］';
 }
 $('#pctl').addEventListener('click', e => {
   const a = e.target.getAttribute('data-pa'); if (!a) return;
