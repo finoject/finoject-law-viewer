@@ -46,7 +46,15 @@ function resolveLawId(title){
 function nodeText(n){
   if (n == null) return '';
   if (typeof n === 'string') return n;
-  if (Array.isArray(n.children)) return n.children.map(nodeText).join('');
+  if (Array.isArray(n.children)){
+    let s = '';
+    for (const c of n.children){
+      // 定義号などの Column（用語｜定義）間に半角スペースを入れ「番号等 番号…」と読めるようにする
+      if (c && c.tag === 'Column' && s && !/\s$/.test(s)) s += ' ';
+      s += nodeText(c);
+    }
+    return s;
+  }
   return '';
 }
 
@@ -89,8 +97,9 @@ function kanjiNum(text){
     if (m.length === 1 && (prev === '数' || prev === '何' || prev === '幾')) convert = false;
     return convert ? parseKan(m) : m;
   });
-  // 全角数字 → 半角（項番号 ２→2 等）
-  out = out.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
+  // 全角の英数字 → 半角（２→2、ＦＡＴＦ→FATF）。全角ハイフン → 半角（Ⅱ－２→Ⅱ-2）
+  out = out.replace(/[０-９Ａ-Ｚａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  out = out.replace(/[－−]/g, '-');
   // 5桁以上の数値に3桁区切りカンマ（実務上の視認性優先。10000000→10,000,000）
   out = out.replace(/\d{5,}/g, s => s.replace(/\B(?=(\d{3})+(?!\d))/g, ','));
   return out;
@@ -193,14 +202,15 @@ function parseGuideline(text){
       cur = { t:'a', num, cap:m[2].trim(), lines:[] }; blocks.push(cur);
     } else if (cur) cur.lines.push(t);
   }
-  // 箇条書きマーカー(①〜⑳ / イ．ロ． / ・ / （注） / （数字）)で始まる行で改行、折り返し行は前行に連結
-  const MARK = /^(?:[①-⑳]|[ァ-ヴ][．.]|・|（注|（[0-9０-９〇一二三四五六七八九十]+）)/;
+  // 箇条書きマーカー(①〜⑳ / イ．ロ． / ・ / ○● / （注） / （数字）)で始まる行で改行、折り返し行は前行に連結
+  const MARK = /^(?:[①-⑳]|[ァ-ヴ][．.]|[・○●]|（注|（[0-9０-９〇一二三四五六七八九十]+）)/;
   for (const b of blocks){
     const merged = [];
     for (const ln of b.lines){
       if (merged.length && !MARK.test(ln)) merged[merged.length-1] += ln;  // 折り返し継続
       else merged.push(ln);
     }
+    b.num  = kanjiNum(b.num);                                    // Ⅱ－２－１－３ → Ⅱ-2-1-3
     b.body = kanjiNum(merged.join('\n').replace(/[ \t　]/g,''));
     b.cap  = kanjiNum(b.cap.replace(/[ \t　]/g,''));
     delete b.lines;
