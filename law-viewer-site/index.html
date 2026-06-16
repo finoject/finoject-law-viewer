@@ -158,11 +158,17 @@ async function openLaw(id, artNum){
 // カッコ（）()の入れ子の深さで背景色を変える＋検索語ハイライト（エスケープ後に1パスで処理。制御文字不要）
 function paint(raw, k){
   const s = esc(raw), kk = k ? esc(k) : '';
+  // 番号・記号だけのカッコ（（1）（一）（イ）（ア）（a）等）は条文番号なので色付けしない
+  const MARKER = /^[（(](?:[0-9０-９一二三四五六七八九十百千〇]+|[ぁ-んァ-ヶa-zA-Zａ-ｚＡ-Ｚ])[）)]/;
   let out='', depth=0, i=0;
   while (i < s.length){
     if (kk && s.startsWith(kk, i)){ out += '<mark>'+kk+'</mark>'; i += kk.length; continue; }
     const ch = s[i];
-    if (ch==='（' || ch==='('){ depth++; out += '<span class="p p'+((depth-1)%6+1)+'">' + ch; }
+    if (ch==='（' || ch==='('){
+      const m = s.slice(i).match(MARKER);
+      if (m){ out += m[0]; i += m[0].length; continue; }   // 番号カッコはそのまま出力
+      depth++; out += '<span class="p p'+((depth-1)%6+1)+'">' + ch;
+    }
     else if ((ch==='）' || ch===')') && depth>0){ out += ch + '</span>'; depth--; }
     else out += ch;
     i++;
