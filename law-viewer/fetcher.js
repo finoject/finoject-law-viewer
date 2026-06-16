@@ -193,36 +193,39 @@ function parseGuideline(text){
   text = text.replace(/。[ \t　]*([Ⅰ-Ⅹ])[ \t　]*([^\d０-９\-－−\s])/g, '。\n$1$2');
   const lines = text.split('\n');
   let lastToc = -1; for (let i=0;i<lines.length;i++) if (G_DOTS.test(lines[i])) lastToc = i; // 目次(ドットリーダー)末尾
-  // 目次から各見出し番号の完全タイトルを取得（pdftotextが本文側で長い見出しを折り返す対策）
-  const toc = {};
-  for (let i=0;i<=lastToc;i++){
-    const tt = lines[i].trim(); if (!G_DOTS.test(tt)) continue;
-    const clean = tt.replace(/\s*(?:[．.]{2,}|…).*$/,'').trim();   // 「……159」等のページ番号側を除去
-    const mm = clean.match(G_HEAD) || clean.match(G_CHAP);
-    if (mm && !toc[mm[1]]) toc[mm[1]] = mm[2].trim();
-  }
   const body = lines.slice(lastToc+1);
-  const blocks = []; let cur = null;
+  const blocks = []; let cur = null, headCont = false, headIndent = 0;
+  const ENDP = /[。」』）)】]$/;                          // 文末・閉じ記号で終わるか
   for (const raw of body){
+    const indent = (raw.match(/^[ \t]*/)[0] || '').length;  // 先頭インデント（pdftotext -layout）
     const t = raw.trim(); if (!t) continue;
     if (/^\d{1,4}$/.test(t)) continue;                  // ページ番号のみの行
     const m = t.match(G_HEAD);
     if (m && !G_DOTS.test(t)){
       const num = m[1];
-      if (cur && cur.num === num) continue;             // ランニングヘッダの重複は無視
-      cur = { t:'a', num, cap:(toc[num]||m[2].trim()), lineCap:m[2].trim(), lines:[] }; blocks.push(cur);
-    } else {
-      const c = !G_DOTS.test(t) && t.match(G_CHAP);     // 章見出し（Ⅱ全ての…）
-      if (c){
-        if (!(cur && cur.num === c[1])){ cur = { t:'a', num:c[1], cap:(toc[c[1]]||c[2].trim()), lineCap:c[2].trim(), lines:[] }; blocks.push(cur); }
-      } else if (cur) cur.lines.push(t);
+      if (cur && cur.num === num){ headCont = false; continue; }  // ランニングヘッダの重複は無視
+      cur = { t:'a', num, cap:m[2].trim(), lines:[] }; blocks.push(cur);
+      headIndent = indent; headCont = !ENDP.test(m[2].trim());    // 見出しが文末記号で終わらなければ折り返しの続きを待つ
+      continue;
     }
+    const c = !G_DOTS.test(t) && t.match(G_CHAP);     // 章見出し（Ⅱ全ての…）
+    if (c){
+      if (!(cur && cur.num === c[1])){ cur = { t:'a', num:c[1], cap:c[2].trim(), lines:[] }; blocks.push(cur); headIndent = indent; headCont = !ENDP.test(c[2].trim()); }
+      continue;
+    }
+    // 見出しタイトルの折り返し（pdftotext -layoutで続き行は大きく字下げされる）→ 本文でなく見出しcapに連結
+    if (cur && headCont && indent >= headIndent + 12 && indent >= 16){
+      cur.cap += t;
+      if (ENDP.test(t)) headCont = false;
+      continue;
+    }
+    headCont = false;
+    if (cur) cur.lines.push(t);
   }
   // 箇条書きマーカー(①〜⑳ / イ．ロ． / ・ / ○● / （注） / （数字）)で始まる行で改行、折り返し行は前行に連結
   // ⑴〜⒇はMARKに含めない（文中参照のⅡ-2-2-1-2⑸/イ⑴又はロ⑵等を項目開始と誤認しないため）。正規の箇条書き⑴は下の「。の後で改行」で分割する。
   const MARK = /^(?:[①-⑳]|[ァ-ヴ][．.]|[・○●]|（注|（参考|（別[紙表添]|（[0-9０-９〇一二三四五六七八九十]+）)/;
   const BARE = /^（(?:注|参考|別[紙表添])[0-9０-９]*）?$/;  // 「（注4）」等ラベルのみの行（内容は次行）
-  const strip = s => (s||'').replace(/[ \t　]/g,'');
   for (const b of blocks){
     const merged = [];
     for (const ln of b.lines){
@@ -231,26 +234,11 @@ function parseGuideline(text){
       if (merged.length && (!MARK.test(ln) || BARE.test(prev.trim()))) merged[merged.length-1] += ln;
       else merged.push(ln);
     }
-    let bodyStr = merged.join('\n');
-    // 見出しタイトルが本文側へ折り返している場合、本文先頭に紛れたタイトルの続き分を除去（目次の完全タイトルを基準に）
-    if (b.cap && b.lineCap !== undefined){
-      const tns = strip(b.cap), lcns = strip(b.lineCap);
-      if (tns.length > lcns.length && tns.startsWith(lcns)){
-        const tail = tns.slice(lcns.length);
-        let ti=0, si=0;
-        while (si<bodyStr.length && ti<tail.length){
-          const c = bodyStr[si];
-          if (c===' '||c==='\t'||c==='　'||c==='\n'){ si++; continue; }   // 本文側の空白・改行は読み飛ばす
-          if (c===tail[ti]){ ti++; si++; } else break;
-        }
-        if (ti===tail.length) bodyStr = bodyStr.slice(si);                // タイトル続きが完全一致した時だけ除去
-      }
-    }
     b.num  = kanjiNum(b.num);                                    // Ⅱ－２－１－３ → Ⅱ-2-1-3
     // 正規の箇条書き⑴⑵…⑽は「。」の直後にのみ改行（文中参照の⑴は分割しない＝Ⅱ-2-2-1-2⑸/イ⑴又はロ⑵等を保つ）
-    b.body = kanjiNum(bodyStr.replace(/。([⑴-⒇])/g,'。\n$1').replace(/[ \t　]/g,''));
-    b.cap  = kanjiNum((b.cap||'').replace(/[ \t　]/g,''));
-    delete b.lines; delete b.lineCap;
+    b.body = kanjiNum(merged.join('\n').replace(/。([⑴-⒇])/g,'。\n$1').replace(/[ \t　]/g,''));
+    b.cap  = kanjiNum(b.cap.replace(/[ \t　]/g,''));
+    delete b.lines;
   }
   return blocks;
 }
