@@ -88,12 +88,13 @@
   .artreg:hover{ filter:brightness(1.15); }
   /* カッコの入れ子の深さで背景色を変える */
   .body .p{ border-radius:3px; padding:0 1px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
-  .body .p1{ background:rgba(37,99,235,.62); }    /* 青 */
-  .body .p2{ background:rgba(202,77,8,.66); }     /* 橙 */
-  .body .p3{ background:rgba(21,128,61,.62); }    /* 緑 */
-  .body .p4{ background:rgba(147,51,234,.62); }   /* 紫 */
-  .body .p5{ background:rgba(190,24,93,.64); }    /* 赤 */
-  .body .p6{ background:rgba(13,148,136,.62); }   /* 青緑 */
+  /* 入れ子で背景が重なり濃く見えるため、各色の不透明度を約7割に下げる（2026-06-17三根さん指示）*/
+  .body .p1{ background:rgba(37,99,235,.43); }    /* 青 */
+  .body .p2{ background:rgba(202,77,8,.46); }     /* 橙 */
+  .body .p3{ background:rgba(21,128,61,.43); }    /* 緑 */
+  .body .p4{ background:rgba(147,51,234,.43); }   /* 紫 */
+  .body .p5{ background:rgba(190,24,93,.45); }    /* 赤 */
+  .body .p6{ background:rgba(13,148,136,.43); }   /* 青緑 */
   /* カッコの深さ別 折り畳み（「（…）」表示）。折り畳み規則は #doc[data-pd=N] でJS生成（高速） */
   .body .el{ display:none; opacity:.7; }
   #doc[data-pd] .p > .el{ opacity:.7; }
@@ -439,7 +440,7 @@ function regArtBadge(lawId, num){
   const e = REGBYART[lawId+'|'+num]; if(!e||!e.length) return '';
   const kinds=[...new Set(e.map(x=>x.kind))].filter(k=>k&&k!=='その他');
   const tip = e.map(x=>jpd(x.it.date)+' '+(x.kind||'')).join(' / ');
-  return `<a class="artreg" href="${esc(e[0].it.url)}" target="_blank" rel="noopener" title="${esc(tip)}">📡 規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
+  return `<a class="artreg" href="${esc(e[0].it.url)}" target="_blank" rel="noopener" title="金融規制ウォッチで開く（右クリックで新規タブ/ウィンドウを選択）｜${esc(tip)}">📡 規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
 }
 function renderDoc(kw){
   const k = (kw||'').trim();
