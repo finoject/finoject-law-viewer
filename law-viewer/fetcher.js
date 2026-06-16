@@ -131,8 +131,9 @@ function tableData(node){
     if(!n || typeof n!=='object') return;
     if(n.tag==='TableRow' || n.tag==='TableHeaderRow'){
       const header = (n.tag==='TableHeaderRow');
+      // セル={t:整形済テキスト, ct:上のセルと結合(継続)か}。e-Govは罫線属性で結合を表現（継続セルは空＋BorderTop:none）
       const cells=(n.children||[]).filter(c=>c&&(c.tag==='TableColumn'||c.tag==='TableHeaderColumn'))
-        .map(c=>kanjiNum(nodeText(c).replace(/[\s　]+/g,'').trim()));   // セルは整形(漢数字等)して保持。空セルも残し列を揃える
+        .map(c=>({ t: kanjiNum(nodeText(c).replace(/[\s　]+/g,'').trim()), ct: !!(c.attr && c.attr.BorderTop === 'none') }));
       rows.push({ header, cells });
       return;                                   // 行内はこれ以上降りない
     }

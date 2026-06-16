@@ -272,15 +272,39 @@ function render(raw, k, artNum){
   return out;
 }
 // 表データ（行×列）を本物のHTMLテーブルに。セルも render() で整形（カッコ色分け・条文リンク）
+// 結合セル(ct=上と継続)はrowspanで上のセルに統合し、空の継続行を作らない
 function tableHtml(rows, k){
+  const n = rows.length;
+  const span = rows.map(r => (r.cells||[]).map(()=>1));
+  const skip = rows.map(r => (r.cells||[]).map(()=>false));
+  for (let i=1;i<n;i++){
+    const cells = rows[i].cells||[];
+    for (let ci=0; ci<cells.length; ci++){
+      if (cells[ci] && cells[ci].ct){                       // 上と結合
+        let j=i-1; while (j>=0 && (skip[j]||[])[ci]) j--;    // このセルを所有する上行
+        if (j>=0 && rows[j].cells && rows[j].cells[ci]!==undefined){ span[j][ci]++; skip[i][ci]=true; }
+      }
+    }
+  }
   let h = '<table class="lawtbl">';
-  for (const r of rows){
-    const tg = r.header ? 'th' : 'td';
+  for (let i=0;i<n;i++){
+    const r = rows[i], tg = r.header ? 'th' : 'td', cells = r.cells||[];
     h += '<tr>';
-    for (const c of (r.cells||[])){ h += '<'+tg+'>' + render(c||'', k) + '</'+tg+'>'; }
+    for (let ci=0; ci<cells.length; ci++){
+      if (skip[i][ci]) continue;
+      const rs = span[i][ci] > 1 ? ' rowspan="'+span[i][ci]+'"' : '';
+      const cell = cells[ci];
+      h += '<'+tg+rs+'>' + render((cell && cell.t) || '', k) + '</'+tg+'>';
+    }
     h += '</tr>';
   }
   return h + '</table>';
+}
+// 検索対象テキスト（本文＋表セルも含める。本文の占位子は除く）
+function searchText(b){
+  let s = b.num + ' ' + (b.cap||'') + ' ' + (b.body||'').replace(/⟦TBL:\d+⟧/g,'');
+  if (b.tables){ for (const tbl of b.tables) for (const row of tbl) for (const c of (row.cells||[])) s += ' ' + (c && c.t || ''); }
+  return s;
 }
 function renderDoc(kw){
   const k = (kw||'').trim();
@@ -288,8 +312,7 @@ function renderDoc(kw){
   for (const b of CUR.blocks){
     if (b.t==='h'){ html += `<div class="h lv${b.lv}">${esc(b.x)}</div>`; }
     else {
-      const text = (b.num+' '+b.cap+' '+b.body);
-      if (k && !text.includes(k)) continue;          // 検索ヒットのみ表示
+      if (k && !searchText(b).includes(k)) continue;          // 検索ヒットのみ表示（表セルも対象）
       let body = render(b.body, k, b.num);
       if (b.tables) body = body.replace(/⟦TBL:(\d+)⟧/g, (m,i) => b.tables[+i] ? tableHtml(b.tables[+i], k) : '');
       const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
@@ -341,7 +364,7 @@ async function globalSearch(q){
   let html = '', total = 0;
   for (const l of orderedLaws()){
     const d = cache[l.law_id]; if (!d) continue;
-    const hits = d.blocks.filter(b => b.t!=='h' && (b.num+' '+(b.cap||'')+' '+(b.body||'')).includes(q));
+    const hits = d.blocks.filter(b => b.t!=='h' && searchText(b).includes(q));
     if (!hits.length) continue;
     html += `<div class="gsec">${esc(l.title)} <span>(${hits.length}件)</span></div>`;
     for (const b of hits){
