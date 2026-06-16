@@ -281,7 +281,8 @@ function main(){
   const isFirst = !prev.laws.length;
   // グループ順を固定
   const G = ['資金決済','犯収法','金商法','ガイドライン'];
-  laws.sort((a,b)=> (G.indexOf(a.group)-G.indexOf(b.group)) || a.title.localeCompare(b.title,'ja'));
+  const gi = x => (G.indexOf(x.group) + 1) || 99;   // 未知グループ(会社法等)は末尾
+  laws.sort((a,b)=> (gi(a)-gi(b)) || a.title.localeCompare(b.title,'ja'));
   fs.writeFileSync(idxPath, JSON.stringify({ generatedAt: nowIso, laws, changed, isFirst }, null, 2), 'utf8');
 
   console.log('=== 取得結果 ==='); report.forEach(r => console.log(' - ' + r));

@@ -109,7 +109,9 @@ function renderSidebar(){
   const byG = {};
   for (const l of INDEX.laws){ (byG[l.group]=byG[l.group]||[]).push(l); }
   let html='';
-  for (const g of G_ORDER){
+  // 既定順のグループ＋未知グループ（会社法・民法等を追加しても自動表示）
+  const groups = [...G_ORDER, ...Object.keys(byG).filter(g => !G_ORDER.includes(g))];
+  for (const g of groups){
     if(!byG[g]) continue;
     html += `<div class="grp">${g}</div>`;
     for (const l of byG[g]){
