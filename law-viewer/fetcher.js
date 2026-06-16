@@ -4,6 +4,8 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
 
 const API = 'https://laws.e-gov.go.jp/api/2';
 const SITE = path.join(__dirname, '..', 'law-viewer-site');
@@ -166,12 +168,66 @@ function extractBlocks(root){
   return blocks;
 }
 
+// ===== 金融庁 事務ガイドライン（PDF）取得・章節化 =====
+const GBASE = 'https://www.fsa.go.jp/common/law/guide/kaisya/';
+const GUIDELINES = [
+  { key:'fsa-guide-16', file:'16.pdf', title:'事務ガイドライン 第三分冊：16 暗号資産交換業者関係' },
+  { key:'fsa-guide-14', file:'14.pdf', title:'事務ガイドライン 第三分冊：14 資金移動業者関係' },
+  { key:'fsa-guide-05', file:'05.pdf', title:'事務ガイドライン 第三分冊：5 前払式支払手段発行者関係' },
+  { key:'fsa-guide-17', file:'17.pdf', title:'事務ガイドライン 第三分冊：17 電子決済手段等取引業者関係' },
+];
+const G_HEAD = /^([Ⅰ-Ⅹ](?:[－\-−][０-９\d〇一二三四五六七八九十]+)+)\s*(.*)$/; // Ⅰ－１－２…
+const G_DOTS = /[．\.]{4,}|…/;
+function parseGuideline(text){
+  const lines = text.split('\n');
+  let lastToc = -1; for (let i=0;i<lines.length;i++) if (G_DOTS.test(lines[i])) lastToc = i; // 目次(ドットリーダー)末尾
+  const body = lines.slice(lastToc+1);
+  const blocks = []; let cur = null;
+  for (const raw of body){
+    const t = raw.trim(); if (!t) continue;
+    if (/^\d{1,4}$/.test(t)) continue;                  // ページ番号のみの行
+    const m = t.match(G_HEAD);
+    if (m && !G_DOTS.test(t)){
+      const num = m[1];
+      if (cur && cur.num === num) continue;             // ランニングヘッダの重複は無視
+      cur = { t:'a', num, cap:m[2].trim(), lines:[] }; blocks.push(cur);
+    } else if (cur) cur.lines.push(t);
+  }
+  for (const b of blocks){
+    b.body = kanjiNum(b.lines.join('').replace(/[ \t　]+/g,'')); delete b.lines;
+    b.cap  = kanjiNum(b.cap.replace(/[ \t　]+/g,''));
+  }
+  return blocks;
+}
+function fetchGuidelines(prevRec, nowIso, laws, changed, report){
+  const tmp = os.tmpdir(), today = nowIso.slice(0,10);
+  for (const g of GUIDELINES){
+    try {
+      const pdf = path.join(tmp, g.key+'.pdf'), txt = path.join(tmp, g.key+'.txt');
+      execFileSync('curl', ['-sL','--max-time','90','-A',UA,'-o',pdf, GBASE+g.file], { maxBuffer:300*1024*1024 });
+      execFileSync('pdftotext', ['-enc','UTF-8','-layout','-nopgbrk', pdf, txt]);
+      const text = fs.readFileSync(txt,'utf8');
+      const blocks = parseGuideline(text);
+      if (!blocks.length) throw new Error('章節抽出ゼロ');
+      const hash = crypto.createHash('sha1').update(text).digest('hex').slice(0,16);
+      const prev = prevRec[g.key];
+      const updated = (prev && prev.revision_id === hash) ? prev.updated : today; // 内容変化時のみ更新日
+      const rec = { law_id:g.key, title:g.title, group:'ガイドライン', type:'事務ガイドライン',
+        law_num:'', revision_id:hash, updated, article_count:blocks.length, egov_url:GBASE+g.file };
+      laws.push(rec);
+      fs.writeFileSync(path.join(DATA, `${g.key}.json`), JSON.stringify({ ...rec, blocks }), 'utf8');
+      if (!prev || prev.revision_id !== hash) changed.push(g.title);
+      report.push(`${g.title}: ${blocks.length}節 ${prev&&prev.revision_id!==hash?'(更新)':''}`);
+    } catch(e){ report.push(`${g.key}: 失敗 ${String(e.message||e).slice(0,70)}`); }
+  }
+}
+
 function main(){
   if (!fs.existsSync(DATA)) fs.mkdirSync(DATA, { recursive:true });
   const idxPath = path.join(DATA, 'index.json');
   let prev = { laws:[] };
   if (fs.existsSync(idxPath)) { try { prev = JSON.parse(fs.readFileSync(idxPath,'utf8')); } catch{} }
-  const prevRev = {}; for (const l of prev.laws) prevRev[l.law_id] = l.revision_id;
+  const prevRev = {}, prevRec = {}; for (const l of prev.laws) { prevRev[l.law_id] = l.revision_id; prevRec[l.law_id] = l; }
 
   const nowIso = new Date().toISOString();
   const laws = []; const changed = []; const report = [];
@@ -198,9 +254,12 @@ function main(){
     } catch(e){ report.push(`${id}: 失敗 ${String(e.message||e).slice(0,60)}`); }
   }
 
+  // 金融庁 事務ガイドライン（PDF）を取得して統合
+  fetchGuidelines(prevRec, nowIso, laws, changed, report);
+
   const isFirst = !prev.laws.length;
   // グループ順を固定
-  const G = ['資金決済','犯収法','金商法'];
+  const G = ['資金決済','犯収法','金商法','ガイドライン'];
   laws.sort((a,b)=> (G.indexOf(a.group)-G.indexOf(b.group)) || a.title.localeCompare(b.title,'ja'));
   fs.writeFileSync(idxPath, JSON.stringify({ generatedAt: nowIso, laws, changed, isFirst }, null, 2), 'utf8');
 

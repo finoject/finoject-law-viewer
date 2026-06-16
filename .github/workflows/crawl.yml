@@ -26,7 +26,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: e-Gov法令APIから取得し条文化（更新分を差分検出）
+      - name: PDF抽出ツール(poppler)導入
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+
+      - name: e-Gov法令＋金融庁ガイドラインを取得し構造化（更新分を差分検出）
         working-directory: law-viewer
         run: node fetcher.js
 
