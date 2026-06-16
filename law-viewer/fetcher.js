@@ -204,10 +204,13 @@ function parseGuideline(text){
   }
   // 箇条書きマーカー(①〜⑳ / イ．ロ． / ・ / ○● / （注） / （数字）)で始まる行で改行、折り返し行は前行に連結
   const MARK = /^(?:[①-⑳]|[ァ-ヴ][．.]|[・○●]|（注|（参考|（別[紙表添]|（[0-9０-９〇一二三四五六七八九十]+）)/;
+  const BARE = /^（(?:注|参考|別[紙表添])[0-9０-９]*）?$/;  // 「（注4）」等ラベルのみの行（内容は次行）
   for (const b of blocks){
     const merged = [];
     for (const ln of b.lines){
-      if (merged.length && !MARK.test(ln)) merged[merged.length-1] += ln;  // 折り返し継続
+      const prev = merged[merged.length-1];
+      // 折り返し継続、または直前がラベルのみの行（（注4）の内容が次行に来るケース）は連結
+      if (merged.length && (!MARK.test(ln) || BARE.test(prev.trim()))) merged[merged.length-1] += ln;
       else merged.push(ln);
     }
     b.num  = kanjiNum(b.num);                                    // Ⅱ－２－１－３ → Ⅱ-2-1-3
