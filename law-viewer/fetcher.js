@@ -193,9 +193,17 @@ function parseGuideline(text){
       cur = { t:'a', num, cap:m[2].trim(), lines:[] }; blocks.push(cur);
     } else if (cur) cur.lines.push(t);
   }
+  // 箇条書きマーカー(①〜⑳ / イ．ロ． / ・ / （注） / （数字）)で始まる行で改行、折り返し行は前行に連結
+  const MARK = /^(?:[①-⑳]|[ァ-ヴ][．.]|・|（注|（[0-9０-９〇一二三四五六七八九十]+）)/;
   for (const b of blocks){
-    b.body = kanjiNum(b.lines.join('').replace(/[ \t　]+/g,'')); delete b.lines;
-    b.cap  = kanjiNum(b.cap.replace(/[ \t　]+/g,''));
+    const merged = [];
+    for (const ln of b.lines){
+      if (merged.length && !MARK.test(ln)) merged[merged.length-1] += ln;  // 折り返し継続
+      else merged.push(ln);
+    }
+    b.body = kanjiNum(merged.join('\n').replace(/[ \t　]/g,''));
+    b.cap  = kanjiNum(b.cap.replace(/[ \t　]/g,''));
+    delete b.lines;
   }
   return blocks;
 }
