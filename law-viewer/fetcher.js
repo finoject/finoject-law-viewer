@@ -211,7 +211,8 @@ function parseGuideline(text){
     }
   }
   // 箇条書きマーカー(①〜⑳ / イ．ロ． / ・ / ○● / （注） / （数字）)で始まる行で改行、折り返し行は前行に連結
-  const MARK = /^(?:[①-⑳]|[⑴-⒇]|[ァ-ヴ][．.]|[・○●]|（注|（参考|（別[紙表添]|（[0-9０-９〇一二三四五六七八九十]+）)/;
+  // ⑴〜⒇はMARKに含めない（文中参照のⅡ-2-2-1-2⑸/イ⑴又はロ⑵等を項目開始と誤認しないため）。正規の箇条書き⑴は下の「。の後で改行」で分割する。
+  const MARK = /^(?:[①-⑳]|[ァ-ヴ][．.]|[・○●]|（注|（参考|（別[紙表添]|（[0-9０-９〇一二三四五六七八九十]+）)/;
   const BARE = /^（(?:注|参考|別[紙表添])[0-9０-９]*）?$/;  // 「（注4）」等ラベルのみの行（内容は次行）
   for (const b of blocks){
     const merged = [];
@@ -222,8 +223,8 @@ function parseGuideline(text){
       else merged.push(ln);
     }
     b.num  = kanjiNum(b.num);                                    // Ⅱ－２－１－３ → Ⅱ-2-1-3
-    // ⑴⑵…⑽（括弧付き数字）の前で改行（pdftotextが1行に連結するケースに対応）
-    b.body = kanjiNum(merged.join('\n').replace(/([^\n])([⑴-⒇])/g,'$1\n$2').replace(/[ \t　]/g,''));
+    // 正規の箇条書き⑴⑵…⑽は「。」の直後にのみ改行（文中参照の⑴は分割しない＝Ⅱ-2-2-1-2⑸/イ⑴又はロ⑵等を保つ）
+    b.body = kanjiNum(merged.join('\n').replace(/。([⑴-⒇])/g,'。\n$1').replace(/[ \t　]/g,''));
     b.cap  = kanjiNum(b.cap.replace(/[ \t　]/g,''));
     delete b.lines;
   }
