@@ -273,7 +273,19 @@ function render(raw, k, artNum){
 }
 // 表データ（行×列）を本物のHTMLテーブルに。セルも render() で整形（カッコ色分け・条文リンク）
 // 結合セル(ct=上と継続)はrowspanで上のセルに統合し、空の継続行を作らない
-function tableHtml(rows, k){
+function tableHtml(table, k){
+  let rows = (table && table.rows) ? table.rows : (table || []);
+  // 読替表（直前文に「読み替え」）で既存ヘッダが無ければ、列の意味を示す見出しを補う
+  if (table && table.yomikae && rows.length){
+    const f0 = (rows[0].cells && rows[0].cells[0] && rows[0].cells[0].t) || '';
+    const hasHeader = rows[0].header || /読(み)?替|規定|字句|上欄|中欄|下欄/.test(f0);
+    if (!hasHeader){
+      const nc = rows.reduce((m,r)=>Math.max(m,(r.cells||[]).length),0);
+      const labels = nc>=3 ? ['読み替える規定','読み替えられる字句','読み替える字句'] : ['読み替えられる字句','読み替える字句'];
+      const hc = []; for (let i=0;i<nc;i++) hc.push({ t: labels[i]||'', ct:false });
+      rows = [{ header:true, cells:hc }].concat(rows);
+    }
+  }
   const n = rows.length;
   const span = rows.map(r => (r.cells||[]).map(()=>1));
   const skip = rows.map(r => (r.cells||[]).map(()=>false));
@@ -303,7 +315,7 @@ function tableHtml(rows, k){
 // 検索対象テキスト（本文＋表セルも含める。本文の占位子は除く）
 function searchText(b){
   let s = b.num + ' ' + (b.cap||'') + ' ' + (b.body||'').replace(/⟦TBL:\d+⟧/g,'');
-  if (b.tables){ for (const tbl of b.tables) for (const row of tbl) for (const c of (row.cells||[])) s += ' ' + (c && c.t || ''); }
+  if (b.tables){ for (const tbl of b.tables){ const rows=(tbl&&tbl.rows)?tbl.rows:tbl; for (const row of rows) for (const c of (row.cells||[])) s += ' ' + (c && c.t || ''); } }
   return s;
 }
 function renderDoc(kw){

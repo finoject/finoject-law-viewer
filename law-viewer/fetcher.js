@@ -149,7 +149,7 @@ function levelSentence(node){
     const t=c.tag||'';
     if(/^(Item|Subitem\d+|Paragraph)$/.test(t)) continue;
     if(/Title$/.test(t) || t==='ParagraphNum') continue;
-    if(t==='TableStruct' || t==='Table'){ const rows=tableData(c); if(rows.length){ const i=_tables.length; _tables.push(rows); tail+='\n⟦TBL:'+i+'⟧'; } continue; }
+    if(t==='TableStruct' || t==='Table'){ const rows=tableData(c); if(rows.length){ const i=_tables.length; _tables.push({ rows, yomikae: /読(み)?替/.test(s) }); tail+='\n⟦TBL:'+i+'⟧'; } continue; }
     s+=nodeText(c);
   }
   s = s.replace(/[ \t　]*\n[ \t　]*/g,'').replace(/[ \t]{2,}/g,' ').trim(); // 単独スペース(Column区切り)は保持
