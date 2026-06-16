@@ -153,7 +153,7 @@ const LAW_OF = {
   'fsa-kantoku-city':'356AC0000000059', 'fsa-kantoku-chusho':'356AC0000000059',  // 銀行監督指針→銀行法
   'fsa-kantoku-kinsho':'323AC0000000025',                                        // 金商業者監督指針→金商法
 };
-let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RMAXD=0, curMaxDepth=0;
+let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RPC=[], curMaxDepth=0;
 
 const $ = s => document.querySelector(s);
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -283,7 +283,7 @@ function render(raw, k, artNum){
     if (ch==='（' || ch==='('){
       MARKER.lastIndex = i; const mk = MARKER.exec(text);
       if (mk && mk.index === i){ out += mk[0]; i += mk[0].length; continue; }   // 番号カッコは無色のまま
-      depth++; if(depth>RMAXD)RMAXD=depth; out += '<span class="p p'+((depth-1)%6+1)+'" data-d="'+depth+'">' + ch + '<span class="pz">';  // pz=内側（折り畳み対象）
+      depth++; RPC[depth]=(RPC[depth]||0)+1; out += '<span class="p p'+((depth-1)%6+1)+'" data-d="'+depth+'">' + ch + '<span class="pz">';  // pz=内側（折り畳み対象）、RPC=深さ別カウント
     }
     else if ((ch==='）' || ch===')') && depth>0){ out += '</span><i class="el">…</i>' + ch + '</span>'; depth--; }  // el=省略時の「…」
     else if (ch==='。'){ out += '。'; const nx=text[i+1]; if (depth===0 && nx && nx!=='\n' && !/[」』）)】］〕]/.test(nx)) out += '\n'; }  // 文ごとに改行（カッコ内の文・閉じ括弧/鉤括弧の直前では改行しない）
@@ -359,9 +359,15 @@ function searchText(b){
   if (b.tables){ for (const tbl of b.tables){ const rows=(tbl&&tbl.rows)?tbl.rows:tbl; for (const row of rows) for (const c of (row.cells||[])) s += ' ' + (c && c.t || ''); } }
   return s;
 }
+// 「2個以上存在する最深レベル」を実効最大深さとする（全法令で1個だけの極端に深い外れ値を初回ステップに畳み込み、初回クリックが必ず効くように）
+function effMaxDepth(rpc){
+  let absMax=0; for (let d=1; d<rpc.length; d++) if (rpc[d]) absMax=d;
+  for (let d=absMax; d>=1; d--) if ((rpc[d]||0) >= 2) return d;
+  return absMax;   // すべて1個以下なら絶対最大
+}
 function renderDoc(kw){
   const k = (kw||'').trim();
-  let html=''; RMAXD=0;
+  let html=''; RPC=[];
   for (const b of CUR.blocks){
     if (b.t==='h'){ html += `<div class="h lv${b.lv}">${esc(b.x)}</div>`; }
     else {
@@ -374,7 +380,7 @@ function renderDoc(kw){
   }
   if (k && !/class="art"/.test(html)) html = `<div class="hint">「${esc(k)}」に一致する条文はありません</div>`;
   $('#doc').innerHTML = `<div class="wrap">${html}</div>`;
-  curMaxDepth = RMAXD;   // この描画での最大カッコ深さ（applyParenが使用）
+  curMaxDepth = effMaxDepth(RPC);   // この描画での実効最大カッコ深さ（applyParenが使用）
   applyParen();          // カッコ折り畳み状態を再適用（CSSクラス1発）
 }
 
