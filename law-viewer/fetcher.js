@@ -123,35 +123,36 @@ function forceNum(s){
 }
 // 指定タグの見出しテキスト
 function childTitle(node, tag){ const c=(node.children||[]).find(x=>x&&x.tag===tag); return c?nodeText(c).trim():''; }
-// 表（TableStruct/Table）を「行＝改行・列＝｜区切り」で整形（読替表等が平坦に連結されるのを防ぐ）
-function tableLines(node){
+// 表（TableStruct/Table）を構造データ化（行×列）。本文には占位子 ⟦TBL:i⟧ を置き、フロントが<table>で描画する
+let _tables = [];
+function tableData(node){
   const rows=[];
   (function walk(n){
     if(!n || typeof n!=='object') return;
     if(n.tag==='TableRow' || n.tag==='TableHeaderRow'){
-      const cols=(n.children||[]).filter(c=>c&&(c.tag==='TableColumn'||c.tag==='TableHeaderColumn'))
-        .map(c=>nodeText(c).replace(/[\s　]+/g,'').trim());
-      const row=cols.filter(x=>x!=='').join('　｜　');
-      if(row) rows.push(row);
+      const header = (n.tag==='TableHeaderRow');
+      const cells=(n.children||[]).filter(c=>c&&(c.tag==='TableColumn'||c.tag==='TableHeaderColumn'))
+        .map(c=>kanjiNum(nodeText(c).replace(/[\s　]+/g,'').trim()));   // セルは整形(漢数字等)して保持。空セルも残し列を揃える
+      rows.push({ header, cells });
       return;                                   // 行内はこれ以上降りない
     }
     (n.children||[]).forEach(walk);
   })(node);
   return rows;
 }
-// この階層の文だけ（下位の項・号・各種Title・番号は除外）。表は行ごとに改行して末尾に付す
+// この階層の文だけ（下位の項・号・各種Title・番号は除外）。表は占位子に置換し _tables に退避
 function levelSentence(node){
-  let s='', tbl='';
+  let s='', tail='';
   for(const c of (node.children||[])){
     if(typeof c==='string'){ s+=c; continue; }
     const t=c.tag||'';
     if(/^(Item|Subitem\d+|Paragraph)$/.test(t)) continue;
     if(/Title$/.test(t) || t==='ParagraphNum') continue;
-    if(t==='TableStruct' || t==='Table'){ const r=tableLines(c); if(r.length) tbl+='\n'+r.join('\n'); continue; }
+    if(t==='TableStruct' || t==='Table'){ const rows=tableData(c); if(rows.length){ const i=_tables.length; _tables.push(rows); tail+='\n⟦TBL:'+i+'⟧'; } continue; }
     s+=nodeText(c);
   }
   s = s.replace(/[ \t　]*\n[ \t　]*/g,'').replace(/[ \t]{2,}/g,' ').trim(); // 単独スペース(Column区切り)は保持
-  return s + tbl;   // 表の改行は保持
+  return s + tail;   // 表の占位子は改行付きで末尾に
 }
 // 条文を 項・号・イロハ ごとに改行し、階層インデント付きで整形
 function articleBody(article){
@@ -193,12 +194,16 @@ function extractBlocks(root){
     if (tag === 'Article'){
       const at  = (n.children||[]).find(c => c && c.tag === 'ArticleTitle');
       const cap = (n.children||[]).find(c => c && c.tag === 'ArticleCaption');
-      blocks.push({
+      _tables = [];                               // この条の表を退避（articleBody→levelSentenceが詰める）
+      const body = kanjiNum(articleBody(n));
+      const rec = {
         t:'a',
         num: kanjiNum(nodeText(at).trim()),
         cap: cap ? kanjiNum(nodeText(cap).replace(/\s+/g,'').trim()) : '',
-        body: kanjiNum(articleBody(n)),
-      });
+        body,
+      };
+      if (_tables.length) rec.tables = _tables;
+      blocks.push(rec);
       return; // 条文内はこれ以上降りない
     }
     (n.children||[]).forEach(walk);
