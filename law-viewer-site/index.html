@@ -115,8 +115,8 @@ async function boot(){
   renderSidebar();
   // ディープリンク: ?law=ID&art=第九条
   const q = new URLSearchParams(location.search);
-  const law = q.get('law'); const art = q.get('art');
-  if (law) await openLaw(law, art);
+  const law = q.get('law'); const art = q.get('art'); const para = q.get('para');
+  if (law) await openLaw(law, art, para);
 }
 
 function renderSidebar(){
@@ -145,7 +145,7 @@ async function loadLaw(id){
   cache[id] = d; return d;
 }
 
-async function openLaw(id, artNum){
+async function openLaw(id, artNum, para){
   const d = await loadLaw(id);
   CUR = d;
   REF = LAW_OF[d.law_id] || null;                                   // この文書の「法」が指す親法令
@@ -165,7 +165,12 @@ async function openLaw(id, artNum){
     let tries = 0;
     const jump = () => {
       const t = [...document.querySelectorAll('.art')].find(a => a.dataset.num === dec);
-      if (t){ t.classList.add('target'); t.scrollIntoView({block:'start'}); }
+      if (t){
+        t.classList.add('target');
+        const pa = para && document.getElementById(dec + ':p' + para);   // 項指定があればその項へ
+        if (pa){ pa.classList.add('hit'); pa.scrollIntoView({block:'center'}); }
+        else { t.scrollIntoView({block:'start'}); }
+      }
       else if (++tries < 25) setTimeout(jump, 100);
     };
     setTimeout(jump, 50);
@@ -205,7 +210,7 @@ function render(raw, k, artNum){
         // 法あり=親法令へ（常時）。法なし=自文書だが、自文書に実在する条のときだけ（他法引用文中の第N条を誤リンクしない）
         if (tid && (isHou || ARTSET.has(art))){
           const ttl = isHou ? REFTITLE : myTitle;
-          out += '<a class="rf" href="?law='+tid+'&art='+encodeURIComponent(art)+'" title="'+esc(ttl)+' '+art+' を開く（クリックで移動）">'+m[0]+'</a>';
+          out += '<a class="rf" href="?law='+tid+'&art='+encodeURIComponent(art)+'" target="_blank" rel="noopener" title="'+esc(ttl)+' '+art+' を新しいタブで開く（右クリックで新規タブ/ウィンドウを選択）">'+m[0]+'</a>';
           i += m[0].length; continue;
         }
       }
@@ -214,7 +219,7 @@ function render(raw, k, artNum){
         REFKO.lastIndex = i; const m2 = REFKO.exec(text);
         if (m2 && m2.index === i){
           const pn = m2[0].match(/第(\d+)項/)[1];
-          out += '<a class="rf" data-para="'+esc(aid)+':p'+pn+'" title="第'+pn+'項へ移動">'+m2[0]+'</a>';
+          out += '<a class="rf" href="?law='+myId+'&art='+encodeURIComponent(aid)+'&para='+pn+'" target="_blank" rel="noopener" title="'+esc(aid)+'第'+pn+'項を新しいタブで開く（右クリックで新規タブ/ウィンドウを選択）">'+m2[0]+'</a>';
           i += m2[0].length; continue;
         }
       }
@@ -249,23 +254,8 @@ function renderDoc(kw){
 }
 
 // 本文中の法令参照リンクのクリック → 即時リロードせずアプリ内ジャンプ（ホバーでリンク表示・クリックで移動）
-$('#doc').addEventListener('click', e => {
-  const a = e.target.closest('a.rf'); if (!a) return;
-  e.preventDefault();
-  if (a.dataset.para){                          // 同一条文内の項ジャンプ（ページ内スクロール）
-    const el = document.getElementById(a.dataset.para);
-    if (el){
-      document.querySelectorAll('.pa.hit').forEach(x => x.classList.remove('hit'));
-      el.classList.add('hit'); el.scrollIntoView({ block:'center' });
-    }
-    return;
-  }
-  const u = new URL(a.getAttribute('href'), location.href);
-  const law = u.searchParams.get('law'), art = u.searchParams.get('art');
-  history.pushState(null, '', '?law=' + law + '&art=' + encodeURIComponent(art));
-  $('#search').value = '';
-  openLaw(law, art);
-});
+// 本文中の参照リンク(a.rf)は target="_blank" の実リンク＝新しいタブで開く。
+// 左クリック=新タブ（現在地を保持）、右クリック=ブラウザ標準の「新しいタブ/ウィンドウで開く」。JSでの横取りはしない。
 $('#search').addEventListener('input', e => renderDoc(e.target.value));
 $('#burger').addEventListener('click', ()=> $('#side').classList.toggle('open'));
 
