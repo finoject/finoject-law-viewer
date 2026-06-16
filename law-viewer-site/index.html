@@ -37,6 +37,19 @@
   #lawMeta a{ color:#7fb0ff; }
   #search{ margin-top:9px; width:100%; max-width:520px; padding:8px 11px; border-radius:8px; border:1px solid var(--line);
     background:#0e1626; color:var(--fg); font-size:13px; }
+  #gsearch{ display:block; width:100%; max-width:680px; padding:10px 13px; border-radius:9px; border:1px solid #3a6bd0;
+    background:#0e1626; color:var(--fg); font-size:14px; margin-bottom:8px; }
+  #gsearch:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(46,108,240,.3); }
+  /* 横断検索の結果 */
+  .gres-head{ font-size:13px; color:var(--muted); margin:4px 0 12px; }
+  .gsec{ font-size:14px; font-weight:700; color:#bcd0f0; margin:18px 0 4px; border-left:3px solid var(--accent); padding-left:8px; }
+  .gsec span{ font-weight:400; color:var(--muted); font-size:12px; }
+  .ghit{ display:block; text-decoration:none; color:var(--fg); border:1px solid var(--line); border-radius:8px;
+    padding:8px 11px; margin:6px 0; background:#0f1a2e; font-size:13px; line-height:1.7; }
+  .ghit:hover{ border-color:var(--accent); background:#13243f; }
+  .ghit .gnum{ font-weight:700; color:#7fb0ff; }
+  .ghit .gcap{ color:var(--muted); margin-left:6px; }
+  .ghit .gsnip{ display:block; color:#cdd8ee; margin-top:3px; }
   #doc{ flex:1; overflow-y:auto; padding:8px 22px 80px; }
   #doc .wrap{ max-width:860px; margin:0 auto; }
   .h{ font-weight:700; color:#bcd0f0; margin:20px 0 6px; }
@@ -82,6 +95,7 @@
   <div id="main">
     <div id="top">
       <button id="burger">☰ 法令一覧</button>
+      <input id="gsearch" placeholder="🔍 全法令・ガイドラインを横断検索…（例：暗号資産、本人確認、収納代行）">
       <h2 id="lawTitle">法令を選択してください</h2>
       <p id="lawMeta"></p>
       <input id="search" placeholder="この法令内をキーワード検索…（例：暗号資産、本人確認、登録）" class="hidden">
@@ -117,6 +131,7 @@ async function boot(){
   const q = new URLSearchParams(location.search);
   const law = q.get('law'); const art = q.get('art'); const para = q.get('para');
   if (law) await openLaw(law, art, para);
+  else showHome();
 }
 
 function renderSidebar(){
@@ -194,6 +209,8 @@ function render(raw, k, artNum){
   let depth=0, i=0;
   while (i < text.length){
     const bol = (i===0) || (text[i-1]==='\n');
+    // 主要な列挙項目（①〜⑳ / ⑴〜⒇）の前は1行空けて視認性を上げる（細かいイロハ・号は空けない）
+    if (bol && i>0 && /[①-⑳⑴-⒇]/.test(text[i])) out += '\n';
     // 行頭の項番号 → 番号を項アンカーで包む（号/イロハは字下げ＝先頭が空白なので該当しない）
     if (bol && aid && /[0-9]/.test(text[i])){
       PARANUM.lastIndex = i; const pm = PARANUM.exec(text);
@@ -230,6 +247,7 @@ function render(raw, k, artNum){
       depth++; out += '<span class="p p'+((depth-1)%6+1)+'">' + ch;
     }
     else if ((ch==='）' || ch===')') && depth>0){ out += ch + '</span>'; depth--; }
+    else if (ch==='。'){ out += '。'; const nx=text[i+1]; if (depth===0 && nx && nx!=='\n' && !/[」』）)】］〕]/.test(nx)) out += '\n'; }  // 文ごとに改行（カッコ内の文・閉じ括弧/鉤括弧の直前では改行しない）
     else out += ch;
     i++;
   }
@@ -257,6 +275,58 @@ function renderDoc(kw){
 // 本文中の参照リンク(a.rf)は target="_blank" の実リンク＝新しいタブで開く。
 // 左クリック=新タブ（現在地を保持）、右クリック=ブラウザ標準の「新しいタブ/ウィンドウで開く」。JSでの横取りはしない。
 $('#search').addEventListener('input', e => renderDoc(e.target.value));
+
+// ===== 全法令・ガイドライン横断検索 =====
+let ALL_LOADED = false;
+async function loadAll(){
+  if (ALL_LOADED) return;
+  await Promise.all(INDEX.laws.map(l => loadLaw(l.law_id).catch(()=>null)));
+  ALL_LOADED = true;
+}
+function orderedLaws(){
+  const byG = {}; for (const l of INDEX.laws) (byG[l.group]=byG[l.group]||[]).push(l);
+  const groups = [...G_ORDER, ...Object.keys(byG).filter(g => !G_ORDER.includes(g))];
+  const out = []; for (const g of groups){ if (byG[g]) out.push(...byG[g]); } return out;
+}
+function gSnippet(body, q){
+  const i = (body||'').indexOf(q); if (i<0) return '';
+  const s = Math.max(0,i-28), e = Math.min(body.length, i+q.length+60);
+  const t = (s>0?'…':'') + body.slice(s,e).replace(/\n/g,' ') + (e<body.length?'…':'');
+  return esc(t).split(esc(q)).join('<mark>'+esc(q)+'</mark>');
+}
+function showHome(){
+  $('#doc').innerHTML = `<div class="wrap"><div class="hint">
+    上の検索窓で<b>全法令・ガイドラインを横断検索</b>できます（結果は下に全件表示）。<br>
+    または左の一覧から法令を選ぶと条文が表示されます。<br>
+    （毎朝自動更新。改正があった法令には <span style="background:#fbbf24;color:#0b1220;border-radius:4px;padding:0 5px;">更新</span> が付きます）
+  </div></div>`;
+}
+let gseq = 0;
+async function globalSearch(q){
+  q = (q||'').trim();
+  if (!q){ CUR ? renderDoc('') : showHome(); return; }
+  const my = ++gseq;
+  $('#doc').innerHTML = '<div class="wrap"><div class="hint">全法令・ガイドラインを検索中…</div></div>';
+  await loadAll();
+  if (my !== gseq) return;                         // 後続の入力があれば破棄
+  let html = '', total = 0;
+  for (const l of orderedLaws()){
+    const d = cache[l.law_id]; if (!d) continue;
+    const hits = d.blocks.filter(b => b.t!=='h' && (b.num+' '+(b.cap||'')+' '+(b.body||'')).includes(q));
+    if (!hits.length) continue;
+    html += `<div class="gsec">${esc(l.title)} <span>(${hits.length}件)</span></div>`;
+    for (const b of hits){
+      total++;
+      html += `<a class="ghit" href="?law=${l.law_id}&art=${encodeURIComponent(b.num)}" target="_blank" rel="noopener">`
+        + `<span class="gnum">${esc(b.num)}</span><span class="gcap">${esc(b.cap||'')}</span>`
+        + `<span class="gsnip">${gSnippet(b.body,q)}</span></a>`;
+    }
+  }
+  $('#doc').innerHTML = `<div class="wrap"><div class="gres-head">「${esc(q)}」の横断検索結果：${total}件</div>`
+    + (html || '<div class="hint">該当する条文・項目はありません</div>') + '</div>';
+}
+let gtimer = null;
+$('#gsearch').addEventListener('input', e => { const v = e.target.value; clearTimeout(gtimer); gtimer = setTimeout(()=>globalSearch(v), 220); });
 $('#burger').addEventListener('click', ()=> $('#side').classList.toggle('open'));
 
 boot().catch(e => { $('#doc').innerHTML = '<div class="wrap"><div class="hint">データの読み込みに失敗しました</div></div>'; });
