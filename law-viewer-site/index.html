@@ -32,6 +32,9 @@
   #main{ flex:1; display:flex; flex-direction:column; overflow:hidden; }
   #top{ flex:none; background:rgba(11,18,32,.96); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); padding:12px 18px; }
   #burger{ display:none; }
+  .topbtns{ display:flex; gap:8px; margin-bottom:8px; }
+  #home{ background:#16223a; color:#cfe0ff; border:1px solid #2b66c0; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; }
+  #home:hover{ background:#1c3a63; }
   #lawTitle{ font-size:17px; font-weight:700; margin:0; }
   #lawMeta{ font-size:11px; color:var(--muted); margin:3px 0 0; }
   #lawMeta a{ color:#7fb0ff; }
@@ -94,11 +97,14 @@
 
   <div id="main">
     <div id="top">
-      <button id="burger">☰ 法令一覧</button>
+      <div class="topbtns">
+        <button id="burger">☰ 法令一覧</button>
+        <button id="home">🏠 トップ（法令選択／全文検索）</button>
+      </div>
       <input id="gsearch" placeholder="🔍 全法令・ガイドラインを横断検索…（例：暗号資産、本人確認、収納代行）">
       <h2 id="lawTitle">法令を選択してください</h2>
       <p id="lawMeta"></p>
-      <input id="search" placeholder="この法令内をキーワード検索…（例：暗号資産、本人確認、登録）" class="hidden">
+      <input id="search" placeholder="📄 この法令内だけをキーワード検索…（例：暗号資産、本人確認、登録）" class="hidden">
     </div>
     <div id="doc"><div class="wrap"><div class="hint">
       左の一覧から法令を選ぶと、条文が表示されます。<br>
@@ -327,6 +333,21 @@ async function globalSearch(q){
 }
 let gtimer = null;
 $('#gsearch').addEventListener('input', e => { const v = e.target.value; clearTimeout(gtimer); gtimer = setTimeout(()=>globalSearch(v), 220); });
+
+// トップ（法令選択／全文検索）へ戻る
+function goHome(){
+  CUR = null;
+  history.pushState(null, '', location.pathname);
+  document.querySelectorAll('.law.active').forEach(b => b.classList.remove('active'));
+  $('#lawTitle').textContent = '法令を選択してください';
+  $('#lawMeta').innerHTML = '';
+  const s = $('#search'); s.classList.add('hidden'); s.value = '';
+  $('#gsearch').value = '';
+  $('#side').classList.remove('open');
+  showHome();
+  $('#doc').scrollTop = 0;
+}
+$('#home').addEventListener('click', goHome);
 $('#burger').addEventListener('click', ()=> $('#side').classList.toggle('open'));
 
 boot().catch(e => { $('#doc').innerHTML = '<div class="wrap"><div class="hint">データの読み込みに失敗しました</div></div>'; });
