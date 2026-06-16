@@ -55,7 +55,7 @@
   .ghit .gcap{ color:var(--muted); margin-left:6px; }
   .ghit .gsnip{ display:block; color:#cdd8ee; margin-top:3px; }
   #doc{ flex:1; overflow-y:auto; padding:8px 22px 80px; }
-  #doc .wrap{ max-width:860px; margin:0 auto; }
+  #doc .wrap{ max-width:none; margin:0; }   /* 本文はウィンドウ幅いっぱい（行数を減らし実務での視認性を上げる。三根さん指示2026-06-17）*/
   .h{ font-weight:700; color:#bcd0f0; margin:20px 0 6px; }
   .h.lv1{ font-size:16px; } .h.lv2{ font-size:15px; } .h.lv3,.h.lv4,.h.lv5{ font-size:13px; color:#9fb4d6; }
   .art{ border-bottom:1px solid var(--line); padding:12px 4px; content-visibility:auto; contain-intrinsic-size:auto 240px; }  /* 画面外の条文は遅延描画（巨大法令を高速化） */
@@ -160,6 +160,8 @@
 
 <script>
 const G_ORDER = ['金商法','資金決済','犯収法','銀行法','会社法','個人情報','ガイドライン'];
+// サイドバーのグループ見出しの表示名（内部キーG_ORDER/groupは変更しない＝LAW_OF等に影響させない）
+const GLABEL = { '金商法':'金商法関連','資金決済':'資金決済法関連','犯収法':'犯収法関連','銀行法':'銀行法関連','会社法':'会社法関連','個人情報':'個人情報保護法関連','ガイドライン':'各種ガイドライン' };
 // 各府令・施行令・ガイドラインの本文中「法」が指す親法令（law_id）。新規追加時はここに対応を足す。
 const LAW_OF = {
   '422CO0000000019':'421AC0000000059', '429M60000002007':'421AC0000000059', '422M60000002004':'421AC0000000059',
@@ -221,7 +223,7 @@ function renderSidebar(){
   const groups = [...G_ORDER, ...Object.keys(byG).filter(g => !G_ORDER.includes(g))];
   for (const g of groups){
     if(!byG[g]) continue;
-    html += `<div class="grp">${g}</div>`;
+    html += `<div class="grp">${esc(GLABEL[g]||g)}</div>`;
     for (const l of byG[g]){
       const upd = (INDEX.changed||[]).includes(l.title) ? '<span class="upd">更新</span>' : '';
       html += `<button class="law" data-id="${l.law_id}">
