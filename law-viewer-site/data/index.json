@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-16T18:24:33.268Z",
+  "generatedAt": "2026-06-16T18:38:21.602Z",
   "laws": [
     {
       "law_id": "421AC0000000059",
@@ -332,10 +332,6 @@
       "egov_url": "https://www.fsa.go.jp/common/law/guide/chusho/index.html"
     }
   ],
-  "changed": [
-    "主要行等向けの総合的な監督指針",
-    "中小・地域金融機関向けの総合的な監督指針",
-    "金融商品取引業者等向けの総合的な監督指針"
-  ],
+  "changed": [],
   "isFirst": false
 }
