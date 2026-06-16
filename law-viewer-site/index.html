@@ -58,6 +58,8 @@
   /* 本文中の法令参照リンク（法第N条…） */
   .body a.rf{ color:inherit; text-decoration:none; cursor:pointer; border-bottom:1px dashed rgba(127,176,255,.55); }
   .body a.rf:hover{ color:#cfe7ff; border-bottom-color:#7fb0ff; background:rgba(127,176,255,.18); border-radius:2px; }
+  .body .pa{ scroll-margin-top:70px; }                                  /* 項アンカー（行頭の項番号） */
+  .body .pa.hit{ background:rgba(255,210,80,.9); color:#1a1a1a; border-radius:3px; padding:0 3px; }  /* ジャンプ先の項を強調 */
   .hint{ color:var(--muted); text-align:center; margin-top:60px; font-size:14px; line-height:1.8; }
   .hidden{ display:none; }
 
@@ -174,18 +176,29 @@ async function openLaw(id, artNum){
 //  ① 検索語ハイライト ② カッコ（）の入れ子の深さで背景色分け（番号・記号だけのカッコは除外）
 //  ③ 条文参照リンク … 「法第N条…」→この文書の親法令、「第N条…」（法/名称法を伴わない）→この文書自身。
 //     直前が漢字・閉じカッコの場合は対象外（民法・○○法第N条 や （…号）第N条 の誤リンクを防ぐ）。
-function render(raw, k){
+function render(raw, k, artNum){
   const text = esc(raw), kk = k ? esc(k) : '';
   const MARKER = /[（(](?:[0-9０-９一二三四五六七八九十百千〇]+|[ぁ-んァ-ヶa-zA-Zａ-ｚＡ-Ｚ])[）)]/y;  // 番号・記号のみのカッコ
-  const REFRE  = /(法)?第\d+条(?:の\d+)?(?:第\d+項)?(?:第\d+号(?:の\d+)?)?/y;                        // 条文参照
+  const REFJO  = /(法)?第\d+条(?:の\d+)?(?:第\d+項)?(?:第\d+号(?:の\d+)?)?/y;    // 条参照（条あり）
+  const REFKO  = /第\d+項(?:第\d+号(?:の\d+)?)?(?:各号)?/y;                       // 項参照（条を含まない＝自条内）
+  const PARANUM = /\d+(?=[ 　])/y;                                              // 行頭の項番号（数字＋空白）
   const myId = CUR && CUR.law_id, myTitle = (CUR && CUR.title) || '';
-  let out='', depth=0, i=0;
+  const aid = artNum || '';
+  // 第1項アンカー（本文先頭。第1項は番号が無いため空アンカー）
+  let out = aid ? '<span class="pa" id="'+esc(aid)+':p1"></span>' : '';
+  let depth=0, i=0;
   while (i < text.length){
+    const bol = (i===0) || (text[i-1]==='\n');
+    // 行頭の項番号 → 番号を項アンカーで包む（号/イロハは字下げ＝先頭が空白なので該当しない）
+    if (bol && aid && /[0-9]/.test(text[i])){
+      PARANUM.lastIndex = i; const pm = PARANUM.exec(text);
+      if (pm && pm.index === i){ out += '<span class="pa" id="'+esc(aid)+':p'+pm[0]+'">'+pm[0]+'</span>'; i += pm[0].length; continue; }
+    }
     if (kk && text.startsWith(kk, i)){ out += '<mark>'+kk+'</mark>'; i += kk.length; continue; }
     const ch = text[i];
-    if (ch==='法' || ch==='第'){
-      REFRE.lastIndex = i; const m = REFRE.exec(text);
-      if (m && m.index === i && !/[一-鿿々）)]/.test(text[i-1] || '')){   // 直前が漢字/閉じカッコなら誤リンク回避
+    if ((ch==='法' || ch==='第') && !/[一-鿿々）)]/.test(text[i-1] || '')){   // 直前が漢字/閉じカッコなら誤リンク回避
+      REFJO.lastIndex = i; const m = REFJO.exec(text);
+      if (m && m.index === i){
         const isHou = !!m[1];
         const tid = isHou ? REF : myId;                                    // 法あり→親法令／法なし→自文書
         const art = m[0].match(/第\d+条(?:の\d+)?/)[0];
@@ -194,6 +207,15 @@ function render(raw, k){
           const ttl = isHou ? REFTITLE : myTitle;
           out += '<a class="rf" href="?law='+tid+'&art='+encodeURIComponent(art)+'" title="'+esc(ttl)+' '+art+' を開く（クリックで移動）">'+m[0]+'</a>';
           i += m[0].length; continue;
+        }
+      }
+      // 条を含まない項参照（第N項…）→ この条文内の該当項へジャンプ
+      if (ch==='第' && aid){
+        REFKO.lastIndex = i; const m2 = REFKO.exec(text);
+        if (m2 && m2.index === i){
+          const pn = m2[0].match(/第(\d+)項/)[1];
+          out += '<a class="rf" data-para="'+esc(aid)+':p'+pn+'" title="第'+pn+'項へ移動">'+m2[0]+'</a>';
+          i += m2[0].length; continue;
         }
       }
     }
@@ -217,7 +239,7 @@ function renderDoc(kw){
     else {
       const text = (b.num+' '+b.cap+' '+b.body);
       if (k && !text.includes(k)) continue;          // 検索ヒットのみ表示
-      const body = render(b.body, k);
+      const body = render(b.body, k, b.num);
       const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
       html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}<div class="body">${body}</div></div>`;
     }
@@ -230,6 +252,14 @@ function renderDoc(kw){
 $('#doc').addEventListener('click', e => {
   const a = e.target.closest('a.rf'); if (!a) return;
   e.preventDefault();
+  if (a.dataset.para){                          // 同一条文内の項ジャンプ（ページ内スクロール）
+    const el = document.getElementById(a.dataset.para);
+    if (el){
+      document.querySelectorAll('.pa.hit').forEach(x => x.classList.remove('hit'));
+      el.classList.add('hit'); el.scrollIntoView({ block:'center' });
+    }
+    return;
+  }
   const u = new URL(a.getAttribute('href'), location.href);
   const law = u.searchParams.get('law'), art = u.searchParams.get('art');
   history.pushState(null, '', '?law=' + law + '&art=' + encodeURIComponent(art));
