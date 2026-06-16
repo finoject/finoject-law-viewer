@@ -211,7 +211,7 @@ function parseGuideline(text){
     const indent = (raw.match(/^[ \t]*/)[0] || '').length;  // 先頭インデント（pdftotext -layout）
     const t = raw.trim(); if (!t) continue;
     if (/^\d{1,4}$/.test(t)) continue;                  // ページ番号のみの行
-    const m = t.match(G_HEAD);
+    const m = !t.includes('。') && t.match(G_HEAD);    // 句点を含む行は見出しにしない（本文中の参照「（Ⅱ-5）の…とする。」等を除外）
     if (m && !G_DOTS.test(t)){
       const num = m[1];
       if (cur && cur.num === num){ headCont = false; continue; }  // ランニングヘッダの重複は無視
@@ -219,7 +219,7 @@ function parseGuideline(text){
       headIndent = indent; headCont = !ENDP.test(m[2].trim());    // 見出しが文末記号で終わらなければ折り返しの続きを待つ
       continue;
     }
-    const c = !G_DOTS.test(t) && t.match(G_CHAP);     // 章見出し（Ⅱ全ての…）
+    const c = !t.includes('。') && !G_DOTS.test(t) && t.match(G_CHAP);     // 章見出し（Ⅱ全ての…）
     if (c){
       if (!(cur && cur.num === c[1])){ cur = { t:'a', num:c[1], cap:c[2].trim(), lines:[] }; blocks.push(cur); headIndent = indent; headCont = !ENDP.test(c[2].trim()); }
       continue;
@@ -253,6 +253,55 @@ function parseGuideline(text){
     delete b.lines;
   }
   return blocks;
+}
+
+// ===== FSA監督指針（HTMLの章別ページ群を取り込む）=====
+const KRN = {I:'Ⅰ',II:'Ⅱ',III:'Ⅲ',IV:'Ⅳ',V:'Ⅴ',VI:'Ⅵ',VII:'Ⅶ',VIII:'Ⅷ',IX:'Ⅸ',X:'Ⅹ'};
+const GUIDELINES_HTML = [
+  { key:'fsa-kantoku-city',   title:'主要行等向けの総合的な監督指針',           base:'https://www.fsa.go.jp/common/law/guide/city/' },
+  { key:'fsa-kantoku-chusho', title:'中小・地域金融機関向けの総合的な監督指針', base:'https://www.fsa.go.jp/common/law/guide/chusho/' },
+  { key:'fsa-kantoku-kinsho', title:'金融商品取引業者等向けの総合的な監督指針', base:'https://www.fsa.go.jp/common/law/guide/kinyushohin/' },
+];
+function htmlEnt(s){ return s.replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(+n)); }
+// 行頭の見出し番号を正規化: ASCIIローマ→Unicode、番号内の空白除去（「II －１－２」→「Ⅱ－１－２」）
+function normHeadNum(l){
+  return l.replace(/^([IVXⅠ-Ⅹ])[ 　]*((?:[－\-−][ 　]*[０-９0-9]+)+)/, (m,r,rest)=>(KRN[r.toUpperCase()]||r)+rest.replace(/[ 　]/g,'').replace(/-/g,'－'));
+}
+// 監督指針の章HTMLページ→本文テキスト（h1〜footer手前を抽出、ブロック要素を改行に）
+function kantokuToText(html){
+  let s = html.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<style[\s\S]*?<\/style>/g,'').replace(/<noscript[\s\S]*?<\/noscript>/g,'');
+  const h1 = s.search(/<h1[^>]*>/); if (h1 < 0) return '';
+  let end = s.indexOf('<footer', h1); if (end < 0) end = s.length;
+  const top = s.indexOf('ページの先頭', h1); if (top >= 0 && top < end) end = top;
+  let seg = s.slice(h1, end).replace(/<\/(h1|h2|h3|h4|h5|p|li|dt|dd|tr|table)>/gi,'\n').replace(/<br\s*\/?>/gi,'\n');
+  seg = htmlEnt(seg.replace(/<[^>]+>/g,''));
+  return seg.split('\n').map(l => normHeadNum(l.replace(/[　]/g,' ').replace(/\s+/g,' ').trim())).filter(l => l).join('\n');
+}
+function fetchKantoku(prevRec, nowIso, laws, changed, report){
+  const today = nowIso.slice(0,10);
+  for (const g of GUIDELINES_HTML){
+    try {
+      const dir = (g.base.match(/\/([^/]+)\/$/)||[])[1] || '';
+      const idx = curlText(g.base + 'index.html');
+      // 同一ディレクトリの数字.htmlページ（章）を列挙
+      const re = new RegExp('href="(?:[^"]*\\/'+dir+'\\/|(?:\\.\\/)?)(\\d+)\\.html"','g');
+      const chs = [...new Set([...idx.matchAll(re)].map(m=>+m[1]))].sort((a,b)=>a-b);
+      if (!chs.length) throw new Error('章ページ無し');
+      let text = '';
+      for (const c of chs){ const u = g.base + (c<10?('0'+c):(''+c)) + '.html'; try { text += '\n' + kantokuToText(curlText(u)); } catch(_){} }
+      const blocks = parseGuideline(text);
+      if (blocks.length < 5) throw new Error('章節抽出不足('+blocks.length+')');
+      const hash = crypto.createHash('sha1').update(text).digest('hex').slice(0,16);
+      const prev = prevRec[g.key];
+      const updated = (prev && prev.revision_id === hash) ? prev.updated : today;
+      const rec = { law_id:g.key, title:g.title, group:'ガイドライン', type:'監督指針',
+        law_num:'', revision_id:hash, updated, article_count:blocks.length, egov_url:g.base+'index.html' };
+      laws.push(rec);
+      fs.writeFileSync(path.join(DATA, `${g.key}.json`), JSON.stringify({ ...rec, blocks }), 'utf8');
+      if (!prev || prev.revision_id !== hash) changed.push(g.title);
+      report.push(`${g.title}: ${blocks.length}節 (章${chs.length})`);
+    } catch(e){ report.push(`${g.key}: 失敗 ${String(e.message||e).slice(0,70)}`); }
+  }
 }
 function fetchGuidelines(prevRec, nowIso, laws, changed, report){
   const tmp = os.tmpdir(), today = nowIso.slice(0,10);
@@ -311,6 +360,8 @@ function main(){
 
   // 金融庁 事務ガイドライン（PDF）を取得して統合
   fetchGuidelines(prevRec, nowIso, laws, changed, report);
+  // 金融庁 監督指針（HTML章ページ）を取得して統合
+  fetchKantoku(prevRec, nowIso, laws, changed, report);
 
   const isFirst = !prev.laws.length;
   // グループ順を固定
