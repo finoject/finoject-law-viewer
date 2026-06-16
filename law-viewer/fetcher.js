@@ -132,12 +132,17 @@ function tableData(node){
     if(n.tag==='TableRow' || n.tag==='TableHeaderRow'){
       const header = (n.tag==='TableHeaderRow');
       // セル={t:整形済テキスト, rs:rowspan, cs:colspan, ct:罫線方式の継続(BorderTop:none)}。e-Govは①rowspan/colspan属性 ②罫線(空セル+BorderTop:none) の2方式で結合を表現するので両方保持
+      const norm = s => s.replace(/[\s　]+/g,' ').trim();   // 連続空白は単一スペースに（号/イロハ区切りの空白は保持）
       const cells=(n.children||[]).filter(c=>c&&(c.tag==='TableColumn'||c.tag==='TableHeaderColumn'))
-        .map(c=>{ const a=c.attr||{}; return {
-          t: kanjiNum(nodeText(c).replace(/[\s　]+/g,'').trim()),
-          rs: Math.max(1, parseInt(a.rowspan||'1',10)||1),
-          cs: Math.max(1, parseInt(a.colspan||'1',10)||1),
-          ct: a.BorderTop === 'none' };
+        .map(c=>{ const a=c.attr||{};
+          // セル内の各文(Sentence等)＝号「一」・イ・ロ・ハ等は別Sentenceなので、改行で区切る
+          const kids=(c.children||[]).filter(x=>x&&typeof x==='object');
+          const t = (kids.length>1) ? kids.map(x=>norm(nodeText(x))).filter(Boolean).join('\n') : norm(nodeText(c));
+          return {
+            t: kanjiNum(t),
+            rs: Math.max(1, parseInt(a.rowspan||'1',10)||1),
+            cs: Math.max(1, parseInt(a.colspan||'1',10)||1),
+            ct: a.BorderTop === 'none' };
         });
       rows.push({ header, cells });
       return;                                   // 行内はこれ以上降りない
