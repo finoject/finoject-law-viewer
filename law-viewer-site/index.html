@@ -55,6 +55,9 @@
   .body .p4{ background:rgba(147,51,234,.62); }   /* 紫 */
   .body .p5{ background:rgba(190,24,93,.64); }    /* 赤 */
   .body .p6{ background:rgba(13,148,136,.62); }   /* 青緑 */
+  /* 本文中の法令参照リンク（法第N条…） */
+  .body a.rf{ color:inherit; text-decoration:none; cursor:pointer; border-bottom:1px dashed rgba(127,176,255,.55); }
+  .body a.rf:hover{ color:#cfe7ff; border-bottom-color:#7fb0ff; background:rgba(127,176,255,.18); border-radius:2px; }
   .hint{ color:var(--muted); text-align:center; margin-top:60px; font-size:14px; line-height:1.8; }
   .hidden{ display:none; }
 
@@ -91,7 +94,16 @@
 
 <script>
 const G_ORDER = ['資金決済','犯収法','金商法','ガイドライン'];
-let INDEX=null, CUR=null, cache={};
+// 各府令・施行令・ガイドラインの本文中「法」が指す親法令（law_id）。新規追加時はここに対応を足す。
+const LAW_OF = {
+  '422CO0000000019':'421AC0000000059', '429M60000002007':'421AC0000000059', '422M60000002004':'421AC0000000059',
+  '422M60000002003':'421AC0000000059', '505M60000002048':'421AC0000000059',
+  '420CO0000000020':'419AC0000000022', '420M60000F5A001':'419AC0000000022',
+  '340CO0000000321':'323AC0000000025', '419M60000002052':'323AC0000000025',
+  'fsa-guide-16':'421AC0000000059', 'fsa-guide-14':'421AC0000000059',
+  'fsa-guide-05':'421AC0000000059', 'fsa-guide-17':'421AC0000000059',
+};
+let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='';
 
 const $ = s => document.querySelector(s);
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -134,6 +146,8 @@ async function loadLaw(id){
 async function openLaw(id, artNum){
   const d = await loadLaw(id);
   CUR = d;
+  REF = LAW_OF[d.law_id] || null;                                   // この文書の「法」が指す親法令
+  REFTITLE = REF ? ((INDEX.laws.find(l => l.law_id === REF)||{}).title || '') : '';
   document.querySelectorAll('.law').forEach(b => b.classList.toggle('active', b.dataset.id===id));
   $('#lawTitle').textContent = d.title;
   const updated = (d.updated||'').slice(0,10);
@@ -176,6 +190,15 @@ function paint(raw, k){
   while (depth-- > 0) out += '</span>';
   return out;
 }
+// 本文中「法第N条…」を、この文書の親法令の該当条文へのリンクにする（ホバーで表示・クリックで移動）。
+// 「法」の直前が漢字の場合（民法・会社法・○○法 等）は対象外＝親法の「法」と誤認しない。
+function linkRefs(html){
+  if (!REF) return html;
+  return html.replace(/(?<![一-鿿々])法第\d+条(?:の\d+)?(?:第\d+項)?(?:第\d+号(?:の\d+)?)?/g, m => {
+    const art = m.match(/第\d+条(?:の\d+)?/)[0];
+    return `<a class="rf" href="?law=${REF}&art=${encodeURIComponent(art)}" title="${esc(REFTITLE)} ${art} を開く（クリックで移動）">${m}</a>`;
+  });
+}
 function renderDoc(kw){
   const k = (kw||'').trim();
   let html='';
@@ -184,7 +207,7 @@ function renderDoc(kw){
     else {
       const text = (b.num+' '+b.cap+' '+b.body);
       if (k && !text.includes(k)) continue;          // 検索ヒットのみ表示
-      const body = paint(b.body, k);
+      const body = linkRefs(paint(b.body, k));
       const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
       html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}<div class="body">${body}</div></div>`;
     }
@@ -193,6 +216,16 @@ function renderDoc(kw){
   $('#doc').innerHTML = `<div class="wrap">${html}</div>`;
 }
 
+// 本文中の法令参照リンクのクリック → 即時リロードせずアプリ内ジャンプ（ホバーでリンク表示・クリックで移動）
+$('#doc').addEventListener('click', e => {
+  const a = e.target.closest('a.rf'); if (!a) return;
+  e.preventDefault();
+  const u = new URL(a.getAttribute('href'), location.href);
+  const law = u.searchParams.get('law'), art = u.searchParams.get('art');
+  history.pushState(null, '', '?law=' + law + '&art=' + encodeURIComponent(art));
+  $('#search').value = '';
+  openLaw(law, art);
+});
 $('#search').addEventListener('input', e => renderDoc(e.target.value));
 $('#burger').addEventListener('click', ()=> $('#side').classList.toggle('open'));
 
