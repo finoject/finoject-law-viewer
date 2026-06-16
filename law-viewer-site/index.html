@@ -78,6 +78,10 @@
   .rttl:hover{ color:#7fb0ff; text-decoration:underline; }
   .rarts{ font-size:12px; color:var(--muted); flex-basis:100%; }
   .rarts .ra{ color:#8fd0ff; text-decoration:none; margin-right:8px; border-bottom:1px dotted #2b66c0; cursor:pointer; }
+  .rsub{ font-size:12px; font-weight:700; color:#9fb4d6; margin:10px 0 2px; padding-top:8px; border-top:1px dashed var(--line); }
+  .rsub:first-of-type{ border-top:none; padding-top:0; }
+  .nsrc{ flex:none; font-size:11px; font-weight:700; color:#0b1220; background:#9fd0a0; border-radius:5px; padding:1px 6px; }
+  .nnote{ border-top:none; font-size:11px; }
   .rmore{ font-size:12px; color:var(--muted); padding:8px 2px 2px; border-top:1px solid var(--line); }
   .rmore a, .rarts a{ color:#8fd0ff; }
   .rk{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; flex:none; background:#475569; color:#fff; }
@@ -88,13 +92,13 @@
   .artreg:hover{ filter:brightness(1.15); }
   /* カッコの入れ子の深さで背景色を変える */
   .body .p{ border-radius:3px; padding:0 1px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
-  /* 入れ子で背景が重なり濃く見えるため、各色の不透明度を約7割に下げる（2026-06-17三根さん指示）*/
-  .body .p1{ background:rgba(37,99,235,.43); }    /* 青 */
-  .body .p2{ background:rgba(202,77,8,.46); }     /* 橙 */
-  .body .p3{ background:rgba(21,128,61,.43); }    /* 緑 */
-  .body .p4{ background:rgba(147,51,234,.43); }   /* 紫 */
-  .body .p5{ background:rgba(190,24,93,.45); }    /* 赤 */
-  .body .p6{ background:rgba(13,148,136,.43); }   /* 青緑 */
+  /* 入れ子で背景が重なり濃く見えるため、各色の不透明度を元の約8割に下げる（2026-06-17三根さん指示。7割は弱すぎ→8割へ）*/
+  .body .p1{ background:rgba(37,99,235,.50); }    /* 青 */
+  .body .p2{ background:rgba(202,77,8,.53); }     /* 橙 */
+  .body .p3{ background:rgba(21,128,61,.50); }    /* 緑 */
+  .body .p4{ background:rgba(147,51,234,.50); }   /* 紫 */
+  .body .p5{ background:rgba(190,24,93,.51); }    /* 赤 */
+  .body .p6{ background:rgba(13,148,136,.50); }   /* 青緑 */
   /* カッコの深さ別 折り畳み（「（…）」表示）。折り畳み規則は #doc[data-pd=N] でJS生成（高速） */
   .body .el{ display:none; opacity:.7; }
   #doc[data-pd] .p > .el{ opacity:.7; }
@@ -182,12 +186,13 @@ let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RPC
 // ===== 金融規制ウォッチ連携（逆引き：この法令に関する最近の規制動向を条文に重ねる）=====
 const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
-let REGBYLAW={}, REGBYART={}, REGLOADED=false;
+let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGLOADED=false;
 async function loadRegNews(){
   if (REGLOADED) return;
   REGLOADED = true;
   try {
     const d = await (await fetch(REG_URL + '?t=' + Date.now())).json();
+    REGLAWNEWS = d.lawnews || {};
     for (const it of (d.items||[])){
       for (const r of (it.lawrefs||[])){
         (REGBYLAW[r.id] = REGBYLAW[r.id] || []).push({ it, kind:r.kind, art:r.art });
@@ -418,23 +423,35 @@ function jpd(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${y
 function regKindTag(kind){ return (!kind||kind==='その他') ? '' : `<span class="rk k-${kind}">${esc(kind)}</span>`; }
 function jumpArt(num){ const t=[...document.querySelectorAll('.art')].find(a=>a.dataset.num===num); if(t){ t.classList.add('target'); t.scrollIntoView({block:'start'}); } }
 function regPanelHtml(lawId){
-  const list = REGBYLAW[lawId]; if(!list || !list.length) return '';
-  const byUrl = new Map();                                   // 同一ニュースが複数条にまたがる→URLで集約
+  const list = REGBYLAW[lawId] || [];
+  const news = REGLAWNEWS[lawId] || [];
+  if(!list.length && !news.length) return '';
+  // ① 当局の規制動向（FSA/JPX等）。同一ニュースが複数条にまたがる→URLで集約
+  const byUrl = new Map();
   for(const e of list){ const u=e.it.url; if(!byUrl.has(u)) byUrl.set(u,{it:e.it, kinds:new Set(), arts:new Set()});
     const g=byUrl.get(u); if(e.kind)g.kinds.add(e.kind); if(e.art)g.arts.add(e.art); }
   const rows=[...byUrl.values()].sort((a,b)=>(b.it.date||'').localeCompare(a.it.date||''));
   const SHOWN=12;
-  const items = rows.slice(0,SHOWN).map(g=>{
+  const officialRows = rows.slice(0,SHOWN).map(g=>{
     const arts=[...g.arts].map(a=>`<a class="ra" href="#" onclick="jumpArt('${a}');return false;" title="${esc(a)}へ移動">${esc(a)}</a>`).join('');
     const kinds=[...g.kinds].map(regKindTag).join('');
     return `<div class="rrow"><span class="rdate">${jpd(g.it.date)}</span><span class="rag">${esc(g.it.agency||'')}</span>${kinds}`
       + `<a class="rttl" href="${esc(g.it.url)}" target="_blank" rel="noopener">${esc(g.it.title)}</a>`
       + (arts?`<span class="rarts">該当条文: ${arts}</span>`:'') + `</div>`;
   }).join('');
-  const more = rows.length>SHOWN
-    ? `<div class="rmore">ほか ${rows.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`
-    : `<div class="rmore"><a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（新着監視）↗</a></div>`;
-  return `<details class="regpanel" open><summary>📡 この法令に関する最近の規制動向（${rows.length}件）</summary>${items}${more}</details>`;
+  const officialSec = list.length
+    ? `<div class="rsub">⚖️ 当局の動向（${rows.length}件）</div>${officialRows}`
+      + (rows.length>SHOWN ? `<div class="rmore">ほか ${rows.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`
+                           : `<div class="rmore"><a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（新着監視）↗</a></div>`)
+    : '';
+  // ② 関連ニュース（指定報道ソースの見出し＋リンク。有料記事でも「情報があること」を伝える）
+  const newsSec = news.length
+    ? `<div class="rsub">📰 関連ニュース（報道）</div>` + news.map(n=>
+        `<div class="rrow nrow"><span class="rdate">${jpd(n.date)}</span><span class="nsrc">${esc(n.source||'')}</span>`
+        + `<a class="rttl" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></div>`).join('')
+      + `<div class="rmore nnote">※ 報道見出しはGoogle ニュース検索より。有料記事は本文が読めない場合があります。</div>`
+    : '';
+  return `<details class="regpanel" open><summary>📡 この法令に関する最近の規制動向（${rows.length}件）</summary>${officialSec}${newsSec}</details>`;
 }
 function regArtBadge(lawId, num){
   const e = REGBYART[lawId+'|'+num]; if(!e||!e.length) return '';
