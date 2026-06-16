@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-16T18:00:54.497Z",
+  "generatedAt": "2026-06-16T18:24:33.268Z",
   "laws": [
     {
       "law_id": "421AC0000000059",
@@ -255,6 +255,17 @@
       "egov_url": "https://laws.e-gov.go.jp/law/428M60020000003"
     },
     {
+      "law_id": "fsa-kantoku-kinsho",
+      "title": "金融商品取引業者等向けの総合的な監督指針",
+      "group": "ガイドライン",
+      "type": "監督指針",
+      "law_num": "",
+      "revision_id": "ae6f5fbb729f7c49",
+      "updated": "2026-06-16",
+      "article_count": 51,
+      "egov_url": "https://www.fsa.go.jp/common/law/guide/kinyushohin/index.html"
+    },
+    {
       "law_id": "fsa-guide-14",
       "title": "事務ガイドライン 第三分冊：14 資金移動業者関係",
       "group": "ガイドライン",
@@ -273,7 +284,7 @@
       "law_num": "",
       "revision_id": "7ba3e0bdd127087c",
       "updated": "2026-06-16",
-      "article_count": 123,
+      "article_count": 120,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/16.pdf"
     },
     {
@@ -284,7 +295,7 @@
       "law_num": "",
       "revision_id": "e4c97dfe892bac10",
       "updated": "2026-06-16",
-      "article_count": 76,
+      "article_count": 75,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/17.pdf"
     },
     {
@@ -295,22 +306,36 @@
       "law_num": "",
       "revision_id": "f6fb0e7502b4662a",
       "updated": "2026-06-16",
-      "article_count": 104,
+      "article_count": 103,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/05.pdf"
+    },
+    {
+      "law_id": "fsa-kantoku-city",
+      "title": "主要行等向けの総合的な監督指針",
+      "group": "ガイドライン",
+      "type": "監督指針",
+      "law_num": "",
+      "revision_id": "b426ee68e5228429",
+      "updated": "2026-06-16",
+      "article_count": 45,
+      "egov_url": "https://www.fsa.go.jp/common/law/guide/city/index.html"
+    },
+    {
+      "law_id": "fsa-kantoku-chusho",
+      "title": "中小・地域金融機関向けの総合的な監督指針",
+      "group": "ガイドライン",
+      "type": "監督指針",
+      "law_num": "",
+      "revision_id": "5bc61dee08d313a4",
+      "updated": "2026-06-16",
+      "article_count": 93,
+      "egov_url": "https://www.fsa.go.jp/common/law/guide/chusho/index.html"
     }
   ],
   "changed": [
-    "銀行法",
-    "銀行法施行令",
-    "銀行法施行規則",
-    "会社法",
-    "会社法施行令",
-    "会社法施行規則",
-    "会社計算規則",
-    "電子公告規則",
-    "個人情報の保護に関する法律",
-    "個人情報の保護に関する法律施行令",
-    "個人情報の保護に関する法律施行規則"
+    "主要行等向けの総合的な監督指針",
+    "中小・地域金融機関向けの総合的な監督指針",
+    "金融商品取引業者等向けの総合的な監督指針"
   ],
   "isFirst": false
 }
