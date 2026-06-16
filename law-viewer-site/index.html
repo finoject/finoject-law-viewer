@@ -103,7 +103,7 @@ const LAW_OF = {
   'fsa-guide-16':'421AC0000000059', 'fsa-guide-14':'421AC0000000059',
   'fsa-guide-05':'421AC0000000059', 'fsa-guide-17':'421AC0000000059',
 };
-let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='';
+let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set();
 
 const $ = s => document.querySelector(s);
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -148,6 +148,7 @@ async function openLaw(id, artNum){
   CUR = d;
   REF = LAW_OF[d.law_id] || null;                                   // この文書の「法」が指す親法令
   REFTITLE = REF ? ((INDEX.laws.find(l => l.law_id === REF)||{}).title || '') : '';
+  ARTSET = new Set((d.blocks||[]).filter(b => b.num).map(b => b.num));  // 自文書に実在する条番号（自リンクの可否判定用）
   document.querySelectorAll('.law').forEach(b => b.classList.toggle('active', b.dataset.id===id));
   $('#lawTitle').textContent = d.title;
   const updated = (d.updated||'').slice(0,10);
@@ -169,18 +170,36 @@ async function openLaw(id, artNum){
   } else { $('#doc').scrollTop = 0; }
 }
 
-// カッコ（）()の入れ子の深さで背景色を変える＋検索語ハイライト（エスケープ後に1パスで処理。制御文字不要）
-function paint(raw, k){
-  const s = esc(raw), kk = k ? esc(k) : '';
-  // 番号・記号だけのカッコ（（1）（一）（イ）（ア）（a）等）は条文番号なので色付けしない
-  const MARKER = /^[（(](?:[0-9０-９一二三四五六七八九十百千〇]+|[ぁ-んァ-ヶa-zA-Zａ-ｚＡ-Ｚ])[）)]/;
+// 本文を1パスで処理（エスケープ後・制御文字不要）:
+//  ① 検索語ハイライト ② カッコ（）の入れ子の深さで背景色分け（番号・記号だけのカッコは除外）
+//  ③ 条文参照リンク … 「法第N条…」→この文書の親法令、「第N条…」（法/名称法を伴わない）→この文書自身。
+//     直前が漢字・閉じカッコの場合は対象外（民法・○○法第N条 や （…号）第N条 の誤リンクを防ぐ）。
+function render(raw, k){
+  const text = esc(raw), kk = k ? esc(k) : '';
+  const MARKER = /[（(](?:[0-9０-９一二三四五六七八九十百千〇]+|[ぁ-んァ-ヶa-zA-Zａ-ｚＡ-Ｚ])[）)]/y;  // 番号・記号のみのカッコ
+  const REFRE  = /(法)?第\d+条(?:の\d+)?(?:第\d+項)?(?:第\d+号(?:の\d+)?)?/y;                        // 条文参照
+  const myId = CUR && CUR.law_id, myTitle = (CUR && CUR.title) || '';
   let out='', depth=0, i=0;
-  while (i < s.length){
-    if (kk && s.startsWith(kk, i)){ out += '<mark>'+kk+'</mark>'; i += kk.length; continue; }
-    const ch = s[i];
+  while (i < text.length){
+    if (kk && text.startsWith(kk, i)){ out += '<mark>'+kk+'</mark>'; i += kk.length; continue; }
+    const ch = text[i];
+    if (ch==='法' || ch==='第'){
+      REFRE.lastIndex = i; const m = REFRE.exec(text);
+      if (m && m.index === i && !/[一-鿿々）)]/.test(text[i-1] || '')){   // 直前が漢字/閉じカッコなら誤リンク回避
+        const isHou = !!m[1];
+        const tid = isHou ? REF : myId;                                    // 法あり→親法令／法なし→自文書
+        const art = m[0].match(/第\d+条(?:の\d+)?/)[0];
+        // 法あり=親法令へ（常時）。法なし=自文書だが、自文書に実在する条のときだけ（他法引用文中の第N条を誤リンクしない）
+        if (tid && (isHou || ARTSET.has(art))){
+          const ttl = isHou ? REFTITLE : myTitle;
+          out += '<a class="rf" href="?law='+tid+'&art='+encodeURIComponent(art)+'" title="'+esc(ttl)+' '+art+' を開く（クリックで移動）">'+m[0]+'</a>';
+          i += m[0].length; continue;
+        }
+      }
+    }
     if (ch==='（' || ch==='('){
-      const m = s.slice(i).match(MARKER);
-      if (m){ out += m[0]; i += m[0].length; continue; }   // 番号カッコはそのまま出力
+      MARKER.lastIndex = i; const mk = MARKER.exec(text);
+      if (mk && mk.index === i){ out += mk[0]; i += mk[0].length; continue; }   // 番号カッコは無色のまま
       depth++; out += '<span class="p p'+((depth-1)%6+1)+'">' + ch;
     }
     else if ((ch==='）' || ch===')') && depth>0){ out += ch + '</span>'; depth--; }
@@ -190,15 +209,6 @@ function paint(raw, k){
   while (depth-- > 0) out += '</span>';
   return out;
 }
-// 本文中「法第N条…」を、この文書の親法令の該当条文へのリンクにする（ホバーで表示・クリックで移動）。
-// 「法」の直前が漢字の場合（民法・会社法・○○法 等）は対象外＝親法の「法」と誤認しない。
-function linkRefs(html){
-  if (!REF) return html;
-  return html.replace(/(?<![一-鿿々])法第\d+条(?:の\d+)?(?:第\d+項)?(?:第\d+号(?:の\d+)?)?/g, m => {
-    const art = m.match(/第\d+条(?:の\d+)?/)[0];
-    return `<a class="rf" href="?law=${REF}&art=${encodeURIComponent(art)}" title="${esc(REFTITLE)} ${art} を開く（クリックで移動）">${m}</a>`;
-  });
-}
 function renderDoc(kw){
   const k = (kw||'').trim();
   let html='';
@@ -207,7 +217,7 @@ function renderDoc(kw){
     else {
       const text = (b.num+' '+b.cap+' '+b.body);
       if (k && !text.includes(k)) continue;          // 検索ヒットのみ表示
-      const body = linkRefs(paint(b.body, k));
+      const body = render(b.body, k);
       const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
       html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}<div class="body">${body}</div></div>`;
     }
