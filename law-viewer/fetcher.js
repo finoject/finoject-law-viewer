@@ -250,6 +250,12 @@ function fetchGuidelines(prevRec, nowIso, laws, changed, report){
       execFileSync('curl', ['-sL','--max-time','90','-A',UA,'-o',pdf, GBASE+g.file], { maxBuffer:300*1024*1024 });
       execFileSync('pdftotext', ['-enc','UTF-8','-layout','-nopgbrk', pdf, txt]);
       const text = fs.readFileSync(txt,'utf8');
+      if (g.key==='fsa-guide-16'){   // 一時デバッグ: ランナーのpdftotext出力（見出し折返し付近のインデント）
+        const ls = text.split('\n');
+        for (let i=0;i<ls.length;i++){ if (/存在す$|る場合の主な着眼点/.test(ls[i].trim())){
+          for (let k=i-1;k<=i+3 && k<ls.length;k++){ const ind=(ls[k].match(/^[ \t]*/)[0]||'').length; console.log(`DBG L${k} ind=${ind} :: ${ls[k].trim().slice(0,30)}`); }
+          console.log('DBG ---'); break; } }
+      }
       const blocks = parseGuideline(text);
       if (!blocks.length) throw new Error('章節抽出ゼロ');
       const hash = crypto.createHash('sha1').update(text).digest('hex').slice(0,16);
