@@ -64,6 +64,28 @@
   .art .body{ margin-top:6px; font-size:14px; line-height:1.85; white-space:pre-wrap; }
   .art.target{ background:rgba(46,108,240,.12); border-radius:8px; }
   mark{ background:var(--hi); color:#0b1220; border-radius:2px; padding:0 1px; }
+  /* 規制動向パネル（逆引き）＋条文バッジ */
+  .regpanel{ border:1px solid #2b66c0; background:#0e1a2e; border-radius:10px; padding:8px 12px; margin:4px 0 16px; }
+  .regpanel>summary{ cursor:pointer; font-weight:700; color:#8fd0ff; font-size:14px; list-style:none; }
+  .regpanel>summary::-webkit-details-marker{ display:none; }
+  .regpanel>summary::before{ content:'▾ '; }
+  .regpanel:not([open])>summary::before{ content:'▸ '; }
+  .rrow{ display:flex; flex-wrap:wrap; align-items:baseline; gap:7px; padding:7px 2px; border-top:1px solid var(--line); font-size:13px; }
+  .rrow:first-of-type{ margin-top:6px; }
+  .rdate{ color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
+  .rag{ color:#bcd0f0; font-size:11px; background:#16223a; border-radius:5px; padding:1px 6px; flex:none; }
+  .rttl{ color:var(--fg); text-decoration:none; flex:1; min-width:200px; }
+  .rttl:hover{ color:#7fb0ff; text-decoration:underline; }
+  .rarts{ font-size:12px; color:var(--muted); flex-basis:100%; }
+  .rarts .ra{ color:#8fd0ff; text-decoration:none; margin-right:8px; border-bottom:1px dotted #2b66c0; cursor:pointer; }
+  .rmore{ font-size:12px; color:var(--muted); padding:8px 2px 2px; border-top:1px solid var(--line); }
+  .rmore a, .rarts a{ color:#8fd0ff; }
+  .rk{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; flex:none; background:#475569; color:#fff; }
+  .rk.k-パブコメ{ background:#b45309; } .rk.k-改正{ background:#1d4ed8; } .rk.k-公布{ background:#15803d; }
+  .rk.k-ガイドライン{ background:#7c3aed; } .rk.k-告示, .rk.k-通達等{ background:#475569; }
+  .artreg{ display:inline-block; margin-left:8px; font-size:11px; font-weight:700; color:#fff; background:#b45309;
+    border-radius:6px; padding:1px 7px; text-decoration:none; vertical-align:middle; }
+  .artreg:hover{ filter:brightness(1.15); }
   /* カッコの入れ子の深さで背景色を変える */
   .body .p{ border-radius:3px; padding:0 1px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
   .body .p1{ background:rgba(37,99,235,.62); }    /* 青 */
@@ -154,12 +176,35 @@ const LAW_OF = {
   'fsa-kantoku-kinsho':'323AC0000000025',                                        // 金商業者監督指針→金商法
 };
 let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RPC=[], curMaxDepth=0;
+// ===== 金融規制ウォッチ連携（逆引き：この法令に関する最近の規制動向を条文に重ねる）=====
+const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
+const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
+let REGBYLAW={}, REGBYART={}, REGLOADED=false;
+async function loadRegNews(){
+  if (REGLOADED) return;
+  REGLOADED = true;
+  try {
+    const d = await (await fetch(REG_URL + '?t=' + Date.now())).json();
+    for (const it of (d.items||[])){
+      for (const r of (it.lawrefs||[])){
+        (REGBYLAW[r.id] = REGBYLAW[r.id] || []).push({ it, kind:r.kind, art:r.art });
+        if (r.art){ const key = r.id+'|'+r.art; (REGBYART[key] = REGBYART[key] || []).push({ it, kind:r.kind }); }
+      }
+    }
+    // 各法令の動向は日付降順
+    for (const id in REGBYLAW) REGBYLAW[id].sort((a,b)=> (b.it.date||'').localeCompare(a.it.date||''));
+    // 既に法令を開いていれば再描画してパネル/バッジを反映（ディープリンク時の取得遅延に対応）
+    const sv = document.querySelector('#search');
+    if (CUR && !(sv && sv.value)) renderDoc('');
+  } catch(e){ /* 取得失敗時は連携なしで通常表示 */ }
+}
 
 const $ = s => document.querySelector(s);
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
 async function boot(){
   INDEX = await (await fetch('./data/index.json?t='+Date.now())).json();
+  loadRegNews();               // 規制動向は裏で読み込み（失敗しても本体表示は継続）
   renderSidebar();
   // ディープリンク: ?law=ID&art=第九条
   const q = new URLSearchParams(location.search);
@@ -365,9 +410,39 @@ function effMaxDepth(rpc){
   for (let d=absMax; d>=1; d--) if ((rpc[d]||0) >= 2) return d;
   return absMax;   // すべて1個以下なら絶対最大
 }
+// ===== 規制動向の重ね表示（逆引きパネル＋条文バッジ）=====
+function jpd(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${y}.${+m}.${+d}`; }
+function regKindTag(kind){ return (!kind||kind==='その他') ? '' : `<span class="rk k-${kind}">${esc(kind)}</span>`; }
+function jumpArt(num){ const t=[...document.querySelectorAll('.art')].find(a=>a.dataset.num===num); if(t){ t.classList.add('target'); t.scrollIntoView({block:'start'}); } }
+function regPanelHtml(lawId){
+  const list = REGBYLAW[lawId]; if(!list || !list.length) return '';
+  const byUrl = new Map();                                   // 同一ニュースが複数条にまたがる→URLで集約
+  for(const e of list){ const u=e.it.url; if(!byUrl.has(u)) byUrl.set(u,{it:e.it, kinds:new Set(), arts:new Set()});
+    const g=byUrl.get(u); if(e.kind)g.kinds.add(e.kind); if(e.art)g.arts.add(e.art); }
+  const rows=[...byUrl.values()].sort((a,b)=>(b.it.date||'').localeCompare(a.it.date||''));
+  const SHOWN=12;
+  const items = rows.slice(0,SHOWN).map(g=>{
+    const arts=[...g.arts].map(a=>`<a class="ra" href="#" onclick="jumpArt('${a}');return false;" title="${esc(a)}へ移動">${esc(a)}</a>`).join('');
+    const kinds=[...g.kinds].map(regKindTag).join('');
+    return `<div class="rrow"><span class="rdate">${jpd(g.it.date)}</span><span class="rag">${esc(g.it.agency||'')}</span>${kinds}`
+      + `<a class="rttl" href="${esc(g.it.url)}" target="_blank" rel="noopener">${esc(g.it.title)}</a>`
+      + (arts?`<span class="rarts">該当条文: ${arts}</span>`:'') + `</div>`;
+  }).join('');
+  const more = rows.length>SHOWN
+    ? `<div class="rmore">ほか ${rows.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`
+    : `<div class="rmore"><a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（新着監視）↗</a></div>`;
+  return `<details class="regpanel" open><summary>📡 この法令に関する最近の規制動向（${rows.length}件）</summary>${items}${more}</details>`;
+}
+function regArtBadge(lawId, num){
+  const e = REGBYART[lawId+'|'+num]; if(!e||!e.length) return '';
+  const kinds=[...new Set(e.map(x=>x.kind))].filter(k=>k&&k!=='その他');
+  const tip = e.map(x=>jpd(x.it.date)+' '+(x.kind||'')).join(' / ');
+  return `<a class="artreg" href="${esc(e[0].it.url)}" target="_blank" rel="noopener" title="${esc(tip)}">📡 規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
+}
 function renderDoc(kw){
   const k = (kw||'').trim();
   let html=''; RPC=[];
+  const badgedNums = new Set();   // 条番号は法令内で一意でない（附則等で重複）→規制動向バッジは本則（最初の出現）のみ
   for (const b of CUR.blocks){
     if (b.t==='h'){ html += `<div class="h lv${b.lv}">${esc(b.x)}</div>`; }
     else {
@@ -375,11 +450,14 @@ function renderDoc(kw){
       let body = render(b.body, k, b.num);
       if (b.tables) body = body.replace(/⟦TBL:(\d+)⟧/g, (m,i) => b.tables[+i] ? tableHtml(b.tables[+i], k) : '');
       const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
-      html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}<div class="body">${body}</div></div>`;
+      let rbadge = '';
+      if (CUR && b.num && !badgedNums.has(b.num)){ rbadge = regArtBadge(CUR.law_id, b.num); if (rbadge) badgedNums.add(b.num); }
+      html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}${rbadge}<div class="body">${body}</div></div>`;
     }
   }
   if (k && !/class="art"/.test(html)) html = `<div class="hint">「${esc(k)}」に一致する条文はありません</div>`;
-  $('#doc').innerHTML = `<div class="wrap">${html}</div>`;
+  const panel = (CUR && !k) ? regPanelHtml(CUR.law_id) : '';   // 検索中以外は冒頭に規制動向パネル
+  $('#doc').innerHTML = `<div class="wrap">${panel}${html}</div>`;
   curMaxDepth = effMaxDepth(RPC);   // この描画での実効最大カッコ深さ（applyParenが使用）
   applyParen();          // カッコ折り畳み状態を再適用（CSSクラス1発）
 }
