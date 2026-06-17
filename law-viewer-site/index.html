@@ -186,25 +186,42 @@ let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RPC
 // ===== 金融規制ウォッチ連携（逆引き：この法令に関する最近の規制動向を条文に重ねる）=====
 const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
-let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGLOADED=false;
-async function loadRegNews(){
-  if (REGLOADED) return;
+let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGLOADED=false, REG_GEN=null;
+// 規制動向＋関連ニュースを取得して索引化。force=true は定期再取得（タブを開いたまま最新化）。
+async function loadRegNews(force){
+  if (REGLOADED && !force) return;
   REGLOADED = true;
   try {
     const d = await (await fetch(REG_URL + '?t=' + Date.now())).json();
-    REGLAWNEWS = d.lawnews || {};
+    if (force && d.generatedAt && d.generatedAt === REG_GEN) return;   // 変化なし→DOMを触らない（読書位置を乱さない）
+    REG_GEN = d.generatedAt || REG_GEN;
+    const byLaw={}, byArt={};                                          // 新規オブジェクトに作り直す（重複蓄積を防ぐ）
     for (const it of (d.items||[])){
       for (const r of (it.lawrefs||[])){
-        (REGBYLAW[r.id] = REGBYLAW[r.id] || []).push({ it, kind:r.kind, art:r.art });
-        if (r.art){ const key = r.id+'|'+r.art; (REGBYART[key] = REGBYART[key] || []).push({ it, kind:r.kind }); }
+        (byLaw[r.id] = byLaw[r.id] || []).push({ it, kind:r.kind, art:r.art });
+        if (r.art){ const key = r.id+'|'+r.art; (byArt[key] = byArt[key] || []).push({ it, kind:r.kind }); }
       }
     }
-    // 各法令の動向は日付降順
-    for (const id in REGBYLAW) REGBYLAW[id].sort((a,b)=> (b.it.date||'').localeCompare(a.it.date||''));
-    // 既に法令を開いていれば再描画してパネル/バッジを反映（ディープリンク時の取得遅延に対応）
+    for (const id in byLaw) byLaw[id].sort((a,b)=> (b.it.date||'').localeCompare(a.it.date||''));   // 日付降順
+    REGBYLAW=byLaw; REGBYART=byArt; REGLAWNEWS=d.lawnews||{};
     const sv = document.querySelector('#search');
-    if (CUR && !(sv && sv.value)) renderDoc('');
+    if (CUR && !(sv && sv.value)){
+      if (force) refreshRegPanel();      // 定期更新時はパネルだけ差し替え（全再描画せず＝スクロール位置維持）
+      else renderDoc('');                // 初回（またはディープリンク取得遅延）は通常描画
+    }
   } catch(e){ /* 取得失敗時は連携なしで通常表示 */ }
+}
+// パネル部分のみをその場で差し替える（読んでいる位置・開閉状態を保つ）。バッジは次のページ遷移時に反映。
+function refreshRegPanel(){
+  if (!CUR) return;
+  const html = regPanelHtml(CUR.law_id);
+  const existing = document.querySelector('#doc .regpanel');
+  const wrap = document.querySelector('#doc .wrap');
+  if (existing){
+    if (html){ const tmp=document.createElement('div'); tmp.innerHTML=html; const fresh=tmp.firstElementChild; if (fresh){ fresh.open = existing.open; existing.replaceWith(fresh); } }
+  } else if (html && wrap){
+    const tmp=document.createElement('div'); tmp.innerHTML=html; if (tmp.firstElementChild) wrap.insertBefore(tmp.firstElementChild, wrap.firstChild);
+  }
 }
 
 const $ = s => document.querySelector(s);
@@ -213,6 +230,7 @@ function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>'
 async function boot(){
   INDEX = await (await fetch('./data/index.json?t='+Date.now())).json();
   loadRegNews();               // 規制動向は裏で読み込み（失敗しても本体表示は継続）
+  setInterval(() => loadRegNews(true), 12*60*1000);   // タブを開いたまま12分おきにニュース/動向を最新化（変化時のみパネル差し替え）
   renderSidebar();
   // ディープリンク: ?law=ID&art=第九条
   const q = new URLSearchParams(location.search);
