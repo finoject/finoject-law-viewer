@@ -2,7 +2,10 @@ name: fetch-laws-and-publish
 
 on:
   schedule:
-    - cron: '35 22 * * *'   # 22:35 UTC = 毎朝 07:35 JST
+    # 法令は更新頻度が低いが、1回/日だとその回がドロップされた日に更新が丸ごと欠落する。
+    # 分は :00 を避ける（GitHubは毎時0分が最も混雑し schedule がドロップ/遅延しやすい＝公式注意）。
+    # 朝・昼・夜の3枠に冗長化し、1枠スキップされても当日中に更新される（reg-monitorと同方針）。
+    - cron: '37 22,4,10 * * *'   # JST 07:37 / 13:37 / 19:37
   workflow_dispatch:
 
 permissions:
