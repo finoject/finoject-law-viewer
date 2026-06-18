@@ -7,7 +7,8 @@
 // 使い方: GET https://<your-worker>.workers.dev/?url=<取得したいURL（URLエンコード）>
 // 例:      https://finoject-proxy.example.workers.dev/?url=https%3A%2F%2Fwww.fsa.go.jp%2Fnews%2F...
 
-const ALLOW = ['fsa.go.jp', 'boj.or.jp', 'jpx.co.jp', 'jsda.or.jp', 'jvcea.or.jp', 'jicpa.or.jp'];
+const ALLOW = ['fsa.go.jp', 'boj.or.jp', 'jpx.co.jp', 'jsda.or.jp', 'jvcea.or.jp', 'jicpa.or.jp',
+  'yahoo.co.jp', 'shugiin.go.jp', 'sangiin.go.jp'];   // yahoo=関連ニュース(news.yahoo.co.jp)、衆参=将来の議案ページ用
 
 export default {
   async fetch(request) {

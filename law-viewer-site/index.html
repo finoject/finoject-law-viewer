@@ -659,10 +659,10 @@ function regPanelHtml(lawId){
     : '';
   // ② 関連ニュース（指定報道ソースの見出し＋リンク。有料記事でも「情報があること」を伝える）
   const newsSec = news.length
-    ? `<div class="rsub">📰 関連ニュース（報道）</div>` + news.map(n=>
-        `<div class="rrow nrow"><span class="rdate">${jpd(n.date)}</span><span class="nsrc">${esc(n.source||'')}</span>`
-        + `<a class="rttl" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></div>`).join('')
-      + `<div class="rmore nnote">※ 報道見出しはGoogle ニュース検索より。有料記事は本文が読めない場合があります。</div>`
+    ? `<div class="rsub">📰 関連ニュース（Yahoo!ニュース）</div>` + news.map(n=>
+        `<div class="rrow nrow"><span class="nsrc">${esc(n.source||'Yahoo')}</span>`
+        + `<a class="rttl lvlink" href="${escA(n.url)}" data-lv-url="${escA(n.url)}" data-lv-mode="proxy" data-lv-title="${escA(n.title)}">${esc(n.title)}</a></div>`).join('')
+      + `<div class="rmore nnote">※ Yahoo!ニュース検索より。クリックで本文を表示（有料記事は一部のみ）。</div>`
     : '';
   return `<details class="regpanel" open><summary>📡 この法令に関する最近の規制動向（${rows.length}件）</summary>${diet}${officialSec}${newsSec}</details>`;
 }
