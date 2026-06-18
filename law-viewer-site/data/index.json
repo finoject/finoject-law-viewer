@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T16:55:29.111Z",
+  "generatedAt": "2026-06-18T17:08:38.297Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -332,6 +332,17 @@
       "egov_url": "https://www.fsa.go.jp/common/law/guide/chusho/index.html"
     },
     {
+      "law_id": "358AC0000000032",
+      "title": "358AC0000000032",
+      "group": "貸金業法",
+      "type": "法律",
+      "law_num": "",
+      "revision_id": "",
+      "updated": "",
+      "article_count": 0,
+      "egov_url": "https://laws.e-gov.go.jp/law/358AC0000000032"
+    },
+    {
       "law_id": "324AC0000000228",
       "title": "外国為替及び外国貿易法",
       "group": "外為法",
@@ -343,6 +354,28 @@
       "egov_url": "https://laws.e-gov.go.jp/law/324AC0000000228"
     },
     {
+      "law_id": "412AC0000000101",
+      "title": "金融サービスの提供及び利用環境の整備等に関する法律",
+      "group": "金サ法",
+      "type": "法律",
+      "law_num": "平成12年法律第101号",
+      "revision_id": "412AC0000000101_20260525_506AC0000000052",
+      "updated": "2025-11-27T18:06:36+09:00",
+      "article_count": 207,
+      "egov_url": "https://laws.e-gov.go.jp/law/412AC0000000101"
+    },
+    {
+      "law_id": "416AC0000000154",
+      "title": "信託業法",
+      "group": "信託業法",
+      "type": "法律",
+      "law_num": "平成16年法律第154号",
+      "revision_id": "416AC0000000154_20260601_507AC0000000066",
+      "updated": "2026-05-25T17:17:17+09:00",
+      "article_count": 235,
+      "egov_url": "https://laws.e-gov.go.jp/law/416AC0000000154"
+    },
+    {
       "law_id": "355CO0000000260",
       "title": "外国為替令",
       "group": "外為法",
@@ -352,8 +385,48 @@
       "updated": "2025-07-16T09:16:22+09:00",
       "article_count": 109,
       "egov_url": "https://laws.e-gov.go.jp/law/355CO0000000260"
+    },
+    {
+      "law_id": "412CO0000000484",
+      "title": "金融サービスの提供及び利用環境の整備等に関する法律施行令",
+      "group": "金サ法",
+      "type": "政令",
+      "law_num": "平成12年政令第484号",
+      "revision_id": "412CO0000000484_20260525_507CO0000000244",
+      "updated": "2025-07-16T09:06:52+09:00",
+      "article_count": 74,
+      "egov_url": "https://laws.e-gov.go.jp/law/412CO0000000484"
+    },
+    {
+      "law_id": "416CO0000000427",
+      "title": "信託業法施行令",
+      "group": "信託業法",
+      "type": "政令",
+      "law_num": "平成16年政令第427号",
+      "revision_id": "416CO0000000427_20260525_507CO0000000244",
+      "updated": "2025-07-16T09:29:40+09:00",
+      "article_count": 73,
+      "egov_url": "https://laws.e-gov.go.jp/law/416CO0000000427"
+    },
+    {
+      "law_id": "358CO0000000181",
+      "title": "貸金業法施行令",
+      "group": "貸金業法",
+      "type": "政令",
+      "law_num": "昭和58年政令第181号",
+      "revision_id": "358CO0000000181_20260525_507CO0000000244",
+      "updated": "2025-07-16T09:11:28+09:00",
+      "article_count": 77,
+      "egov_url": "https://laws.e-gov.go.jp/law/358CO0000000181"
     }
   ],
-  "changed": [],
+  "changed": [
+    "358AC0000000032",
+    "貸金業法施行令",
+    "信託業法",
+    "信託業法施行令",
+    "金融サービスの提供及び利用環境の整備等に関する法律",
+    "金融サービスの提供及び利用環境の整備等に関する法律施行令"
+  ],
   "isFirst": false
 }
