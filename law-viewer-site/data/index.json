@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T13:50:55.427Z",
+  "generatedAt": "2026-06-18T15:52:13.598Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -330,8 +330,33 @@
       "updated": "2026-06-16",
       "article_count": 93,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/chusho/index.html"
+    },
+    {
+      "law_id": "324AC0000000228",
+      "title": "外国為替及び外国貿易法",
+      "group": "外為法",
+      "type": "法律",
+      "law_num": "昭和24年法律第228号",
+      "revision_id": "324AC0000000228_20260605_508AC0000000030",
+      "updated": "2026-06-05T14:21:51+09:00",
+      "article_count": 210,
+      "egov_url": "https://laws.e-gov.go.jp/law/324AC0000000228"
+    },
+    {
+      "law_id": "355CO0000000260",
+      "title": "外国為替令",
+      "group": "外為法",
+      "type": "政令",
+      "law_num": "昭和55年政令第260号",
+      "revision_id": "355CO0000000260_20260525_507CO0000000244",
+      "updated": "2025-07-16T09:16:22+09:00",
+      "article_count": 109,
+      "egov_url": "https://laws.e-gov.go.jp/law/355CO0000000260"
     }
   ],
-  "changed": [],
+  "changed": [
+    "外国為替及び外国貿易法",
+    "外国為替令"
+  ],
   "isFirst": false
 }
