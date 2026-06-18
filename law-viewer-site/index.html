@@ -726,40 +726,96 @@ async function previewRef(a){
   _rpEl.style.left=left+'px'; _rpEl.style.top=top+'px';
 }
 function hideRefPop(){ if(_rpEl) _rpEl.classList.add('hidden'); }
-// ===== 定義語ポップアップ（「○○とは…」を網羅抽出し、本文中の定義語にホバーで定義を表示）=====
-let GLOSSARY={}, _glossRe=null, _glossObs=null;
-// 1文書から定義語を抽出して g に追記（既存キーは上書きしない＝先に入れた方が優先）。
-function scanDefs(d, g){
-  const add=(t,def,art)=>{ t=(t||'').replace(/^[「『]|[」』]$/g,'').trim(); def=(def||'').trim();
-    if(t.length<2 || t.length>40 || def.length<2 || /[「」『』]/.test(t)) return;
-    if(!g[t]) g[t]={ def: def.length>260?def.slice(0,260)+'…':def, art }; };
+// ===== 定義語ポップアップ（定義を網羅抽出→スコープ/信頼度付き辞書→本文の定義語にホバー表示）=====
+// 設計: ①略称定義(以下「X」という)の前方句捕捉 ②明示定義(「X」とは…をいう) ③この法律/章/節/条における限定
+//       ④列挙(次に掲げる…を「X」という) ⑤意義は…による ⑥表セルも走査。スコープ管理＋親法令はdoc定義のみ継承。
+let GLOSSARY={}, _glossRe=null, _glossObs=null, GLOSS_ARTSCOPE={};
+const SCOPE_RANK={ article:1, subsection:2, section:3, chapter:4, doc:5 };
+function normTerm(s){ return (s||'').normalize('NFKC').replace(/[「」『』（）()\s　]/g,'').trim(); }
+// 1文書を走査し g（normKey→[entry]）へ追加。trackScope=true(自文書)のみ章節→条のスコープ表を作る。parentはdoc定義のみ継承。
+function scanDefs(d, source, trackScope){
+  const add=(term,def,conf,kind,sType,sKey,art)=>{
+    term=(term||'').replace(/^[「『（(\s　]+|[」』）)\s　]+$/g,'').trim();
+    def=(def||'').replace(/^[\s　、，]*\d+[\s　]+/,'').replace(/^[\s　、，]+/,'').replace(/\s+$/,'').trim();  // 先頭の項番号/読点ノイズ除去
+    if(term.length<2||term.length>40||def.length<2) return;
+    if(/[。、，\n]/.test(term)) return;                       // 用語に句読点が混じる＝誤抽出
+    if(source==='parent' && sType!=='doc') return;            // 親法令は広域(doc)定義のみ継承
+    const key=normTerm(term); if(!key) return;
+    if(def.length>260) def=def.slice(0,260)+'…';
+    const arr=g0(key);
+    if(arr.some(e=>e.scope.type===sType&&e.scope.key===sKey&&e.source===source)) return;  // 同一スコープ重複は1件
+    arr.push({ term, def, conf, kind, scope:{type:sType,key:sKey}, source, art });
+  };
+  const g=GLOSSARY, g0=k=>(g[k]=g[k]||[]);
+  let curCh=null, curSec=null;
   for(const b of (d.blocks||[])){
-    if(b.t==='h' || !b.body) continue; const art=b.num, body=b.body; let m;
-    // ① 「X」とは／というのは … 。（終止動詞を限定せず、文末。まで＝大半の定義を網羅）
-    const re1=/[「『]([^「」『』\n]{2,40})[」』]と(?:は|いうのは)[、，]?\s*([^\n]{2,260}?)。/g;
-    while((m=re1.exec(body))) add(m[1], m[2], art);
-    // ② この(法律/政令/府令/省令/規則/命令/告示)において、Xとは…（「」省略の宣言。前置必須で誤検出を防ぐ）
-    const re2=/この(?:法律|政令|内閣府令|府令|省令|規則|命令|告示|ガイドライン)において[、，]?[「『]?([^「」『』\n、。]{2,40}?)[」』]?と(?:は|いう)[、，]?\s*([^\n]{2,260}?)。/g;
-    while((m=re2.exec(body))) add(m[1], m[2], art);
+    if(b.t==='h'){ const x=b.x||''; if(/[編章]/.test(x)){curCh=x;curSec=null;} else if(/[節款目]/.test(x)){curSec=x;} continue; }
+    const art=b.num;
+    if(trackScope && art) GLOSS_ARTSCOPE[art]={ ch:curCh, sec:curSec };
+    const texts=[ b.body||'' ];
+    if(b.tables) for(const t of b.tables){ const rows=(t&&t.rows)?t.rows:(t||[]); for(const r of rows) for(const c of (r.cells||[])) if(c&&c.t) texts.push('§TBL§'+c.t); }
+    for(const raw of texts){
+      const inTbl=raw.startsWith('§TBL§'); const body=inTbl?raw.slice(5):raw; let m;
+      // ① 略称定義: 〔前方句〕（以下〔単に/これらを〕「X」という/と総称する/と略称する）  ← 定義=括弧直前の語句
+      const reAbbr=/([^、。\n（）()「」]{2,80})[（(]?以下(?:単に|これらを)?[「『]([^「」『』\n]{1,40})[」』](?:という|と総称する|と略称する)/g;
+      while((m=reAbbr.exec(body))) add(m[2], m[1], 'high','abbrev', inTbl?'table':'doc', inTbl?art:null, art);
+      // ② この章/節/款/目/条において「X」とは…（限定スコープ）
+      const reScope=/この(章|節|款|目|条)において[、，]?[「『]?([^「」『』\n、。]{2,40}?)[」』]?と(?:は|いう)[、，]?\s*([^\n]{2,260}?)。/g;
+      while((m=reScope.exec(body))){ const sm={章:'chapter',節:'section',款:'subsection',目:'subsection',条:'article'}[m[1]];
+        const key=sm==='chapter'?curCh:(sm==='section'||sm==='subsection')?curSec:art; add(m[2], m[3], 'high','explicit', sm, key, art); }
+      // ③ この法律/政令/府令…において「X」とは…（document scope）
+      const reDoc=/この(?:法律|政令|内閣府令|府令|省令|規則|命令|告示|ガイドライン|指針)において[、，]?[「『]?([^「」『』\n、。]{2,40}?)[」』]?と(?:は|いう)[、，]?\s*([^\n]{2,260}?)。/g;
+      while((m=reDoc.exec(body))) add(m[1], m[2], 'high','explicit', inTbl?'table':'doc', inTbl?art:null, art);
+      // ④ 「X」とは／は … をいう／。（汎用の明示定義）
+      const reIs=/[「『]([^「」『』\n]{2,40})[」』](?:とは|は)[、，]?\s*([^\n]{2,260}?)。/g;
+      while((m=reIs.exec(body))) add(m[1], m[2], 'high','explicit', inTbl?'table':'doc', inTbl?art:null, art);
+      // ⑤ 次に掲げる(場合/行為/もの)を「X」という（列挙定義・中信頼）
+      const reEnum=/(次に掲げる[^「」\n。]{0,30})を[「『]([^「」『』\n]{1,40})[」』]という/g;
+      while((m=reEnum.exec(body))) add(m[2], m[1], 'medium','enum', inTbl?'table':'doc', inTbl?art:null, art);
+      // ⑥ 「X」の意義は、…による／のとおりとする（意義参照・低信頼）
+      const reGi=/[「『]?([^「」『』\n、。]{2,30}?)[」』]?の意義は[、，]?\s*([^\n]{2,200}?)(?:による|のとおりとする|に定めるところによる)/g;
+      while((m=reGi.exec(body))) add(m[1], m[2], 'low','gi', inTbl?'table':'doc', inTbl?art:null, art);
+    }
   }
 }
 function rebuildGlossRe(){
-  const terms=Object.keys(GLOSSARY).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  // markする語=high/mediumの定義を持つ用語のみ（low=誤爆源は辞書には保持するが自動マークしない）
+  const keys=Object.keys(GLOSSARY).filter(k=>GLOSSARY[k].some(e=>e.conf!=='low'));
+  const reps={}; keys.forEach(k=>GLOSSARY[k].forEach(e=>{ if(!reps[k]||e.term.length>reps[k].length) reps[k]=e.term; }));
+  const terms=keys.map(k=>reps[k]).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
   _glossRe = terms.length ? new RegExp(terms.join('|'),'g') : null;
 }
-function buildGlossary(d){ const g={}; scanDefs(d,g); GLOSSARY=g; rebuildGlossRe(); }
-function mergeGlossary(p){ scanDefs(p, GLOSSARY); rebuildGlossRe(); }   // 親法令等の定義を追加（自文書の定義を優先）
+function buildGlossary(d){ GLOSSARY={}; GLOSS_ARTSCOPE={}; scanDefs(d,'self',true); rebuildGlossRe(); }
+function mergeGlossary(p){ scanDefs(p,'parent',false); rebuildGlossRe(); }   // 親法令のdoc定義を補助継承（自文書優先）
+// 用語のnormKeyと、対象条のスコープ(sc)・条番号(art)から、適用可能な最良エントリを選ぶ
+function selectEntry(key, sc, art){
+  const arr=GLOSSARY[key]; if(!arr) return null;
+  const ok=arr.filter(e=>{ const t=e.scope.type, k=e.scope.key;
+    if(t==='doc') return true;
+    if(t==='chapter') return sc&&sc.ch===k;
+    if(t==='section'||t==='subsection') return sc&&sc.sec===k;
+    if(t==='article'||t==='table') return k===art;
+    return false; });
+  if(!ok.length) return null;
+  const cr={high:0,medium:1,low:2};
+  ok.sort((a,b)=> (a.source==='self'?0:1)-(b.source==='self'?0:1) || SCOPE_RANK[a.scope.type]-SCOPE_RANK[b.scope.type] || cr[a.conf]-cr[b.conf] || b.term.length-a.term.length);
+  return ok[0];
+}
 function markGlossary(artEl){
   if(!_glossRe || !artEl || artEl.dataset.gl) return; artEl.dataset.gl='1';
   const bodyEl=artEl.querySelector('.body'); if(!bodyEl) return;
+  const art=artEl.dataset.num, sc=GLOSS_ARTSCOPE[art];
   const tns=[]; const w=document.createTreeWalker(bodyEl, NodeFilter.SHOW_TEXT, { acceptNode(n){
     const p=n.parentElement; if(!p||!n.nodeValue) return NodeFilter.FILTER_REJECT;
     if(p.closest('a,.gloss,mark,.cap,.el')) return NodeFilter.FILTER_REJECT;
     _glossRe.lastIndex=0; return _glossRe.test(n.nodeValue)? NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT; } });
   let n; while((n=w.nextNode())) tns.push(n);
   for(const tn of tns){ const s=tn.nodeValue, frag=document.createDocumentFragment(); let last=0,m; _glossRe.lastIndex=0;
-    while((m=_glossRe.exec(s))){ if(m.index>last) frag.appendChild(document.createTextNode(s.slice(last,m.index)));
-      const sp=document.createElement('span'); sp.className='gloss'; sp.dataset.t=m[0]; sp.textContent=m[0]; frag.appendChild(sp); last=m.index+m[0].length; }
+    while((m=_glossRe.exec(s))){
+      if(!selectEntry(normTerm(m[0]), sc, art)) continue;     // この条のスコープで適用できる定義が無ければマークしない
+      if(m.index>last) frag.appendChild(document.createTextNode(s.slice(last,m.index)));
+      const sp=document.createElement('span'); sp.className='gloss'; sp.dataset.t=m[0]; sp.textContent=m[0]; frag.appendChild(sp); last=m.index+m[0].length;
+    }
     if(last<s.length) frag.appendChild(document.createTextNode(s.slice(last)));
     if(frag.childNodes.length) tn.parentNode.replaceChild(frag,tn); }
 }
@@ -775,10 +831,12 @@ function markVisibleGloss(){
 let _glossTimer=null;
 function observeGloss(){ clearTimeout(_glossTimer); _glossTimer=setTimeout(markVisibleGloss, 60); }
 function showGlossPop(a){
-  const t=a.dataset.t, e=GLOSSARY[t]; if(!e) return;
+  const t=a.dataset.t; const artEl=a.closest('.art'); const art=artEl?artEl.dataset.num:null;
+  const e=selectEntry(normTerm(t), GLOSS_ARTSCOPE[art], art); if(!e) return;
   if(!_rpEl){ _rpEl=document.createElement('div'); _rpEl.id='refpop'; document.body.appendChild(_rpEl);
     _rpEl.addEventListener('mouseenter',()=>clearTimeout(_rpHideTimer)); _rpEl.addEventListener('mouseleave',()=>{ _rpHideTimer=setTimeout(hideRefPop,200); }); }
-  _rpEl.innerHTML = '<div class="rphead"><span class="rpnum">定義 「'+esc(t)+'」</span>'+(e.art?'<span class="rpcap">'+esc(e.art)+'</span>':'')+'</div><div class="rpbody">'+esc(e.def)+'。</div>';
+  const note = (e.source==='parent'?'親法令の定義':'') + (e.art?(e.source==='parent'?'／':'')+e.art:'');
+  _rpEl.innerHTML = '<div class="rphead"><span class="rpnum">定義 「'+esc(t)+'」</span>'+(note?'<span class="rpcap">'+esc(note)+'</span>':'')+'</div><div class="rpbody">'+esc(e.def)+(e.kind==='abbrev'?'（略称）':(/。$/.test(e.def)?'':'。'))+'</div>';
   _rpEl.classList.remove('hidden');
   const r=a.getBoundingClientRect(), pw=_rpEl.offsetWidth, ph=_rpEl.offsetHeight;
   let left=Math.min(r.left, window.innerWidth-pw-12); if(left<8) left=8;
