@@ -481,8 +481,10 @@ async function loadLaw(id){
 async function openLaw(id, artNum, para){
   const d = await loadLaw(id);
   CUR = d;
-  buildGlossary(d);                                                 // 定義語辞書（この法令の「○○とは…をいう」）
+  buildGlossary(d);                                                 // 定義語辞書（この文書の「○○とは…」を網羅抽出）
   REF = LAW_OF[d.law_id] || null;                                   // この文書の「法」が指す親法令
+  if (REF){ loadLaw(REF).then(p=>{ if(CUR===d){ mergeGlossary(p);   // 親法令(本法)の定義も取り込み、再マーキング
+    document.querySelectorAll('#artbody .art[data-gl]').forEach(a=>a.removeAttribute('data-gl')); markVisibleGloss(); } }).catch(()=>{}); }
   REFTITLE = REF ? ((INDEX.laws.find(l => l.law_id === REF)||{}).title || '') : '';
   ARTSET = new Set((d.blocks||[]).filter(b => b.num).map(b => b.num));  // 自文書に実在する条番号（自リンクの可否判定用）
   document.querySelectorAll('.law').forEach(b => b.classList.toggle('active', b.dataset.id===id));
@@ -701,16 +703,29 @@ async function previewRef(a){
   _rpEl.style.left=left+'px'; _rpEl.style.top=top+'px';
 }
 function hideRefPop(){ if(_rpEl) _rpEl.classList.add('hidden'); }
-// ===== 定義語ポップアップ（「○○とは…をいう」を抽出し、本文中の定義語にホバーで定義を表示）=====
+// ===== 定義語ポップアップ（「○○とは…」を網羅抽出し、本文中の定義語にホバーで定義を表示）=====
 let GLOSSARY={}, _glossRe=null, _glossObs=null;
-function buildGlossary(d){
-  const g={}; const re=/「([^「」、。\n]{3,24})」とは[、，]?\s*([^。\n]{4,180}?)を(?:いう|いい)/g;
-  for(const b of (d.blocks||[])){ if(b.t==='h'||!b.body) continue; let m; re.lastIndex=0;
-    while((m=re.exec(b.body))){ const t=m[1].trim(); if(t && !g[t]) g[t]={ def:m[2].trim(), art:b.num }; } }
-  GLOSSARY=g;
-  const terms=Object.keys(g).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+// 1文書から定義語を抽出して g に追記（既存キーは上書きしない＝先に入れた方が優先）。
+function scanDefs(d, g){
+  const add=(t,def,art)=>{ t=(t||'').replace(/^[「『]|[」』]$/g,'').trim(); def=(def||'').trim();
+    if(t.length<2 || t.length>40 || def.length<2 || /[「」『』]/.test(t)) return;
+    if(!g[t]) g[t]={ def: def.length>260?def.slice(0,260)+'…':def, art }; };
+  for(const b of (d.blocks||[])){
+    if(b.t==='h' || !b.body) continue; const art=b.num, body=b.body; let m;
+    // ① 「X」とは／というのは … 。（終止動詞を限定せず、文末。まで＝大半の定義を網羅）
+    const re1=/[「『]([^「」『』\n]{2,40})[」』]と(?:は|いうのは)[、，]?\s*([^\n]{2,260}?)。/g;
+    while((m=re1.exec(body))) add(m[1], m[2], art);
+    // ② この(法律/政令/府令/省令/規則/命令/告示)において、Xとは…（「」省略の宣言。前置必須で誤検出を防ぐ）
+    const re2=/この(?:法律|政令|内閣府令|府令|省令|規則|命令|告示|ガイドライン)において[、，]?[「『]?([^「」『』\n、。]{2,40}?)[」』]?と(?:は|いう)[、，]?\s*([^\n]{2,260}?)。/g;
+    while((m=re2.exec(body))) add(m[1], m[2], art);
+  }
+}
+function rebuildGlossRe(){
+  const terms=Object.keys(GLOSSARY).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
   _glossRe = terms.length ? new RegExp(terms.join('|'),'g') : null;
 }
+function buildGlossary(d){ const g={}; scanDefs(d,g); GLOSSARY=g; rebuildGlossRe(); }
+function mergeGlossary(p){ scanDefs(p, GLOSSARY); rebuildGlossRe(); }   // 親法令等の定義を追加（自文書の定義を優先）
 function markGlossary(artEl){
   if(!_glossRe || !artEl || artEl.dataset.gl) return; artEl.dataset.gl='1';
   const bodyEl=artEl.querySelector('.body'); if(!bodyEl) return;
@@ -740,7 +755,7 @@ function showGlossPop(a){
   const t=a.dataset.t, e=GLOSSARY[t]; if(!e) return;
   if(!_rpEl){ _rpEl=document.createElement('div'); _rpEl.id='refpop'; document.body.appendChild(_rpEl);
     _rpEl.addEventListener('mouseenter',()=>clearTimeout(_rpHideTimer)); _rpEl.addEventListener('mouseleave',()=>{ _rpHideTimer=setTimeout(hideRefPop,200); }); }
-  _rpEl.innerHTML = '<div class="rphead"><span class="rpnum">定義 「'+esc(t)+'」</span>'+(e.art?'<span class="rpcap">'+esc(e.art)+'</span>':'')+'</div><div class="rpbody">'+esc(e.def)+'をいう。</div>';
+  _rpEl.innerHTML = '<div class="rphead"><span class="rpnum">定義 「'+esc(t)+'」</span>'+(e.art?'<span class="rpcap">'+esc(e.art)+'</span>':'')+'</div><div class="rpbody">'+esc(e.def)+'。</div>';
   _rpEl.classList.remove('hidden');
   const r=a.getBoundingClientRect(), pw=_rpEl.offsetWidth, ph=_rpEl.offsetHeight;
   let left=Math.min(r.left, window.innerWidth-pw-12); if(left<8) left=8;
