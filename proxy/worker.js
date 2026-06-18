@@ -44,11 +44,15 @@ export default {
 
     if (ct.includes('text/html')) {
       let html = await upstream.text();
-      // 相対パス（CSS/画像/リンク）が元サイトに解決するよう <base> を注入。
-      // target="_blank"＝差し込みページ内のリンクは新しいタブで開く（iframe内遷移で埋め込み拒否サイトに当たり真っ白になるのを防ぐ）。
-      const baseTag = '<base href="' + t.href.replace(/"/g, '&quot;') + '" target="_blank">';
-      if (/<head[^>]*>/i.test(html)) html = html.replace(/<head([^>]*)>/i, '<head$1>' + baseTag);
-      else html = baseTag + html;
+      // 読み取り専用表示の安定化: <script> を除去（外部サイトのJSが iframe 内でハング/真っ白/フレームバスター/
+      // コンテンツ非表示を起こすのを防ぐ。本文は静的HTMLに含まれるため除去しても読める）。
+      html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<script\b[^>]*\/>/gi, '');
+      // 相対パス(CSS/画像/リンク)を元サイトに解決する <base>。target="_blank"=ページ内リンクは新しいタブで開く。
+      // ＋万一CSS/JSで本文が隠れている場合に備え可視化を強制。
+      const inject = '<base href="' + t.href.replace(/"/g, '&quot;') + '" target="_blank">'
+        + '<style>html,body{opacity:1!important;visibility:visible!important;}</style>';
+      if (/<head[^>]*>/i.test(html)) html = html.replace(/<head([^>]*)>/i, '<head$1>' + inject);
+      else html = inject + html;
       return new Response(html, { status: upstream.status, headers: h });
     }
     // PDF（日銀の金融政策決定会合資料等）やその他はそのまま中継
