@@ -20,7 +20,8 @@
   #toReg{ display:inline-block; font-size:12px; color:#9fd0ff; text-decoration:none; margin:0 4px 10px;
     padding:5px 10px; border:1px solid #2b66c0; border-radius:8px; background:#13243f; }
   #toReg:hover{ background:#1c3a63; }
-  .grp{ font-size:11px; color:var(--muted); margin:14px 6px 6px; letter-spacing:.04em; border-left:3px solid var(--accent); padding-left:8px; }
+  .grp{ font-size:11px; color:var(--muted); margin:14px 6px 2px; letter-spacing:.04em; border-left:3px solid var(--accent); padding-left:8px; }
+  .grpdesc{ font-size:10.5px; color:var(--muted); margin:0 6px 7px; padding-left:11px; line-height:1.45; opacity:.85; }
   .law{ display:block; width:100%; text-align:left; cursor:pointer; border:1px solid var(--line);
     background:#16223a; color:#cfe0ff; border-radius:8px; padding:9px 10px; margin:6px 0; font-size:13px; line-height:1.4; }
   .law:hover{ border-color:var(--accent); }
@@ -234,6 +235,10 @@
   /* カッコの深さ別 折り畳み（「（…）」表示）。折り畳み規則は #doc[data-pd=N] でJS生成（高速） */
   .body .el{ display:none; opacity:.7; }
   #doc[data-pd] .p > .el{ opacity:.7; }
+  /* 定義カッコ（「以下「○○」という。」「次条において同じ。」等）は折り畳みモードでも隠さない（実務上の重要定義。三根さん指示2026-06-19）。入れ子も展開し、薄い点線枠で区別 */
+  #doc[data-pd] .p.pk > .pz, #doc[data-pd] .p.pk .pz{ display:inline !important; }
+  #doc[data-pd] .p.pk > .el, #doc[data-pd] .p.pk .el{ display:none !important; }
+  #doc[data-pd] .p.pk{ outline:1px dotted rgba(159,208,255,.45); outline-offset:1px; border-radius:3px; }
   /* カッコ深さ操作バー */
   #pctl{ margin-top:9px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
   #pctl button{ background:#16223a; color:#cfe0ff; border:1px solid var(--line); border-radius:7px; padding:4px 9px; font-size:12px; cursor:pointer; }
@@ -305,6 +310,20 @@
 const G_ORDER = ['金商法','資金決済','貸金業法','信託業法','金サ法','犯収法','外為法','銀行法','会社法','個人情報','ガイドライン'];
 // サイドバーのグループ見出しの表示名（内部キーG_ORDER/groupは変更しない＝LAW_OF等に影響させない）
 const GLABEL = { '金商法':'金商法関連','資金決済':'資金決済法関連','貸金業法':'貸金業法関連','信託業法':'信託業法関連','金サ法':'金融サービス提供法関連','犯収法':'犯収法関連','外為法':'外為法関連（AML/制裁）','銀行法':'銀行法関連','会社法':'会社法関連','個人情報':'個人情報保護法関連','ガイドライン':'各種ガイドライン' };
+// 各法令グループが「何に関係するか」の一行説明（初見ユーザー向け。三根さん指示2026-06-19）
+const GDESC = {
+  '金商法':'有価証券・デリバティブ・セキュリティトークン・金商業者規制',
+  '資金決済':'資金移動業・前払式支払手段・暗号資産・電子決済手段（ステーブルコイン）',
+  '貸金業法':'貸金業者の登録・行為規制・上限金利',
+  '信託業法':'信託の引受けを業として行う者の規制',
+  '金サ法':'金融サービス仲介業・顧客本位の業務運営',
+  '犯収法':'取引時確認・疑わしい取引の届出などAML/CFTの基本法',
+  '外為法':'対外取引・経済制裁・資産凍結（AML/制裁）',
+  '銀行法':'銀行業の免許・業務範囲・健全性規制',
+  '会社法':'会社の設立・機関・計算・組織再編',
+  '個人情報':'個人データの取得・利用・第三者提供・安全管理',
+  'ガイドライン':'金融庁の事務ガイドライン・監督指針（当局の解釈・運用指針）'
+};
 // 各府令・施行令・ガイドラインの本文中「法」が指す親法令（law_id）。新規追加時はここに対応を足す。
 const LAW_OF = {
   '422CO0000000019':'421AC0000000059', '429M60000002007':'421AC0000000059', '422M60000002004':'421AC0000000059',
@@ -529,6 +548,7 @@ function renderSidebar(){
   for (const g of groups){
     if(!byG[g]) continue;
     html += `<div class="grp">${esc(GLABEL[g]||g)}</div>`;
+    if (GDESC[g]) html += `<div class="grpdesc">${esc(GDESC[g])}</div>`;
     for (const l of byG[g]){
       const upd = (INDEX.changed||[]).includes(l.title) ? '<span class="upd">更新</span>' : '';
       html += `<button class="law" data-id="${l.law_id}">
@@ -557,6 +577,7 @@ async function openLaw(id, artNum, para){
     $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">⚠ この法令データを読み込めませんでした。<br><span style="font-size:12px">時間をおいて再度お試しください（データは毎日自動更新されます）。</span></div></div>';
     return; }
   CUR = d;
+  pDepth = 99;                                                      // 別の法令に移ったらカッコ折り畳みは全表示に戻す（前の法令の設定を引き継がない。三根さん指示2026-06-19）
   buildGlossary(d);                                                 // 定義語辞書（この文書の「○○とは…」を網羅抽出）
   REF = LAW_OF[d.law_id] || null;                                   // この文書の「法」が指す親法令
   if (REF){ loadLaw(REF).then(p=>{ if(CUR===d){ mergeGlossary(p);   // 親法令(本法)の定義も取り込み、再マーキング
@@ -607,6 +628,7 @@ function render(raw, k, artNum){
   const REFJO  = /(法)?第\d+条(?:の\d+)?(?:第\d+項)?(?:第\d+号(?:の\d+)?)?/y;    // 条参照（条あり）
   const REFKO  = /第\d+項(?:第\d+号(?:の\d+)?)?(?:各号)?/y;                       // 項参照（条を含まない＝自条内）
   const REFREL = /(?:同条|前条|次条|前々条|次々条)(?:第\d+項)?|前項|次項|同項/y;     // 相対参照（条/項）
+  const DEFKEEP = /以下[^（）()]{0,60}(?:という|と総称|と略称|同じ)|において同じ|以下同じ/;   // 折り畳み時も隠さない定義カッコの目印
   const PARANUM = /\d+(?=[ 　])/y;                                              // 行頭の項番号（数字＋空白）
   const myId = CUR && CUR.law_id, myTitle = (CUR && CUR.title) || '';
   const aid = artNum || '';
@@ -684,7 +706,11 @@ function render(raw, k, artNum){
     if (ch==='（' || ch==='('){
       MARKER.lastIndex = i; const mk = MARKER.exec(text);
       if (mk && mk.index === i){ out += mk[0]; i += mk[0].length; continue; }   // 番号カッコは無色のまま
-      depth++; RPC[depth]=(RPC[depth]||0)+1; out += '<span class="p p'+((depth-1)%6+1)+'" data-d="'+depth+'">' + ch + '<span class="pz">';  // pz=内側（折り畳み対象）、RPC=深さ別カウント
+      // 重要定義カッコ（以下「○○」という／において同じ／と総称・略称する 等）はカッコ折り畳み時も隠さない。対応する閉じ括弧までの内容（最大220字）で判定
+      let close=-1, dd=0; for (let j=i; j<text.length && j<i+220; j++){ const c=text[j]; if(c==='（'||c==='(')dd++; else if(c==='）'||c===')'){ if(--dd===0){ close=j; break; } } }
+      const win = close>i ? text.slice(i, close+1) : text.slice(i, i+160);
+      const keep = DEFKEEP.test(win) ? ' pk' : '';
+      depth++; RPC[depth]=(RPC[depth]||0)+1; out += '<span class="p p'+((depth-1)%6+1)+keep+'" data-d="'+depth+'">' + ch + '<span class="pz">';  // pz=内側（折り畳み対象）、RPC=深さ別カウント、pk=折り畳まない定義カッコ
     }
     else if ((ch==='）' || ch===')') && depth>0){ out += '</span><i class="el">…</i>' + ch + '</span>'; depth--; }  // el=省略時の「…」
     else if (ch==='。'){ out += '。'; const nx=text[i+1]; if (depth===0 && nx && nx!=='\n' && !/[」』）)】］〕]/.test(nx)) out += '\n'; }  // 文ごとに改行（カッコ内の文・閉じ括弧/鉤括弧の直前では改行しない）
@@ -989,7 +1015,8 @@ function regArtBadge(lawId, num){
   const it = e[0].it;
   const mode = FRAMABLE_AGENCIES.includes(it.agency) ? 'direct' : 'proxy';
   // クリックで別タブでなく条文エリアに差し込み表示（.lvlinkを#docの委譲ハンドラが拾う。←条文に戻る付き）
-  return `<a class="artreg lvlink" href="${escA(it.url)}" data-lv-url="${escA(it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(it.title||('規制動向'))}" title="ここに内容を表示（←条文に戻る）｜${esc(tip)}">📡 規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
+  const ttl = it.title || '規制動向';
+  return `<a class="artreg lvlink" href="${escA(it.url)}" data-lv-url="${escA(it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(ttl)}" title="${esc(ttl)}｜${esc(tip)}（クリックで条文欄に表示／再クリックで条文に戻る）">📡 規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
 }
 function renderDoc(kw){
   const k = (kw||'').trim();
