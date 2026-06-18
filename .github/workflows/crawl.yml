@@ -36,6 +36,10 @@ jobs:
         working-directory: law-viewer
         run: node fetcher.js
 
+      - name: 市況データ取得（ドル円/日経平均/NYダウ/ビットコイン）
+        working-directory: law-viewer
+        run: node market.js || echo "市況取得は失敗（市況バーは欠落値表示・本体に影響なし）"
+
       - name: 差分データをコミット（蓄積を永続化）
         run: |
           git config user.name "law-viewer-bot"
