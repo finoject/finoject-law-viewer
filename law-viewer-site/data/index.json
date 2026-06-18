@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T15:52:13.598Z",
+  "generatedAt": "2026-06-18T16:07:20.975Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -354,9 +354,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/355CO0000000260"
     }
   ],
-  "changed": [
-    "外国為替及び外国貿易法",
-    "外国為替令"
-  ],
+  "changed": [],
   "isFirst": false
 }
