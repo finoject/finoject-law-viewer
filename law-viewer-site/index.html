@@ -678,7 +678,10 @@ function regArtBadge(lawId, num){
   const e = REGBYART[lawId+'|'+num]; if(!e||!e.length) return '';
   const kinds=[...new Set(e.map(x=>x.kind))].filter(k=>k&&k!=='その他');
   const tip = e.map(x=>jpd(x.it.date)+' '+(x.kind||'')).join(' / ');
-  return `<a class="artreg" href="${esc(e[0].it.url)}" target="_blank" rel="noopener" title="金融規制ウォッチで開く（右クリックで新規タブ/ウィンドウを選択）｜${esc(tip)}">📡 規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
+  const it = e[0].it;
+  const mode = FRAMABLE_AGENCIES.includes(it.agency) ? 'direct' : 'proxy';
+  // クリックで別タブでなく条文エリアに差し込み表示（.lvlinkを#docの委譲ハンドラが拾う。←条文に戻る付き）
+  return `<a class="artreg lvlink" href="${escA(it.url)}" data-lv-url="${escA(it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(it.title||('規制動向'))}" title="ここに内容を表示（←条文に戻る）｜${esc(tip)}">📡 規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
 }
 function renderDoc(kw){
   const k = (kw||'').trim();
