@@ -76,7 +76,8 @@
   .rag{ color:#bcd0f0; font-size:11px; background:#16223a; border-radius:5px; padding:1px 6px; flex:none; }
   .rttl{ color:var(--fg); text-decoration:none; flex:1; min-width:200px; }
   .rttl:hover{ color:#7fb0ff; text-decoration:underline; }
-  .rarts{ font-size:12px; color:var(--muted); flex-basis:100%; }
+  .rarts{ font-size:12px; color:#9fd0ff; flex-basis:100%; margin-top:2px; }
+  .rarts-w{ color:var(--muted); }
   .rarts .ra{ color:#8fd0ff; text-decoration:none; margin-right:8px; border-bottom:1px dotted #2b66c0; cursor:pointer; }
   .rsub{ font-size:12px; font-weight:700; color:#9fb4d6; margin:10px 0 2px; padding-top:8px; border-top:1px dashed var(--line); }
   .rsub:first-of-type{ border-top:none; padding-top:0; }
@@ -87,7 +88,7 @@
   .dstatus.d-active{ background:#b45309; }   /* 審議中・付託・送付・継続 */
   .dstatus.d-dead{ background:#6b7280; }     /* 廃案・否決・撤回・審査未了 */
   /* 条文エリアに差し込む本文ビューア（パネル項目クリック時） */
-  #lawview{ display:flex; flex-direction:column; height:calc(100vh - 230px); min-height:460px; margin-top:4px;
+  #lawview{ display:flex; flex-direction:column; height:calc(100vh - 150px); min-height:560px; margin-top:4px;
     border:1px solid #2b66c0; border-radius:10px; overflow:hidden; background:#0e1a2e; }
   #lawview.hidden{ display:none; }
   .lvbar{ display:flex; align-items:center; gap:10px; padding:8px 11px; border-bottom:1px solid var(--line); flex:none; }
@@ -146,13 +147,16 @@
   .fk.k-ガイドライン{ background:#7c3aed; } .fk.k-告示,.fk.k-通達等{ background:#475569; }
   .feedfoot{ margin-top:16px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); padding-top:12px; }
   .feedfoot a{ color:#8fd0ff; }
-  /* トップ画面の2カラム（左:フィード／右:本文ビューア） */
-  .homecols{ display:flex; gap:16px; align-items:flex-start; margin-top:6px; }
-  #feedcol{ flex:1 1 44%; min-width:0; }
+  /* トップ画面の2カラム（左:フィード／右:本文ビューア）。中央のスプリッタをドラッグで幅可変（ウルトラワイド対応） */
+  .homecols{ display:flex; gap:0; align-items:stretch; margin-top:6px; }
+  #feedcol{ flex:0 0 44%; min-width:0; }
+  #hsplit{ flex:0 0 12px; align-self:stretch; cursor:col-resize; position:relative; }
+  #hsplit::before{ content:""; position:absolute; left:5px; top:0; bottom:0; width:2px; background:var(--line); border-radius:2px; }
+  #hsplit:hover::before, #hsplit.drag::before{ background:var(--accent); }
   .fitem{ cursor:pointer; border-radius:8px; }
   .fitem:hover{ background:#0e1a2e; }
   .fitem.sel{ background:rgba(46,108,240,.16); outline:1px solid #2b66c0; }
-  #regview{ flex:1 1 56%; min-width:0; position:sticky; top:0; height:calc(100vh - 220px); min-height:420px;
+  #regview{ flex:1 1 0; min-width:0; position:sticky; top:0; height:calc(100vh - 150px); min-height:520px;
     border:1px solid var(--line); border-radius:10px; background:#0e1a2e; overflow:hidden; display:flex; flex-direction:column; }
   .rvhint{ color:var(--muted); font-size:13px; padding:28px 18px; text-align:center; margin:auto; }
   .rvhead{ display:flex; align-items:center; gap:9px; padding:9px 11px; border-bottom:1px solid var(--line); flex:none; }
@@ -168,10 +172,18 @@
   .rvnote{ margin-top:14px; font-size:11px; }
   @media(max-width:860px){
     .homecols{ flex-direction:column; }
-    #feedcol, #regview{ flex:none; width:100%; }
+    #feedcol, #regview{ flex:none !important; width:100%; }
+    #hsplit{ display:none; }                    /* モバイルは縦積み＝スプリッタ不要 */
     #regview{ position:static; height:auto; }
     #regview:not(.active){ display:none; }     /* スマホ等では未選択時はビューアを隠す */
-    .rvframe{ height:70vh; }
+    .rvframe{ height:74vh; }
+    /* モバイル: タップ領域を広げる（指で押しやすく） */
+    .qschip, .fchipbtn, .fc-law{ padding:9px 14px; font-size:13.5px; }
+    .ref, .fchip, .artreg, .rk, #pctl button, .lvback{ padding:7px 11px; font-size:12.5px; }
+    .fitem{ padding:13px 8px; }
+    .rttl, .fttl{ font-size:14.5px; }
+    .body a.rf{ padding:1px 2px; }
+    #home, #burger, #gsearch, #search{ font-size:15px; padding:10px 12px; }
   }
   /* カッコの入れ子の深さで背景色を変える */
   .body .p{ border-radius:3px; padding:0 1px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
@@ -705,7 +717,8 @@ function regPanelHtml(lawId){
     const mode = FRAMABLE_AGENCIES.includes(g.it.agency) ? 'direct' : 'proxy';   // 埋め込み可agencyは直接/それ以外はプロキシ
     return `<div class="rrow"><span class="rdate">${jpd(g.it.date)}</span><span class="rag">${esc(g.it.agency||'')}</span>${kinds}`
       + `<a class="rttl lvlink" href="${escA(g.it.url)}" data-lv-url="${escA(g.it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(g.it.title)}">${esc(g.it.title)}</a>`
-      + (arts?`<span class="rarts">該当条文: ${arts}</span>`:'') + `</div>`;
+      + (arts?`<span class="rarts">📍 この更新が触れる条文（関連の根拠）: ${arts}</span>`
+             :`<span class="rarts rarts-w">📍 この法令全体に関連（特定の条は示されていません）</span>`) + `</div>`;
   }).join('');
   const officialSec = list.length
     ? `<div class="rsub">⚖️ 当局の動向（${rows.length}件）</div>${officialRows}`
@@ -793,15 +806,35 @@ function showHome(){
     <div id="feedchips" class="feedchips"></div>
     <div class="homecols">
       <div id="feedcol"><div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div></div>
+      <div id="hsplit" title="ドラッグで左右の幅を調整"></div>
       <div id="regview"><div class="rvhint">← 項目をクリックすると、ここに内容が表示されます（画面は切り替わりません）。</div></div>
     </div>
     <div class="feedfoot">📖 のついた更新はクリックで該当法令・条文が開きます ／ <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（全件・6機関・Slack通知）↗</a></div>
   </div>`;
   renderFeedChips();
   renderRegFeed();
+  setupHSplit();
 }
 // おすすめ検索チップ：クリックで横断検索を実行（初見ユーザーの立ち上がりを速くする）
 function quickSearch(q){ const g=$('#gsearch'); if(g) g.value=q; globalSearch(q); }
+// トップの左右フレーム幅をドラッグで可変に（ウルトラワイドで便利。比率はlocalStorageに保存）
+function setupHSplit(){
+  const sp=document.getElementById('hsplit'), col=document.getElementById('feedcol'), cols=document.querySelector('.homecols');
+  if(!sp||!col||!cols) return;
+  const saved=parseFloat(localStorage.getItem('feedRatio'));
+  if(saved>=20 && saved<=80) col.style.flexBasis = saved+'%';
+  let dragging=false;
+  sp.addEventListener('mousedown', e=>{ dragging=true; sp.classList.add('drag'); document.body.style.userSelect='none'; e.preventDefault(); });
+  window.addEventListener('mousemove', e=>{
+    if(!dragging) return;
+    const r=cols.getBoundingClientRect();
+    let ratio=(e.clientX - r.left)/r.width*100;
+    ratio=Math.max(25, Math.min(75, ratio));
+    col.style.flexBasis = ratio.toFixed(1)+'%';
+  });
+  window.addEventListener('mouseup', ()=>{ if(!dragging) return; dragging=false; sp.classList.remove('drag'); document.body.style.userSelect='';
+    const b=parseFloat(col.style.flexBasis); if(b) localStorage.setItem('feedRatio', b.toFixed(1)); });
+}
 let gseq = 0;
 async function globalSearch(q){
   q = (q||'').trim();
