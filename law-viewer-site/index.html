@@ -324,6 +324,38 @@ const LAW_OF = {
   'fsa-kantoku-kinsho':'323AC0000000025',                                        // 金商業者監督指針→金商法
 };
 let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RPC=[], curMaxDepth=0;
+let ARTSEQ=[], ARTIDX={};   // 自文書の条番号を文書順に（前条/次条の相対参照解決用）
+function relArt(aid, delta){ const i=ARTIDX[aid]; if(i==null) return null; return ARTSEQ[i+delta]||null; }
+// 相対参照を解決。ctx={aid,curPara,myId, antLaw,antArt,antPara(直前に言及された条/項)}。返り値 {law,art,para,label,set} or null。
+//  ・前項/次項=現在条の curPara 起点 ／ 前条/次条/前々条/次々条=現在条からの相対 ／ 同条/同項=直前に言及された条・項（antecedent）。
+//  ・同条/同項は外部法・未収録法を指す場合はリンクしない（誤リンク防止）。set=この参照を新たな antecedent として記録する値。
+function resolveRel(tok, ctx){
+  const { aid, curPara, myId } = ctx;
+  const pm = tok.match(/第(\d+)項/);
+  if (tok.startsWith('同')){                                    // 同条／同条第M項／同項 → 直前に言及された条・項
+    const L = ctx.antLaw, A = ctx.antArt;
+    if (!L || !A) return null;                                  // 先行する条の言及が無い＝解決不能
+    if (L === myId && !ARTSET.has(A)) return null;              // 自文書に実在しない条はリンクしない
+    if (tok.startsWith('同条')){
+      const para = pm ? +pm[1] : null;
+      return { law:L, art:A, para, label:A+(para?'第'+para+'項':''), set:{law:L,art:A,para} };
+    }
+    if (!ctx.antPara) return null;                              // 同項：直前の項が不明なら解決不能
+    return { law:L, art:A, para:ctx.antPara, label:A+'第'+ctx.antPara+'項', set:{law:L,art:A,para:ctx.antPara} };
+  }
+  if (/^(前条|次条|前々条|次々条)/.test(tok)){                  // 条の相対（現在条から）
+    const delta = {前条:-1,次条:1,前々条:-2,次々条:2}[tok.slice(0, tok.indexOf('条')+1)];
+    const art = relArt(aid, delta);
+    if (!art) return null;                                      // 文書の端＝解決不能
+    const para = pm ? +pm[1] : null;
+    return { law:myId, art, para, label:art+(para?'第'+para+'項':''), set:{law:myId,art,para} };
+  }
+  // 前項／次項（現在条の curPara 起点）
+  if (!curPara) return null;
+  const p = tok.startsWith('前項') ? curPara-1 : curPara+1;
+  if (p < 1) return null;
+  return { law:myId, art:aid, para:p, label:aid+'第'+p+'項', set:{law:myId,art:aid,para:p} };
+}
 // ===== 金融規制ウォッチ連携（逆引き：この法令に関する最近の規制動向を条文に重ねる）=====
 const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
@@ -531,6 +563,8 @@ async function openLaw(id, artNum, para){
     document.querySelectorAll('#artbody .art[data-gl]').forEach(a=>a.removeAttribute('data-gl')); markVisibleGloss(); } }).catch(()=>{}); }
   REFTITLE = REF ? ((INDEX.laws.find(l => l.law_id === REF)||{}).title || '') : '';
   ARTSET = new Set((d.blocks||[]).filter(b => b.num).map(b => b.num));  // 自文書に実在する条番号（自リンクの可否判定用）
+  ARTSEQ = (d.blocks||[]).filter(b => b.num).map(b => b.num);            // 文書順（前条/次条の相対参照解決用）
+  ARTIDX = {}; ARTSEQ.forEach((n,i)=>{ if(ARTIDX[n]==null) ARTIDX[n]=i; });
   document.querySelectorAll('.law').forEach(b => b.classList.toggle('active', b.dataset.id===id));
   $('#lawTitle').textContent = d.title;
   const updated = (d.updated||'').slice(0,10);
@@ -572,9 +606,13 @@ function render(raw, k, artNum){
   const MARKER = /[（(](?:[0-9０-９一二三四五六七八九十百千〇]+|[ぁ-んァ-ヶa-zA-Zａ-ｚＡ-Ｚ]|注[0-9０-９]*|参考[0-9０-９]*|別[紙表添][0-9０-９]*)[）)]/y;  // 番号・記号・ラベル（注/参考/別紙等）のみのカッコは色付けしない
   const REFJO  = /(法)?第\d+条(?:の\d+)?(?:第\d+項)?(?:第\d+号(?:の\d+)?)?/y;    // 条参照（条あり）
   const REFKO  = /第\d+項(?:第\d+号(?:の\d+)?)?(?:各号)?/y;                       // 項参照（条を含まない＝自条内）
+  const REFREL = /(?:同条|前条|次条|前々条|次々条)(?:第\d+項)?|前項|次項|同項/y;     // 相対参照（条/項）
   const PARANUM = /\d+(?=[ 　])/y;                                              // 行頭の項番号（数字＋空白）
   const myId = CUR && CUR.law_id, myTitle = (CUR && CUR.title) || '';
   const aid = artNum || '';
+  let curPara = 1;                                                             // 現在の項番号（相対参照の解決に使用。第1項=1）
+  let antLaw=null, antArt=null, antPara=null;                                  // 直前に言及された 条/項（同条・同項の解決用。リンク可否と独立に記録）
+  let skipPeek=0;                                                              // antecedent 記録で「第N条第N項」の内側 第N項 を再検出しないための既読位置
   // 第1項アンカー（本文先頭。第1項は番号が無いため空アンカー）
   let out = aid ? '<span class="pa" id="'+esc(aid)+':p1"></span>' : '';
   let depth=0, i=0;
@@ -585,10 +623,41 @@ function render(raw, k, artNum){
     // 行頭の項番号 → 番号を項アンカーで包む（号/イロハは字下げ＝先頭が空白なので該当しない）
     if (bol && aid && /[0-9]/.test(text[i])){
       PARANUM.lastIndex = i; const pm = PARANUM.exec(text);
-      if (pm && pm.index === i){ out += '<span class="pa" id="'+esc(aid)+':p'+pm[0]+'">'+pm[0]+'</span>'; i += pm[0].length; continue; }
+      if (pm && pm.index === i){ curPara = +pm[0]; out += '<span class="pa" id="'+esc(aid)+':p'+pm[0]+'">'+pm[0]+'</span>'; i += pm[0].length; continue; }
     }
     if (kk && text.startsWith(kk, i)){ out += '<mark>'+kk+'</mark>'; i += kk.length; continue; }
     const ch = text[i];
+    // 直前に言及された条・項を記録（同条/同項の antecedent）。リンク可否と独立に、すべての条/項言及で更新する。
+    // skipPeek: 「第N条第N項」を一括記録した後、その内側の「第N項」を独立した自条項参照として再記録しないための既読位置。
+    if (aid && (ch==='第' || ch==='法') && i >= skipPeek){
+      REFJO.lastIndex = i; const ma = REFJO.exec(text);
+      if (ma && ma.index === i){
+        const aart = ma[0].match(/第\d+条(?:の\d+)?/)[0];
+        const apm = ma[0].match(/第(\d+)項/);
+        // 直前が漢字/閉じ括弧なら外部法の引用（○○法第N条／（…）第N条）。「法」接頭でも ○○法 の末尾なら親法ではなく外部named law。
+        const prevK = /[一-鿿々）)」『』]/.test(text[i-1]||'');
+        antArt = aart;
+        antLaw = ma[1] ? (prevK ? null : REF) : (prevK ? null : (ARTSET.has(aart) ? myId : null));
+        antPara = apm ? +apm[1] : null;
+        skipPeek = i + ma[0].length;
+      } else {
+        REFKO.lastIndex = i; const mk = REFKO.exec(text);
+        if (mk && mk.index === i){ const mp = mk[0].match(/第(\d+)項/); antArt = aid; antLaw = myId; antPara = mp ? +mp[1] : antPara; skipPeek = i + mk[0].length; }
+      }
+    }
+    // 相対参照（前項/次項/同項/前条/次条/前々条/次々条/同条/同条第M項）→ コンテキストで解決（直前が漢字なら誤検出回避）
+    if (aid && (ch==='前'||ch==='次'||ch==='同') && !/[一-鿿々]/.test(text[i-1]||'')){
+      REFREL.lastIndex = i; const mr = REFREL.exec(text);
+      if (mr && mr.index === i){
+        const r = resolveRel(mr[0], { aid, curPara, myId, antLaw, antArt, antPara });
+        if (r){
+          const href = '?law='+r.law+'&art='+encodeURIComponent(r.art)+(r.para?'&para='+r.para:'');
+          out += '<a class="rf" data-rl="'+r.law+'" data-ra="'+esc(r.art)+'" href="'+href+'" target="_blank" rel="noopener" title="'+esc(r.label)+'（クリックで新しいタブ）">'+mr[0]+'</a>';
+          if (r.set){ antLaw=r.set.law; antArt=r.set.art; antPara=r.set.para; }  // この参照を次の同条/同項の antecedent に
+          i += mr[0].length; continue;
+        }
+      }
+    }
     if ((ch==='法' || ch==='第') && !/[一-鿿々）)]/.test(text[i-1] || '')){   // 直前が漢字/閉じカッコなら誤リンク回避
       REFJO.lastIndex = i; const m = REFJO.exec(text);
       if (m && m.index === i){
