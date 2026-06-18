@@ -335,6 +335,10 @@ function renderRegFeed(){
   });
   if(items.length>SHOWN) html += `<div class="rmore">ほか ${items.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`;
   box.innerHTML=html;
+  // 既定で先頭（最新）の規制動向を右ビューアに表示＝空欄の黒い箱を出さない。
+  // ユーザーが既に項目を開いている（.active）ときは、その表示を維持する。
+  const rv=document.getElementById('regview');
+  if(FEED_SHOWN.length && rv && !rv.classList.contains('active')) openRegView(0);
 }
 // 規制項目の本文を右パネルにその場表示（トップ画面のまま）。プロキシ設定時は全ソース、未設定でも埋め込み可サイトは表示。
 function openRegView(idx){
