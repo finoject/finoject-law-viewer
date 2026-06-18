@@ -96,6 +96,15 @@
   .lvttl{ flex:1; min-width:0; font-size:12.5px; color:#cfe0ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .lvframe{ flex:1; width:100%; border:0; background:#fff; }
   .lvlink{ cursor:pointer; }
+  /* 参照条文のホバー・プレビュー */
+  #refpop{ position:fixed; z-index:50; max-width:520px; max-height:46vh; overflow:auto;
+    background:#0e1a2e; border:1px solid #2b66c0; border-radius:10px; padding:11px 14px;
+    box-shadow:0 10px 34px rgba(0,0,0,.55); font-size:13px; line-height:1.85; }
+  #refpop.hidden{ display:none; }
+  #refpop .rphead{ border-bottom:1px solid var(--line); padding-bottom:5px; margin-bottom:6px; }
+  #refpop .rpnum{ font-weight:700; color:#7fb0ff; }
+  #refpop .rpcap{ color:var(--muted); margin-left:6px; font-size:12px; }
+  #refpop .rpbody{ color:var(--fg); white-space:normal; }
   .rmore{ font-size:12px; color:var(--muted); padding:8px 2px 2px; border-top:1px solid var(--line); }
   .rmore a, .rarts a{ color:#8fd0ff; }
   .rk{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; flex:none; background:#475569; color:#fff; }
@@ -394,6 +403,13 @@ async function boot(){
     e.preventDefault();
     openLawView(a.dataset.lvUrl, a.dataset.lvMode, a.dataset.lvTitle);
   });
+  // 参照条文のホバー・プレビュー（少し待ってから浮かせる／離れたら消す）
+  const docEl = document.getElementById('doc');
+  docEl.addEventListener('mouseover', e => { const a=e.target.closest('.rf[data-ra]'); if(!a) return;
+    clearTimeout(_rpHideTimer); clearTimeout(_rpTimer); _rpTimer=setTimeout(()=>previewRef(a), 200); });
+  docEl.addEventListener('mouseout', e => { const a=e.target.closest('.rf[data-ra]'); if(!a) return;
+    clearTimeout(_rpTimer); _rpHideTimer=setTimeout(hideRefPop, 250); });
+  docEl.addEventListener('scroll', hideRefPop, { passive:true });
   renderSidebar();
   // ディープリンク: ?law=ID&art=第九条
   const q = new URLSearchParams(location.search);
@@ -500,7 +516,7 @@ function render(raw, k, artNum){
         // 法あり=親法令へ（常時）。法なし=自文書だが、自文書に実在する条のときだけ（他法引用文中の第N条を誤リンクしない）
         if (tid && (isHou || ARTSET.has(art))){
           const ttl = isHou ? REFTITLE : myTitle;
-          out += '<a class="rf" href="?law='+tid+'&art='+encodeURIComponent(art)+'" target="_blank" rel="noopener" title="'+esc(ttl)+' '+art+' を新しいタブで開く（右クリックで新規タブ/ウィンドウを選択）">'+m[0]+'</a>';
+          out += '<a class="rf" data-rl="'+tid+'" data-ra="'+esc(art)+'" href="?law='+tid+'&art='+encodeURIComponent(art)+'" target="_blank" rel="noopener" title="'+esc(ttl)+' '+art+'（ホバーで条文プレビュー／クリックで新しいタブ）">'+m[0]+'</a>';
           i += m[0].length; continue;
         }
       }
@@ -627,6 +643,29 @@ function closeLawView(){
   if(lv){ lv.classList.add('hidden'); lv.innerHTML=''; }
   if(ab) ab.classList.remove('hidden');
 }
+// ===== 参照条文のホバー・プレビュー（「第63条第2項の規定を準用する」等を、ホバーで該当条文を浮かせて表示）=====
+let _rpEl=null, _rpTimer=null, _rpHideTimer=null;
+function refPreviewHtml(b){
+  const cap = b.cap ? '<span class="rpcap">'+esc(b.cap)+'</span>' : '';
+  const body = esc(b.body||'').replace(/⟦TBL:\d+⟧/g,'［表（本文で表示）］').replace(/\n/g,'<br>');
+  return '<div class="rphead"><span class="rpnum">'+esc(b.num)+'</span>'+cap+'</div><div class="rpbody">'+body+'</div>';
+}
+async function previewRef(a){
+  const lawId=a.dataset.rl, art=a.dataset.ra; if(!lawId||!art) return;
+  let d = (CUR && lawId===CUR.law_id) ? CUR : cache[lawId];
+  if(!d){ try{ d = await loadLaw(lawId); }catch(e){ return; } }
+  const b=(d.blocks||[]).find(x=>x.num===art); if(!b) return;
+  if(!_rpEl){ _rpEl=document.createElement('div'); _rpEl.id='refpop'; document.body.appendChild(_rpEl);
+    _rpEl.addEventListener('mouseenter',()=>clearTimeout(_rpHideTimer));
+    _rpEl.addEventListener('mouseleave',()=>{ _rpHideTimer=setTimeout(hideRefPop,200); }); }
+  _rpEl.innerHTML = refPreviewHtml(b);
+  _rpEl.classList.remove('hidden');
+  const r=a.getBoundingClientRect(), pw=_rpEl.offsetWidth, ph=_rpEl.offsetHeight;
+  let left=Math.min(r.left, window.innerWidth-pw-12); if(left<8) left=8;
+  let top=r.bottom+6; if(top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);
+  _rpEl.style.left=left+'px'; _rpEl.style.top=top+'px';
+}
+function hideRefPop(){ if(_rpEl) _rpEl.classList.add('hidden'); }
 // 国会の審議状況（法律案）。施行令・府令・GLのページでは親法令(LAW_OF)の法案を表示。
 function dietSecHtml(lawId){
   const bills = (REGDIET[lawId] && REGDIET[lawId].length) ? REGDIET[lawId] : (REGDIET[LAW_OF[lawId]] || []);
