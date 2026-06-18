@@ -536,7 +536,7 @@ function renderRegView(it){
   box.classList.add('active');
 }
 function closeRegView(){
-  const box=document.getElementById('regview'); if(box){ box.classList.remove('active'); box.innerHTML='<div class="rvhint">← 左の項目をクリックすると、ここに内容が表示されます。</div>'; }
+  const box=document.getElementById('regview'); if(box){ box.classList.remove('active'); box.innerHTML='<div class="rvhint">← 左の更新項目を選ぶと、その本文（公表資料・パブコメ等）をこの欄に表示します（別サイトへ移動しません）。</div>'; }
   document.querySelectorAll('#feedcol .fitem.sel').forEach(e=>e.classList.remove('sel'));
 }
 // ===== トップ最上部「本日の更新／直近7日の更新」ポータル =====
@@ -1163,7 +1163,7 @@ function showHome(){
     <div class="homecols">
       <div id="feedcol"><div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div></div>
       <div id="hsplit" title="ドラッグで左右の幅を調整"></div>
-      <div id="regview"><div class="rvhint">← 項目をクリックすると、ここに内容が表示されます（画面は切り替わりません）。</div></div>
+      <div id="regview"><div class="rvhint">← 上の「最新の規制アップデート」や下のフィードの項目を選ぶと、その本文（公表資料・パブコメ等）をこの欄に表示します（別サイトへ移動しません）。</div></div>
     </div>
     <div class="feedfoot">📖 のついた更新はクリックで該当法令・条文が開きます ／ <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（全件・6機関・Slack通知）↗</a></div>
   </div>`;

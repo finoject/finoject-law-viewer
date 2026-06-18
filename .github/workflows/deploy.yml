@@ -1,0 +1,39 @@
+name: deploy-site
+
+# サイト（law-viewer-site/）の変更を main に push したら GitHub Pages へ即時デプロイする。
+# ※ crawl.yml は法令データ取得（3回/日）後にデプロイするが、index.html 等のUI変更は push しても
+#   crawl.yml が次に走るまで反映されなかった。これを解消するための軽量デプロイ専用ワークフロー（データ取得はしない）。
+# data/** はデータ巡回（crawl.yml）側でデプロイされるため、ここでは除外して二重デプロイを避ける。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'law-viewer-site/**'
+      - '!law-viewer-site/data/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# crawl.yml と同じグループでデプロイを直列化（Pages の同時デプロイ衝突を防ぐ）
+concurrency:
+  group: pages-law
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: law-viewer-site
+      - id: deployment
+        uses: actions/deploy-pages@v4
