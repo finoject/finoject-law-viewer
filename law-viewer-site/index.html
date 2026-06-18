@@ -45,7 +45,13 @@
     background:#0e1626; color:var(--fg); font-size:14px; margin-bottom:8px; }
   #gsearch:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(46,108,240,.3); }
   /* 横断検索の結果 */
-  .gres-head{ font-size:13px; color:var(--muted); margin:4px 0 12px; }
+  .gres-head{ font-size:13px; color:var(--muted); margin:4px 0 8px; }
+  .gfbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 14px; }
+  .gflabel{ font-size:12px; color:var(--muted); font-weight:700; }
+  .gfchip{ font-size:12.5px; padding:5px 11px; border-radius:16px; cursor:pointer; background:#16223a; color:#cfe0ff; border:1px solid var(--line); }
+  .gfchip:hover{ border-color:var(--accent); }
+  .gfchip.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .gupd{ margin-left:6px; font-size:10px; font-weight:700; color:#0b1220; background:#fbbf24; border-radius:4px; padding:1px 5px; }
   .gsec{ font-size:14px; font-weight:700; color:#bcd0f0; margin:18px 0 4px; border-left:3px solid var(--accent); padding-left:8px; }
   .gsec span{ font-weight:400; color:var(--muted); font-size:12px; }
   .ghit{ display:block; text-decoration:none; color:var(--fg); border:1px solid var(--line); border-radius:8px;
@@ -159,9 +165,13 @@
   /* トップ画面の2カラム（左:フィード／右:本文ビューア）。中央のスプリッタをドラッグで幅可変（ウルトラワイド対応） */
   .homecols{ display:flex; gap:0; align-items:stretch; margin-top:6px; }
   #feedcol{ flex:0 0 44%; min-width:0; }
-  #hsplit{ flex:0 0 12px; align-self:stretch; cursor:col-resize; position:relative; }
-  #hsplit::before{ content:""; position:absolute; left:5px; top:0; bottom:0; width:2px; background:var(--line); border-radius:2px; }
+  #hsplit{ flex:0 0 16px; align-self:stretch; cursor:col-resize; position:relative; }
+  #hsplit::before{ content:""; position:absolute; left:7px; top:0; bottom:0; width:2px; background:var(--line); border-radius:2px; }
+  /* ドラッグ可能と分かるグリップ（⋮）を中央に表示 */
+  #hsplit::after{ content:"⋮⋮"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); writing-mode:vertical-rl;
+    letter-spacing:-3px; font-size:14px; color:#5f7196; background:#16223a; border:1px solid #2b66c0; border-radius:6px; padding:8px 1px; line-height:1; }
   #hsplit:hover::before, #hsplit.drag::before{ background:var(--accent); }
+  #hsplit:hover::after, #hsplit.drag::after{ color:#cfe0ff; border-color:var(--accent); }
   .fitem{ cursor:pointer; border-radius:8px; }
   .fitem:hover{ background:#0e1a2e; }
   .fitem.sel{ background:rgba(46,108,240,.16); outline:1px solid #2b66c0; }
@@ -251,11 +261,11 @@
       <p id="lawMeta"></p>
       <input id="search" placeholder="📄 この法令内だけをキーワード検索…（例：暗号資産、本人確認、登録）" class="hidden">
       <div id="pctl" class="hidden">
-        <span>（ ）の表示:</span>
-        <button data-pa="all">全部</button>
-        <button data-pa="less">－ 深い所から隠す</button>
-        <button data-pa="more">＋ 戻す</button>
-        <button data-pa="skel">基本構造のみ</button>
+        <span class="pctl-help" title="法令の入れ子になった（　）を深い方から段階的に「（…）」に畳み、条文の骨組みだけを先に読めます。元に戻すこともできます。">（ ）の表示 <b>ⓘ</b>:</span>
+        <button data-pa="all" title="すべての（　）を通常表示">全部</button>
+        <button data-pa="less" title="一番深い入れ子の（　）から「（…）」に畳む">－ 深い所から隠す</button>
+        <button data-pa="more" title="畳んだ（　）を一段ずつ戻す">＋ 戻す</button>
+        <button data-pa="skel" title="すべての（　）を「（…）」に畳み、条文の骨組みだけ表示">基本構造のみ</button>
         <span id="pctl-state"></span>
       </div>
     </div>
@@ -268,15 +278,16 @@
 </div>
 
 <script>
-const G_ORDER = ['金商法','資金決済','犯収法','外為法','銀行法','会社法','個人情報','ガイドライン'];
+const G_ORDER = ['金商法','資金決済','貸金業法','信託業法','金サ法','犯収法','外為法','銀行法','会社法','個人情報','ガイドライン'];
 // サイドバーのグループ見出しの表示名（内部キーG_ORDER/groupは変更しない＝LAW_OF等に影響させない）
-const GLABEL = { '金商法':'金商法関連','資金決済':'資金決済法関連','犯収法':'犯収法関連','外為法':'外為法関連（AML/制裁）','銀行法':'銀行法関連','会社法':'会社法関連','個人情報':'個人情報保護法関連','ガイドライン':'各種ガイドライン' };
+const GLABEL = { '金商法':'金商法関連','資金決済':'資金決済法関連','貸金業法':'貸金業法関連','信託業法':'信託業法関連','金サ法':'金融サービス提供法関連','犯収法':'犯収法関連','外為法':'外為法関連（AML/制裁）','銀行法':'銀行法関連','会社法':'会社法関連','個人情報':'個人情報保護法関連','ガイドライン':'各種ガイドライン' };
 // 各府令・施行令・ガイドラインの本文中「法」が指す親法令（law_id）。新規追加時はここに対応を足す。
 const LAW_OF = {
   '422CO0000000019':'421AC0000000059', '429M60000002007':'421AC0000000059', '422M60000002004':'421AC0000000059',
   '422M60000002003':'421AC0000000059', '505M60000002048':'421AC0000000059',
   '420CO0000000020':'419AC0000000022', '420M60000F5A001':'419AC0000000022',
   '355CO0000000260':'324AC0000000228',                                            // 外国為替令→外為法
+  '358CO0000000181':'358AC0000000032', '416CO0000000427':'416AC0000000154', '412CO0000000484':'412AC0000000101', // 貸金/信託/金サ 施行令→各法
   '340CO0000000321':'323AC0000000025', '419M60000002052':'323AC0000000025',
   '357CO0000000040':'356AC0000000059', '357M50000040010':'356AC0000000059',                     // 銀行法系→銀行法
   '417CO0000000364':'417AC0000000086', '418M60000010012':'417AC0000000086',                     // 会社法系→会社法
@@ -913,28 +924,48 @@ function setupHSplit(){
     const b=parseFloat(col.style.flexBasis); if(b) localStorage.setItem('feedRatio', b.toFixed(1)); });
 }
 let gseq = 0;
+let gLastQ='', gScope='all', gChangedOnly=false;
 async function globalSearch(q){
-  q = (q||'').trim();
+  q = (q||'').trim(); gLastQ=q;
   if (!q){ CUR ? renderDoc('') : showHome(); return; }
   const my = ++gseq;
   $('#doc').innerHTML = '<div class="wrap"><div class="hint">全法令・ガイドラインを検索中…</div></div>';
   await loadAll();
   if (my !== gseq) return;                         // 後続の入力があれば破棄
-  let html = '', total = 0;
+  renderGlobalResults();
+}
+function setGScope(s){ gScope=s; renderGlobalResults(); }
+function toggleGChanged(){ gChangedOnly=!gChangedOnly; renderGlobalResults(); }
+// 横断検索の結果を、種別（法令/ガイドライン）・更新ありで絞り込んで描画（“多すぎる”を選別支援）
+function renderGlobalResults(){
+  const q=gLastQ; if(!q) return;
+  const changedSet=new Set(INDEX.changed||[]);
+  const rows=[]; let lawHits=0, guideHits=0;
   for (const l of orderedLaws()){
-    const d = cache[l.law_id]; if (!d) continue;
-    const hits = d.blocks.filter(b => b.t!=='h' && searchText(b).includes(q));
-    if (!hits.length) continue;
-    html += `<div class="gsec">${esc(l.title)} <span>(${hits.length}件)</span></div>`;
-    for (const b of hits){
-      total++;
-      html += `<a class="ghit" href="?law=${l.law_id}&art=${encodeURIComponent(b.num)}" target="_blank" rel="noopener">`
+    const d=cache[l.law_id]; if(!d) continue;
+    const hits=d.blocks.filter(b=>b.t!=='h' && searchText(b).includes(q));
+    if(!hits.length) continue;
+    const isGuide=(l.group==='ガイドライン');
+    isGuide ? guideHits+=hits.length : lawHits+=hits.length;
+    rows.push({ l, hits, isGuide, changed:changedSet.has(l.title) });
+  }
+  let html='', total=0;
+  for (const r of rows){
+    if(gScope==='law' && r.isGuide) continue;
+    if(gScope==='guide' && !r.isGuide) continue;
+    if(gChangedOnly && !r.changed) continue;
+    html += `<div class="gsec">${esc(r.l.title)} <span>(${r.hits.length}件)</span>${r.changed?'<span class="gupd">更新</span>':''}</div>`;
+    for (const b of r.hits){ total++;
+      html += `<a class="ghit" href="?law=${r.l.law_id}&art=${encodeURIComponent(b.num)}" target="_blank" rel="noopener">`
         + `<span class="gnum">${esc(b.num)}</span><span class="gcap">${esc(b.cap||'')}</span>`
         + `<span class="gsnip">${gSnippet(b.body,q)}</span></a>`;
     }
   }
-  $('#doc').innerHTML = `<div class="wrap"><div class="gres-head">「${esc(q)}」の横断検索結果：${total}件</div>`
-    + (html || '<div class="hint">該当する条文・項目はありません</div>') + '</div>';
+  const chip=(s,label,n)=>`<button class="gfchip${gScope===s?' on':''}" onclick="setGScope('${s}')">${label}（${n}）</button>`;
+  const bar=`<div class="gfbar"><span class="gflabel">絞り込み:</span>${chip('all','すべて',lawHits+guideHits)}${chip('law','法令のみ',lawHits)}${chip('guide','ガイドラインのみ',guideHits)}`
+    + `<button class="gfchip${gChangedOnly?' on':''}" onclick="toggleGChanged()">🆕 更新ありのみ</button></div>`;
+  $('#doc').innerHTML = `<div class="wrap"><div class="gres-head">「${esc(q)}」の横断検索結果：${total}件</div>${bar}`
+    + (html || '<div class="hint">この絞り込み条件では該当がありません</div>') + '</div>';
 }
 let gtimer = null;
 $('#gsearch').addEventListener('input', e => { const v = e.target.value; clearTimeout(gtimer); gtimer = setTimeout(()=>globalSearch(v), 220); });
