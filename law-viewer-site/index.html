@@ -116,6 +116,12 @@
   .artreg:hover{ filter:brightness(1.15); }
   /* トップ画面の規制ウォッチ・フィード */
   .home{ padding-bottom:40px; }
+  .homepurpose{ font-size:14px; line-height:1.7; color:var(--fg); background:linear-gradient(180deg,#10243f,#0e1a2e); border:1px solid #2b66c0; border-radius:10px; padding:12px 15px; margin:2px 0 10px; }
+  .homepurpose .hp-aud{ color:var(--muted); font-size:12px; }
+  .qsbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 14px; }
+  .qslabel{ font-size:12px; color:var(--muted); font-weight:700; }
+  .qschip{ font-size:12.5px; padding:5px 11px; border-radius:16px; cursor:pointer; background:#16223a; color:#cfe0ff; border:1px solid #2b66c0; }
+  .qschip:hover{ background:#1c3a63; color:#fff; }
   .homeintro{ color:var(--muted); font-size:13px; line-height:1.8; background:#0e1a2e; border:1px solid var(--line); border-radius:10px; padding:11px 14px; margin:2px 0 16px; }
   .feedhead{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; border-left:3px solid var(--accent); padding-left:10px; }
   .feedtitle{ font-size:16px; font-weight:700; color:#bcd0f0; }
@@ -773,9 +779,12 @@ function gSnippet(body, q){
   return esc(t).split(esc(q)).join('<mark>'+esc(q)+'</mark>');
 }
 function showHome(){
+  // 代表論点（全て実際にヒットする語を採用＝0件チップを出さない）
+  const QSEARCH = ['取引時確認','疑わしい取引','制裁','暗号資産','電子決済手段','資金移動業','前払式支払手段','分別管理','利用者保護','管理態勢'];
   $('#doc').innerHTML = `<div class="wrap home">
-    <div class="homeintro">このサイトは、金融関連の<b>法令の条文</b>と、当局の<b>最近の規制動向</b>を、ひとつの画面で確認できます。<br>
-      ・<b>左の一覧</b>＝法令を選ぶと条文が開きます（上の窓で全法令・ガイドラインの横断検索も可）。<br>
+    <div class="homepurpose">⚖️ <b>金融コンプライアンス実務者のための無料ツール</b> — 法令・ガイドライン・規制動向・国会審議・報道を<b>1画面</b>で。<span class="hp-aud">（想定ユーザー：資金決済／暗号資産・ステーブルコイン／AML・CFT／証券などの実務担当者）</span></div>
+    <div class="qsbar"><span class="qslabel">まず試す（代表論点）:</span>${QSEARCH.map(q=>`<button class="qschip" onclick="quickSearch('${q}')">🔍 ${q}</button>`).join('')}</div>
+    <div class="homeintro">・<b>左の一覧</b>＝法令を選ぶと条文が開きます（上の窓で全法令・ガイドラインの横断検索も可）。
       ・<b>下のフィード</b>＝金融庁・日銀など6機関の新着。項目をクリックすると、<b>この画面のまま右側に本文</b>が開きます（別サイトへは飛びません）。</div>
     <div class="feedhead">
       <span class="feedtitle">📡 最近の規制動向（金融庁・日銀・JPXほか6機関）</span>
@@ -791,6 +800,8 @@ function showHome(){
   renderFeedChips();
   renderRegFeed();
 }
+// おすすめ検索チップ：クリックで横断検索を実行（初見ユーザーの立ち上がりを速くする）
+function quickSearch(q){ const g=$('#gsearch'); if(g) g.value=q; globalSearch(q); }
 let gseq = 0;
 async function globalSearch(q){
   q = (q||'').trim();
