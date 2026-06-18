@@ -362,8 +362,10 @@ function openRegView(idx){
   document.querySelectorAll('#feedcol .fitem.sel').forEach(e=>e.classList.remove('sel'));
   const row = document.querySelector('#feedcol .fitem[data-idx="'+idx+'"]'); if(row) row.classList.add('sel');
   const framable = FRAMABLE_AGENCIES.includes(it.agency);
+  const yt = ytEmbed(it.url);
   let body;
-  if (PROXY_BASE) body = `<iframe class="rvframe" src="${PROXY_BASE}?url=${encodeURIComponent(it.url)}" referrerpolicy="no-referrer"></iframe>`;
+  if (yt) body = `<iframe class="rvframe" src="${yt}" referrerpolicy="no-referrer" allow="encrypted-media; fullscreen" allowfullscreen></iframe>`;
+  else if (PROXY_BASE) body = `<iframe class="rvframe" src="${PROXY_BASE}?url=${encodeURIComponent(it.url)}" referrerpolicy="no-referrer"></iframe>`;
   else if (framable) body = `<iframe class="rvframe" src="${esc(it.url)}" referrerpolicy="no-referrer"></iframe>`;
   else body = `<div class="rvblocked">この媒体（${esc(it.agency)}）はページ埋め込みを許可していないため、ここに本文を表示できません。`
             + `<a class="rvopen" href="${esc(it.url)}" target="_blank" rel="noopener">↗ 原文を新しいタブで開く</a>`
@@ -602,15 +604,21 @@ function jpd(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${y
 function regKindTag(kind){ return (!kind||kind==='その他') ? '' : `<span class="rk k-${kind}">${esc(kind)}</span>`; }
 function jumpArt(num){ closeLawView(); const t=[...document.querySelectorAll('.art')].find(a=>a.dataset.num===num); if(t){ t.classList.add('target'); t.scrollIntoView({block:'start'}); } }
 function escA(s){ return esc(s).replace(/"/g,'&quot;'); }   // 属性値用（"も退避）
+// URLがYouTube動画なら埋め込み用URLを返す（直接プレーヤー表示。将来の動画項目に対応）
+function ytEmbed(u){
+  const m=(u||'').match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? 'https://www.youtube-nocookie.com/embed/'+m[1] : null;
+}
 // パネル項目クリック → 条文の場所(#artbody)を隠し、その場所(#lawview)に本文をiframe表示。
-// mode='direct'(X-Frame-Options無し=衆議院/JSDA/JVCEA)はそのまま、'proxy'(金融庁/日銀等)はWorker経由。
+// mode='direct'(X-Frame-Options無し=衆議院/JSDA/JVCEA)はそのまま、'proxy'(金融庁/日銀等)はWorker経由。YouTube動画は直接埋め込み。
 function openLawView(url, mode, title){
   const lv=document.getElementById('lawview'), ab=document.getElementById('artbody'); if(!lv||!ab) return;
-  const src = (mode==='proxy' && PROXY_BASE) ? PROXY_BASE+'?url='+encodeURIComponent(url) : url;
+  const yt=ytEmbed(url);
+  const src = yt ? yt : (mode==='proxy' && PROXY_BASE) ? PROXY_BASE+'?url='+encodeURIComponent(url) : url;
   lv.innerHTML = `<div class="lvbar"><button class="lvback" onclick="closeLawView()">← 条文に戻る</button>`
     + `<span class="lvttl">${esc(title||'')}</span>`
     + `<a class="rvext" href="${escA(url)}" target="_blank" rel="noopener" title="原文を新しいタブで開く">↗ 原文</a></div>`
-    + `<iframe class="lvframe" src="${escA(src)}" referrerpolicy="no-referrer"></iframe>`;
+    + `<iframe class="lvframe" src="${escA(src)}" referrerpolicy="no-referrer" allow="encrypted-media; fullscreen" allowfullscreen></iframe>`;
   lv.classList.remove('hidden'); ab.classList.add('hidden');
   const doc=document.getElementById('doc'); if(doc) doc.scrollTop=0;
 }

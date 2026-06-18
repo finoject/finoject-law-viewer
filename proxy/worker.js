@@ -44,8 +44,9 @@ export default {
 
     if (ct.includes('text/html')) {
       let html = await upstream.text();
-      // 相対パス（CSS/画像/リンク）が元サイトに解決するよう <base> を注入
-      const baseTag = '<base href="' + t.href.replace(/"/g, '&quot;') + '">';
+      // 相対パス（CSS/画像/リンク）が元サイトに解決するよう <base> を注入。
+      // target="_blank"＝差し込みページ内のリンクは新しいタブで開く（iframe内遷移で埋め込み拒否サイトに当たり真っ白になるのを防ぐ）。
+      const baseTag = '<base href="' + t.href.replace(/"/g, '&quot;') + '" target="_blank">';
       if (/<head[^>]*>/i.test(html)) html = html.replace(/<head([^>]*)>/i, '<head$1>' + baseTag);
       else html = baseTag + html;
       return new Response(html, { status: upstream.status, headers: h });
