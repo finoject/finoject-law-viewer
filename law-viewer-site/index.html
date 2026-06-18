@@ -90,6 +90,32 @@
   .artreg{ display:inline-block; margin-left:8px; font-size:11px; font-weight:700; color:#fff; background:#b45309;
     border-radius:6px; padding:1px 7px; text-decoration:none; vertical-align:middle; }
   .artreg:hover{ filter:brightness(1.15); }
+  /* トップ画面の規制ウォッチ・フィード */
+  .home{ padding-bottom:40px; }
+  .homeintro{ color:var(--muted); font-size:13px; line-height:1.8; background:#0e1a2e; border:1px solid var(--line); border-radius:10px; padding:11px 14px; margin:2px 0 16px; }
+  .feedhead{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; border-left:3px solid var(--accent); padding-left:10px; }
+  .feedtitle{ font-size:16px; font-weight:700; color:#bcd0f0; }
+  .feedmeta{ font-size:12px; color:var(--muted); }
+  .feedchips{ display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 4px; }
+  .fchipbtn{ font-size:12px; padding:5px 11px; border-radius:16px; cursor:pointer; user-select:none; background:#16223a; color:#cfe0ff; border:1px solid var(--line); }
+  .fchipbtn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .fc-law{ border-color:#2b66c0; color:#8fd0ff; }
+  .fc-law.on{ background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
+  .fday{ margin:16px 0 4px; font-size:13px; font-weight:700; color:#bcd0f0; border-left:3px solid var(--accent); padding-left:9px; }
+  .fitem{ display:flex; gap:10px; align-items:flex-start; padding:10px 6px; border-bottom:1px solid var(--line); }
+  .fbadge{ flex:none; font-size:11px; font-weight:600; color:#fff; padding:3px 8px; border-radius:6px; white-space:nowrap; margin-top:1px; }
+  .fbody{ flex:1; min-width:0; }
+  .fttl{ color:var(--fg); text-decoration:none; font-size:14px; line-height:1.5; }
+  .fttl:hover{ color:#7fb0ff; text-decoration:underline; }
+  .fnew{ margin-left:7px; font-size:10px; font-weight:700; color:#0b1220; background:#fbbf24; border-radius:4px; padding:1px 5px; }
+  .fchips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .fchip{ font-size:11px; padding:2px 8px; border-radius:6px; background:#13243f; color:#8fd0ff; border:1px solid #2b66c0; text-decoration:none; white-space:nowrap; }
+  .fchip:hover{ background:#1c3a63; color:#cfe7ff; }
+  .fk{ margin-left:6px; font-size:10px; font-weight:700; padding:0 5px; border-radius:4px; background:#475569; color:#fff; }
+  .fk.k-パブコメ{ background:#b45309; } .fk.k-改正{ background:#1d4ed8; } .fk.k-公布{ background:#15803d; }
+  .fk.k-ガイドライン{ background:#7c3aed; } .fk.k-告示,.fk.k-通達等{ background:#475569; }
+  .feedfoot{ margin-top:16px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); padding-top:12px; }
+  .feedfoot a{ color:#8fd0ff; }
   /* カッコの入れ子の深さで背景色を変える */
   .body .p{ border-radius:3px; padding:0 1px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
   /* 入れ子で背景が重なり濃く見えるため、各色の不透明度を元の約8割に下げる（2026-06-17三根さん指示。7割は弱すぎ→8割へ）*/
@@ -187,6 +213,10 @@ let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RPC
 const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
 let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGLOADED=false, REG_GEN=null;
+let REGITEMS=[], REGLATEST=null, homeFilterAg='all';   // トップ画面の規制ウォッチ・フィード用
+const REG_COLORS = {'金融庁':'#2e6cf0','日本銀行':'#16a34a','日本取引所グループ':'#0d9488','日本証券業協会':'#d97706','JVCEA':'#9333ea','日本公認会計士協会':'#dc2626'};
+const REG_SHORT  = {'金融庁':'金融庁','日本銀行':'日銀','日本取引所グループ':'JPX','日本証券業協会':'日証協','JVCEA':'JVCEA','日本公認会計士協会':'会計士協会'};
+const REG_AGENCIES = ['金融庁','日本銀行','日本取引所グループ','日本証券業協会','JVCEA','日本公認会計士協会'];
 // 規制動向＋関連ニュースを取得して索引化。force=true は定期再取得（タブを開いたまま最新化）。
 async function loadRegNews(force){
   if (REGLOADED && !force) return;
@@ -204,10 +234,14 @@ async function loadRegNews(force){
     }
     for (const id in byLaw) byLaw[id].sort((a,b)=> (b.it.date||'').localeCompare(a.it.date||''));   // 日付降順
     REGBYLAW=byLaw; REGBYART=byArt; REGLAWNEWS=d.lawnews||{};
+    REGITEMS = (d.items||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.detectedAt||'').localeCompare(a.detectedAt||''));
+    REGLATEST = REGITEMS.reduce((m,it)=> (it.detectedAt && it.detectedAt>m) ? it.detectedAt : m, '');  // 最新巡回で検知＝NEW判定用
     const sv = document.querySelector('#search');
     if (CUR && !(sv && sv.value)){
       if (force) refreshRegPanel();      // 定期更新時はパネルだけ差し替え（全再描画せず＝スクロール位置維持）
       else renderDoc('');                // 初回（またはディープリンク取得遅延）は通常描画
+    } else if (!CUR && !(sv && sv.value)){
+      renderRegFeed();                   // トップ画面のフィードを反映（初回・定期更新とも）
     }
   } catch(e){ /* 取得失敗時は連携なしで通常表示 */ }
 }
@@ -222,6 +256,53 @@ function refreshRegPanel(){
   } else if (html && wrap){
     const tmp=document.createElement('div'); tmp.innerHTML=html; if (tmp.firstElementChild) wrap.insertBefore(tmp.firstElementChild, wrap.firstChild);
   }
+}
+// ===== トップ画面の金融規制ウォッチ・フィード =====
+function jpDay(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${y}年${+m}月${+d}日`; }
+// フィード項目の📖法令リンク（法令単位に集約。クリックでこのアプリ内で該当条文を開く＝行き来不要）
+function homeRefsHtml(it){
+  if(!it.lawrefs || !it.lawrefs.length) return '';
+  const byId={};
+  for(const r of it.lawrefs){ if(!byId[r.id]) byId[r.id]={id:r.id, art:r.art, kind:r.kind, label:(r.label||'').replace(/\s*第.+$/,'')}; if(r.art && !byId[r.id].art) byId[r.id].art=r.art; }
+  return '<div class="fchips">'+Object.values(byId).slice(0,4).map(g=>{
+    const k = (g.kind && g.kind!=='その他') ? `<span class="fk k-${g.kind}">${esc(g.kind)}</span>` : '';
+    const a = g.art ? "'"+g.art.replace(/'/g,'')+"'" : 'null';
+    const href = '?law='+g.id+(g.art?'&art='+encodeURIComponent(g.art):'');
+    return `<a class="fchip" href="${href}" onclick="openLaw('${g.id}',${a});return false;" title="この法令ビューアで開く">📖 ${esc(g.label)}${k}</a>`;
+  }).join('')+'</div>';
+}
+function renderFeedChips(){
+  const box=document.getElementById('feedchips'); if(!box) return;
+  const chip=(ag,label,extra)=>`<span class="fchipbtn${extra||''}${homeFilterAg===ag?' on':''}" data-ag="${ag}">${esc(label)}</span>`;
+  let h = chip('all','すべて');
+  for(const ag of REG_AGENCIES) h += chip(ag, REG_SHORT[ag]||ag);
+  h += chip('__lawlinked__','📖 法令リンクあり',' fc-law');
+  box.innerHTML=h;
+  box.querySelectorAll('.fchipbtn').forEach(c=>c.addEventListener('click',()=>{
+    const ag=c.dataset.ag;
+    homeFilterAg = (homeFilterAg===ag && ag!=='all') ? 'all' : ag;   // 再クリックで解除（トグル）
+    renderFeedChips(); renderRegFeed();
+  }));
+}
+function renderRegFeed(){
+  const box=document.getElementById('regfeed'); if(!box) return;
+  const meta=document.getElementById('feedmeta');
+  if(meta) meta.textContent = REG_GEN ? ('最終更新 '+ (function(g){const d=new Date(g),j=new Date(d.getTime()+9*3600000),p=n=>String(n).padStart(2,'0');return `${j.getUTCFullYear()}/${p(j.getUTCMonth()+1)}/${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;})(REG_GEN) +' JST') : '';
+  if(!REGITEMS.length){ box.innerHTML='<div class="hint" style="margin-top:24px">読み込み中…</div>'; return; }
+  let items = REGITEMS;
+  if(homeFilterAg==='__lawlinked__') items = items.filter(it=>it.lawrefs&&it.lawrefs.length);
+  else if(homeFilterAg!=='all') items = items.filter(it=>it.agency===homeFilterAg);
+  if(!items.length){ box.innerHTML='<div class="hint" style="margin-top:24px">該当する更新はありません</div>'; return; }
+  const SHOWN=60; let html='', cur=null;
+  for(const it of items.slice(0,SHOWN)){
+    if(it.date!==cur){ cur=it.date; html+=`<div class="fday">${jpDay(it.date)}</div>`; }
+    const c=REG_COLORS[it.agency]||'#64748b';
+    const isNew = it.detectedAt && REGLATEST && it.detectedAt===REGLATEST;
+    html += `<div class="fitem"><span class="fbadge" style="background:${c}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
+      + `<div class="fbody"><a class="fttl" href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>${isNew?'<span class="fnew">NEW</span>':''}${homeRefsHtml(it)}</div></div>`;
+  }
+  if(items.length>SHOWN) html += `<div class="rmore">ほか ${items.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`;
+  box.innerHTML=html;
 }
 
 const $ = s => document.querySelector(s);
@@ -525,11 +606,18 @@ function gSnippet(body, q){
   return esc(t).split(esc(q)).join('<mark>'+esc(q)+'</mark>');
 }
 function showHome(){
-  $('#doc').innerHTML = `<div class="wrap"><div class="hint">
-    上の検索窓で<b>全法令・ガイドラインを横断検索</b>できます（結果は下に全件表示）。<br>
-    または左の一覧から法令を選ぶと条文が表示されます。<br>
-    （毎朝自動更新。改正があった法令には <span style="background:#fbbf24;color:#0b1220;border-radius:4px;padding:0 5px;">更新</span> が付きます）
-  </div></div>`;
+  $('#doc').innerHTML = `<div class="wrap home">
+    <div class="homeintro">上の窓で<b>全法令・ガイドラインを横断検索</b>、または左の一覧から法令を選ぶと条文が開きます。各法令ページでは関連する規制動向・報道も条文に重ねて表示されます。</div>
+    <div class="feedhead">
+      <span class="feedtitle">📡 金融規制ウォッチ ― 最近の更新</span>
+      <span id="feedmeta" class="feedmeta"></span>
+    </div>
+    <div id="feedchips" class="feedchips"></div>
+    <div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div>
+    <div class="feedfoot">📖 のついた更新はクリックで該当法令・条文が開きます ／ <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（全件・6機関・Slack通知）↗</a></div>
+  </div>`;
+  renderFeedChips();
+  renderRegFeed();
 }
 let gseq = 0;
 async function globalSearch(q){
