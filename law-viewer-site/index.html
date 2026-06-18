@@ -84,6 +84,11 @@
   .rttl:hover{ color:#7fb0ff; text-decoration:underline; }
   .rarts{ font-size:12px; color:#9fd0ff; flex-basis:100%; margin-top:2px; }
   .rarts-w{ color:var(--muted); }
+  #exportBox{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:2px 0 2px; }
+  #exportBox.hidden{ display:none; }
+  .exlabel{ font-size:12px; color:var(--muted); }
+  #exportBox button{ background:#13243f; color:#8fd0ff; border:1px solid #2b66c0; border-radius:7px; padding:5px 11px; font-size:12.5px; cursor:pointer; }
+  #exportBox button:hover{ background:#1c3a63; color:#cfe7ff; }
   .modebtn{ background:#16223a; color:#cfe0ff; border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:13px; cursor:pointer; }
   .modebtn:hover{ border-color:var(--accent); }
   /* 学習者モード：条文に集中（規制動向の付帯情報を隠し、行間を広げる） */
@@ -259,6 +264,11 @@
       <input id="gsearch" placeholder="🔍 全法令・ガイドラインを横断検索…（例：暗号資産、本人確認、収納代行）">
       <h2 id="lawTitle">法令を選択してください</h2>
       <p id="lawMeta"></p>
+      <div id="exportBox" class="hidden">
+        <span class="exlabel">この法令を保存:</span>
+        <button id="expMd" title="表示中の法令をMarkdownでダウンロード（実務でコピーして使いやすい形）">📥 Markdown</button>
+        <button id="expJson" title="表示中の法令を構造化JSONでダウンロード（他ツール/AIで加工しやすい形）">📥 JSON</button>
+      </div>
       <input id="search" placeholder="📄 この法令内だけをキーワード検索…（例：暗号資産、本人確認、登録）" class="hidden">
       <div id="pctl" class="hidden">
         <span class="pctl-help" title="法令の入れ子になった（　）を深い方から段階的に「（…）」に畳み、条文の骨組みだけを先に読めます。元に戻すこともできます。">（ ）の表示 <b>ⓘ</b>:</span>
@@ -506,6 +516,7 @@ async function openLaw(id, artNum, para){
     + `<a href="${d.egov_url}" target="_blank" rel="noopener">e-Govで原文を見る ↗</a>`;
   const s = $('#search'); s.classList.remove('hidden'); s.value='';
   $('#pctl').classList.remove('hidden');
+  $('#exportBox').classList.remove('hidden');
   renderDoc('');
   $('#side').classList.remove('open');
   // 条文ジャンプ（大きな法令の描画完了を待ってリトライ）
@@ -980,6 +991,7 @@ function goHome(){
   $('#lawMeta').innerHTML = '';
   const s = $('#search'); s.classList.add('hidden'); s.value = '';
   $('#pctl').classList.add('hidden');
+  $('#exportBox').classList.add('hidden');
   $('#gsearch').value = '';
   $('#side').classList.remove('open');
   showHome();
@@ -987,6 +999,66 @@ function goHome(){
 }
 $('#home').addEventListener('click', goHome);
 $('#brand').addEventListener('click', goHome);   // 左上タイトルもトップへ
+
+// ===== エクスポート（表示中の法令を Markdown / JSON でダウンロード。クライアントのみ）=====
+function pad2(n){ return String(n).padStart(2,'0'); }
+function fnameSafe(s){ return (s||'law').replace(/[\\\/:*?"<>|\s（）()]+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'').slice(0,80); }
+// 表データ → Markdownテーブル（rowspan/colspanは簡易フラット化。セル内改行は<br>）
+function tableToMd(tbl){
+  const rows=(tbl&&tbl.rows)?tbl.rows:(tbl||[]); if(!rows.length) return '';
+  const ncol=rows.reduce((m,r)=>Math.max(m,(r.cells||[]).reduce((a,c)=>a+(c.cs||1),0)),0)||1;
+  const out=[]; let sep=false;
+  for(const r of rows){
+    const cells=(r.cells||[]).map(c=>String((c&&c.t)||'').replace(/\|/g,'\\|').replace(/\n/g,'<br>'));
+    while(cells.length<ncol) cells.push('');
+    out.push('| '+cells.join(' | ')+' |');
+    if(!sep){ out.push('|'+' --- |'.repeat(ncol)); sep=true; }
+  }
+  return out.join('\n');
+}
+// 条文本文 → Markdown（行構造を保持。占位子⟦TBL:i⟧を表に展開）
+function articleBodyMd(b){
+  const parts=String(b.body||'').split(/⟦TBL:(\d+)⟧/);
+  let md='';
+  for(let i=0;i<parts.length;i++){
+    if(i%2===1){ const t=b.tables && b.tables[+parts[i]]; md += '\n\n'+(t?tableToMd(t):'')+'\n\n'; }
+    else { md += parts[i].split('\n').map(s=>s.replace(/[ \t　]+$/,'')).join('  \n'); }
+  }
+  return md.replace(/\n{3,}/g,'\n\n').trim();
+}
+function lawToMarkdown(d){
+  const n=new Date(), ds=n.getFullYear()+'/'+pad2(n.getMonth()+1)+'/'+pad2(n.getDate());
+  let md='# '+(d.title||'')+'\n\n';
+  md+='> '+[d.type,d.law_num].filter(Boolean).join('　')+'  \n';
+  md+='> 施行/更新: '+((d.updated||'').slice(0,10)||'—')+'  \n';
+  if(d.egov_url) md+='> e-Gov原文: '+d.egov_url+'  \n';
+  md+='> エクスポート: '+ds+'（finoject 金融関連法令・規制ウォッチ）\n\n---\n\n';
+  for(const b of (d.blocks||[])){
+    if(b.t==='h'){ md+='\n**'+(b.x||'')+'**\n\n'; }
+    else { md+='## '+(b.num||'')+(b.cap?'　'+b.cap:'')+'\n\n'+articleBodyMd(b)+'\n\n'; }
+  }
+  return md.replace(/\n{3,}/g,'\n\n');
+}
+function lawToJSON(d){
+  // 内部の構造化データをそのまま＋エクスポートメタ。条/項/号は num+body(整形済テキスト)、表は tables[] を構造保持。
+  const out={ _export:{ generatedAt:new Date().toISOString(), source:'finoject 金融関連法令・規制ウォッチ' },
+    law_id:d.law_id, title:d.title, type:d.type, law_num:d.law_num, group:d.group, updated:d.updated, egov_url:d.egov_url,
+    blocks:d.blocks };
+  return JSON.stringify(out, null, 2);
+}
+function downloadFile(name, content, mime){
+  const blob=new Blob([content],{type:mime+';charset=utf-8'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 120);
+}
+function exportLaw(fmt){
+  if(!CUR) return; const n=new Date();
+  const base=fnameSafe(CUR.title)+'_'+n.getFullYear()+pad2(n.getMonth()+1)+pad2(n.getDate());
+  if(fmt==='json') downloadFile(base+'.json', lawToJSON(CUR), 'application/json');
+  else downloadFile(base+'.md', lawToMarkdown(CUR), 'text/markdown');
+}
+$('#expMd').addEventListener('click', ()=>exportLaw('md'));
+$('#expJson').addEventListener('click', ()=>exportLaw('json'));
 
 // ===== 実務者/学習者モード（表示粒度の切替）=====
 // 学習者: 条文に集中（規制動向パネル・条文の📡バッジを隠し、行間を広げる）。実務者: 全部表示（既定）。
