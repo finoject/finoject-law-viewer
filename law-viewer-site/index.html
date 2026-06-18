@@ -86,6 +86,16 @@
   .dstatus.d-ok{ background:#15803d; }       /* 成立 */
   .dstatus.d-active{ background:#b45309; }   /* 審議中・付託・送付・継続 */
   .dstatus.d-dead{ background:#6b7280; }     /* 廃案・否決・撤回・審査未了 */
+  /* 条文エリアに差し込む本文ビューア（パネル項目クリック時） */
+  #lawview{ display:flex; flex-direction:column; height:calc(100vh - 230px); min-height:460px; margin-top:4px;
+    border:1px solid #2b66c0; border-radius:10px; overflow:hidden; background:#0e1a2e; }
+  #lawview.hidden{ display:none; }
+  .lvbar{ display:flex; align-items:center; gap:10px; padding:8px 11px; border-bottom:1px solid var(--line); flex:none; }
+  .lvback{ background:#1d4ed8; color:#fff; border:0; border-radius:7px; cursor:pointer; font-size:13px; font-weight:700; padding:6px 13px; }
+  .lvback:hover{ filter:brightness(1.1); }
+  .lvttl{ flex:1; min-width:0; font-size:12.5px; color:#cfe0ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lvframe{ flex:1; width:100%; border:0; background:#fff; }
+  .lvlink{ cursor:pointer; }
   .rmore{ font-size:12px; color:var(--muted); padding:8px 2px 2px; border-top:1px solid var(--line); }
   .rmore a, .rarts a{ color:#8fd0ff; }
   .rk{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; flex:none; background:#475569; color:#fff; }
@@ -376,6 +386,12 @@ async function boot(){
   INDEX = await (await fetch('./data/index.json?t='+Date.now())).json();
   loadRegNews();               // 規制動向は裏で読み込み（失敗しても本体表示は継続）
   setInterval(() => loadRegNews(true), 12*60*1000);   // タブを開いたまま12分おきにニュース/動向を最新化（変化時のみパネル差し替え）
+  // パネル内の「.lvlink」クリック → 条文の場所にその本文を差し込み表示（#docは再描画で中身が変わるが要素自体は残るので委譲）
+  document.getElementById('doc').addEventListener('click', e => {
+    const a = e.target.closest('.lvlink'); if(!a) return;
+    e.preventDefault();
+    openLawView(a.dataset.lvUrl, a.dataset.lvMode, a.dataset.lvTitle);
+  });
   renderSidebar();
   // ディープリンク: ?law=ID&art=第九条
   const q = new URLSearchParams(location.search);
@@ -584,7 +600,25 @@ function effMaxDepth(rpc){
 // ===== 規制動向の重ね表示（逆引きパネル＋条文バッジ）=====
 function jpd(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${y}.${+m}.${+d}`; }
 function regKindTag(kind){ return (!kind||kind==='その他') ? '' : `<span class="rk k-${kind}">${esc(kind)}</span>`; }
-function jumpArt(num){ const t=[...document.querySelectorAll('.art')].find(a=>a.dataset.num===num); if(t){ t.classList.add('target'); t.scrollIntoView({block:'start'}); } }
+function jumpArt(num){ closeLawView(); const t=[...document.querySelectorAll('.art')].find(a=>a.dataset.num===num); if(t){ t.classList.add('target'); t.scrollIntoView({block:'start'}); } }
+function escA(s){ return esc(s).replace(/"/g,'&quot;'); }   // 属性値用（"も退避）
+// パネル項目クリック → 条文の場所(#artbody)を隠し、その場所(#lawview)に本文をiframe表示。
+// mode='direct'(X-Frame-Options無し=衆議院/JSDA/JVCEA)はそのまま、'proxy'(金融庁/日銀等)はWorker経由。
+function openLawView(url, mode, title){
+  const lv=document.getElementById('lawview'), ab=document.getElementById('artbody'); if(!lv||!ab) return;
+  const src = (mode==='proxy' && PROXY_BASE) ? PROXY_BASE+'?url='+encodeURIComponent(url) : url;
+  lv.innerHTML = `<div class="lvbar"><button class="lvback" onclick="closeLawView()">← 条文に戻る</button>`
+    + `<span class="lvttl">${esc(title||'')}</span>`
+    + `<a class="rvext" href="${escA(url)}" target="_blank" rel="noopener" title="原文を新しいタブで開く">↗ 原文</a></div>`
+    + `<iframe class="lvframe" src="${escA(src)}" referrerpolicy="no-referrer"></iframe>`;
+  lv.classList.remove('hidden'); ab.classList.add('hidden');
+  const doc=document.getElementById('doc'); if(doc) doc.scrollTop=0;
+}
+function closeLawView(){
+  const lv=document.getElementById('lawview'), ab=document.getElementById('artbody');
+  if(lv){ lv.classList.add('hidden'); lv.innerHTML=''; }
+  if(ab) ab.classList.remove('hidden');
+}
 // 国会の審議状況（法律案）。施行令・府令・GLのページでは親法令(LAW_OF)の法案を表示。
 function dietSecHtml(lawId){
   const bills = (REGDIET[lawId] && REGDIET[lawId].length) ? REGDIET[lawId] : (REGDIET[LAW_OF[lawId]] || []);
@@ -593,7 +627,7 @@ function dietSecHtml(lawId){
     const s = b.status||'';
     const cls = /成立/.test(s) ? 'd-ok' : /審議中|付託|継続|送付/.test(s) ? 'd-active' : /廃案|否決|撤回|未了/.test(s) ? 'd-dead' : '';
     return `<div class="rrow"><span class="dstatus ${cls}">${esc(s||'—')}</span>`
-      + `<a class="rttl" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.name)}</a>`
+      + `<a class="rttl lvlink" href="${escA(b.url)}" data-lv-url="${escA(b.url)}" data-lv-mode="direct" data-lv-title="${escA(b.name)}">${esc(b.name)}</a>`
       + (b.session?`<span class="rag">第${esc(b.session)}回国会</span>`:'') + `</div>`;
   }).join('');
   return `<div class="rsub">📜 国会での審議状況（法律案）</div>${rows}`
@@ -613,8 +647,9 @@ function regPanelHtml(lawId){
   const officialRows = rows.slice(0,SHOWN).map(g=>{
     const arts=[...g.arts].map(a=>`<a class="ra" href="#" onclick="jumpArt('${a}');return false;" title="${esc(a)}へ移動">${esc(a)}</a>`).join('');
     const kinds=[...g.kinds].map(regKindTag).join('');
+    const mode = FRAMABLE_AGENCIES.includes(g.it.agency) ? 'direct' : 'proxy';   // 埋め込み可agencyは直接/それ以外はプロキシ
     return `<div class="rrow"><span class="rdate">${jpd(g.it.date)}</span><span class="rag">${esc(g.it.agency||'')}</span>${kinds}`
-      + `<a class="rttl" href="${esc(g.it.url)}" target="_blank" rel="noopener">${esc(g.it.title)}</a>`
+      + `<a class="rttl lvlink" href="${escA(g.it.url)}" data-lv-url="${escA(g.it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(g.it.title)}">${esc(g.it.title)}</a>`
       + (arts?`<span class="rarts">該当条文: ${arts}</span>`:'') + `</div>`;
   }).join('');
   const officialSec = list.length
@@ -655,7 +690,8 @@ function renderDoc(kw){
   }
   if (k && !/class="art"/.test(html)) html = `<div class="hint">「${esc(k)}」に一致する条文はありません</div>`;
   const panel = (CUR && !k) ? regPanelHtml(CUR.law_id) : '';   // 検索中以外は冒頭に規制動向パネル
-  $('#doc').innerHTML = `<div class="wrap">${panel}${html}</div>`;
+  // #artbody=条文本体／#lawview=パネル項目クリック時に条文の場所へ差し込む本文ビューア（既定は非表示）
+  $('#doc').innerHTML = `<div class="wrap">${panel}<div id="lawview" class="hidden"></div><div id="artbody">${html}</div></div>`;
   curMaxDepth = effMaxDepth(RPC);   // この描画での実効最大カッコ深さ（applyParenが使用）
   applyParen();          // カッコ折り畳み状態を再適用（CSSクラス1発）
 }
