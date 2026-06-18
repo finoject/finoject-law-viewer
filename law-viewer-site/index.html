@@ -81,7 +81,11 @@
   .rsub{ font-size:12px; font-weight:700; color:#9fb4d6; margin:10px 0 2px; padding-top:8px; border-top:1px dashed var(--line); }
   .rsub:first-of-type{ border-top:none; padding-top:0; }
   .nsrc{ flex:none; font-size:11px; font-weight:700; color:#0b1220; background:#9fd0a0; border-radius:5px; padding:1px 6px; }
-  .nnote{ border-top:none; font-size:11px; }
+  .nnote, .dnote{ border-top:none; font-size:11px; }
+  .dstatus{ flex:none; font-size:11px; font-weight:700; padding:1px 7px; border-radius:5px; background:#475569; color:#fff; }
+  .dstatus.d-ok{ background:#15803d; }       /* 成立 */
+  .dstatus.d-active{ background:#b45309; }   /* 審議中・付託・送付・継続 */
+  .dstatus.d-dead{ background:#6b7280; }     /* 廃案・否決・撤回・審査未了 */
   .rmore{ font-size:12px; color:var(--muted); padding:8px 2px 2px; border-top:1px solid var(--line); }
   .rmore a, .rarts a{ color:#8fd0ff; }
   .rk{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; flex:none; background:#475569; color:#fff; }
@@ -238,7 +242,7 @@ let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RPC
 // ===== 金融規制ウォッチ連携（逆引き：この法令に関する最近の規制動向を条文に重ねる）=====
 const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
-let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGLOADED=false, REG_GEN=null;
+let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGDIET={}, REGLOADED=false, REG_GEN=null;
 let REGITEMS=[], REGLATEST=null, homeFilterAg='all', FEED_SHOWN=[];   // トップ画面の規制ウォッチ・フィード用
 // 外部ページ埋め込み用プロキシ(Cloudflare Worker)。設定すると金融庁/日銀等(X-Frame-Options拒否)も画面内表示できる。
 // デプロイ後にここへ workers.dev のURLを入れる（末尾スラッシュ無し）。空のままでも埋め込み可サイト(JSDA/JVCEA)は表示する。
@@ -255,6 +259,7 @@ async function loadRegNews(force){
     const d = await (await fetch(REG_URL + '?t=' + Date.now())).json();
     if (force && d.generatedAt && d.generatedAt === REG_GEN) return;   // 変化なし→DOMを触らない（読書位置を乱さない）
     REG_GEN = d.generatedAt || REG_GEN;
+    REGDIET = d.dietbills || {};
     const byLaw={}, byArt={};                                          // 新規オブジェクトに作り直す（重複蓄積を防ぐ）
     for (const it of (d.items||[])){
       for (const r of (it.lawrefs||[])){
@@ -580,10 +585,25 @@ function effMaxDepth(rpc){
 function jpd(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${y}.${+m}.${+d}`; }
 function regKindTag(kind){ return (!kind||kind==='その他') ? '' : `<span class="rk k-${kind}">${esc(kind)}</span>`; }
 function jumpArt(num){ const t=[...document.querySelectorAll('.art')].find(a=>a.dataset.num===num); if(t){ t.classList.add('target'); t.scrollIntoView({block:'start'}); } }
+// 国会の審議状況（法律案）。施行令・府令・GLのページでは親法令(LAW_OF)の法案を表示。
+function dietSecHtml(lawId){
+  const bills = (REGDIET[lawId] && REGDIET[lawId].length) ? REGDIET[lawId] : (REGDIET[LAW_OF[lawId]] || []);
+  if(!bills.length) return '';
+  const rows = bills.map(b=>{
+    const s = b.status||'';
+    const cls = /成立/.test(s) ? 'd-ok' : /審議中|付託|継続|送付/.test(s) ? 'd-active' : /廃案|否決|撤回|未了/.test(s) ? 'd-dead' : '';
+    return `<div class="rrow"><span class="dstatus ${cls}">${esc(s||'—')}</span>`
+      + `<a class="rttl" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.name)}</a>`
+      + (b.session?`<span class="rag">第${esc(b.session)}回国会</span>`:'') + `</div>`;
+  }).join('');
+  return `<div class="rsub">📜 国会での審議状況（法律案）</div>${rows}`
+    + `<div class="rmore dnote">出典: 衆議院 議案情報。法律案の審議経過です（施行令・府令はこの法律の改正に伴います）。</div>`;
+}
 function regPanelHtml(lawId){
   const list = REGBYLAW[lawId] || [];
   const news = REGLAWNEWS[lawId] || [];
-  if(!list.length && !news.length) return '';
+  const diet = dietSecHtml(lawId);
+  if(!list.length && !news.length && !diet) return '';
   // ① 当局の規制動向（FSA/JPX等）。同一ニュースが複数条にまたがる→URLで集約
   const byUrl = new Map();
   for(const e of list){ const u=e.it.url; if(!byUrl.has(u)) byUrl.set(u,{it:e.it, kinds:new Set(), arts:new Set()});
@@ -609,7 +629,7 @@ function regPanelHtml(lawId){
         + `<a class="rttl" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></div>`).join('')
       + `<div class="rmore nnote">※ 報道見出しはGoogle ニュース検索より。有料記事は本文が読めない場合があります。</div>`
     : '';
-  return `<details class="regpanel" open><summary>📡 この法令に関する最近の規制動向（${rows.length}件）</summary>${officialSec}${newsSec}</details>`;
+  return `<details class="regpanel" open><summary>📡 この法令に関する最近の規制動向（${rows.length}件）</summary>${diet}${officialSec}${newsSec}</details>`;
 }
 function regArtBadge(lawId, num){
   const e = REGBYART[lawId+'|'+num]; if(!e||!e.length) return '';
