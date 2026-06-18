@@ -151,6 +151,27 @@
   .artreg:hover{ filter:brightness(1.15); }
   /* トップ画面の規制ウォッチ・フィード */
   .home{ padding-bottom:40px; }
+  /* 最上部「本日の更新／直近7日の更新」ポータル */
+  .ptop{ background:linear-gradient(180deg,#13243f,#0e1a2e); border:1px solid #2b66c0; border-radius:12px; padding:13px 15px 8px; margin:2px 0 12px; }
+  .ptophd{ font-size:15px; font-weight:800; color:#dce9ff; margin-bottom:10px; }
+  .ptophint{ display:block; font-size:11px; font-weight:400; color:var(--muted); margin-top:2px; }
+  .pcols{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .pblk{ background:#0e1a2e; border:1px solid var(--line); border-radius:9px; padding:9px 11px; min-width:0; }
+  .pblkh{ font-size:13px; font-weight:700; color:#bcd0f0; margin-bottom:6px; display:flex; align-items:baseline; gap:7px; }
+  .pblkh b{ color:#9fd0ff; }
+  .pblksub{ font-size:11px; font-weight:400; color:var(--muted); margin-left:auto; }
+  .pnone{ font-size:12.5px; color:var(--muted); padding:8px 2px; }
+  .prow{ display:flex; align-items:center; gap:7px; padding:5px 4px; border-top:1px solid #18233a; cursor:pointer; font-size:12.5px; line-height:1.4; }
+  .prow:first-of-type{ border-top:none; }
+  .prow:hover{ background:#16223a; border-radius:6px; }
+  .pdate{ font-size:11px; color:var(--muted); white-space:nowrap; flex:none; }
+  .prow .fbadge{ flex:none; }
+  .pbk-law{ background:#1f6f43; }
+  .ptitle{ color:#cfe0ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
+  .pimp{ flex:none; font-size:10px; font-weight:700; color:#fff; background:#c2410c; border-radius:4px; padding:1px 5px; }
+  .pref{ flex:none; font-size:11px; color:#8fd0ff; white-space:nowrap; }
+  .pmore{ font-size:11.5px; color:var(--muted); padding:6px 2px 2px; }
+  @media (max-width:760px){ .pcols{ grid-template-columns:1fr; } }
   .homepurpose{ font-size:14px; line-height:1.7; color:var(--fg); background:linear-gradient(180deg,#10243f,#0e1a2e); border:1px solid #2b66c0; border-radius:10px; padding:12px 15px; margin:2px 0 10px; }
   .homepurpose .hp-aud{ color:var(--muted); font-size:12px; }
   .qsbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 14px; }
@@ -412,6 +433,7 @@ async function loadRegNews(force){
       if (force) refreshRegPanel();      // 定期更新時はパネルだけ差し替え（全再描画せず＝スクロール位置維持）
       else renderDoc('');                // 初回（またはディープリンク取得遅延）は通常描画
     } else if (!CUR && !(sv && sv.value)){
+      renderPortalTop();                 // トップ最上部「本日／直近7日」を反映
       renderRegFeed();                   // トップ画面のフィードを反映（初回・定期更新とも）
     }
   } catch(e){ /* 取得失敗時は連携なしで通常表示 */ }
@@ -484,9 +506,20 @@ function renderRegFeed(){
 // 規制項目の本文を右パネルにその場表示（トップ画面のまま）。プロキシ設定時は全ソース、未設定でも埋め込み可サイトは表示。
 function openRegView(idx){
   const it = FEED_SHOWN[idx]; if(!it) return;
-  const box = document.getElementById('regview'); if(!box) return;
   document.querySelectorAll('#feedcol .fitem.sel').forEach(e=>e.classList.remove('sel'));
   const row = document.querySelector('#feedcol .fitem[data-idx="'+idx+'"]'); if(row) row.classList.add('sel');
+  renderRegView(it);
+}
+// ポータル（本日の更新／直近7日）からの項目クリック → REGITEMS のグローバル索引で同じ右ビューアに表示
+function openRegViewItem(gi){
+  const it = REGITEMS[gi]; if(!it) return;
+  document.querySelectorAll('#feedcol .fitem.sel').forEach(e=>e.classList.remove('sel'));
+  renderRegView(it);
+  const box=document.getElementById('regview'); if(box) box.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+// 規制項目（item オブジェクト）の本文を右パネルに描画する共通処理
+function renderRegView(it){
+  const box = document.getElementById('regview'); if(!box) return;
   const framable = FRAMABLE_AGENCIES.includes(it.agency);
   const yt = ytEmbed(it.url);
   let body;
@@ -505,6 +538,52 @@ function openRegView(idx){
 function closeRegView(){
   const box=document.getElementById('regview'); if(box){ box.classList.remove('active'); box.innerHTML='<div class="rvhint">← 左の項目をクリックすると、ここに内容が表示されます。</div>'; }
   document.querySelectorAll('#feedcol .fitem.sel').forEach(e=>e.classList.remove('sel'));
+}
+// ===== トップ最上部「本日の更新／直近7日の更新」ポータル =====
+// JST基準のISO日付（offsetDays日前）。ブラウザのタイムゾーンに依存せずJSTで判定する。
+function isoJST(offsetDays){
+  const j=new Date(Date.now()+9*3600000-(offsetDays||0)*86400000), p=n=>String(n).padStart(2,'0');
+  return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())}`;
+}
+// 規制動向（REGITEMS）＋法令データ更新（INDEX.laws[].updated）を日付付きの共通形に集約
+function portalItems(){
+  const out=[];
+  REGITEMS.forEach((it,gi)=>{ if(it.date) out.push({date:it.date, kind:'reg', agency:it.agency, title:it.title, gi, refs:it.lawrefs||[]}); });
+  const changed=new Set(INDEX&&INDEX.changed||[]);
+  ((INDEX&&INDEX.laws)||[]).forEach(l=>{ const u=(l.updated||'').slice(0,10); if(u) out.push({date:u, kind:'law', title:l.title, lawId:l.law_id, ltype:l.type, changed:changed.has(l.title)}); });
+  return out;
+}
+function portalRow(x){
+  const d=jpd(x.date);
+  if(x.kind==='reg'){
+    const c=REG_COLORS[x.agency]||'#64748b';
+    const imp=(x.refs&&x.refs.length)?'<span class="pimp" title="条文に紐づく更新">重要</span>':'';   // 法令条文に紐づく更新＝実務影響が大きい目印
+    const refs=(x.refs&&x.refs.length)?'<span class="pref">📖 '+esc((x.refs[0].label||'').replace(/\s*第.+$/,''))+(x.refs.length>1?` ほか${x.refs.length-1}`:'')+'</span>':'';
+    return `<div class="prow" onclick="openRegViewItem(${x.gi})" title="クリックで右側に本文を表示"><span class="pdate">${d}</span><span class="fbadge" style="background:${c}">${esc(REG_SHORT[x.agency]||x.agency)}</span><span class="ptitle">${esc(x.title)}</span>${imp}${refs}</div>`;
+  }
+  const ch=x.changed?'<span class="pimp" title="直近の自動巡回でデータが変化">改正反映</span>':'';
+  return `<div class="prow" onclick="openLaw('${x.lawId}')" title="クリックで条文を開く"><span class="pdate">${d}</span><span class="fbadge pbk-law">法令</span><span class="ptitle">${esc(x.title)}</span>${ch}</div>`;
+}
+function renderPortalTop(){
+  const box=document.getElementById('portalTop'); if(!box) return;
+  if(!REGITEMS.length && !(INDEX&&INDEX.laws)){ box.innerHTML='<div class="ptop"><div class="hint" style="padding:14px">最新の更新を読み込み中…</div></div>'; return; }
+  const today=isoJST(0), wk=isoJST(7);
+  // 重要度（条文に紐づく動向／改正反映の法令＝高）→日付の降順。実務影響の大きい更新を上に出す（毎朝の確認用）
+  const impScore=x=> x.kind==='law' ? (x.changed?2:1) : (x.refs&&x.refs.length?2:0);
+  const all=portalItems().sort((a,b)=> impScore(b)-impScore(a) || b.date.localeCompare(a.date));
+  const todayItems=all.filter(x=>x.date===today);
+  const weekItems=all.filter(x=>x.date<today && x.date>=wk);
+  const LIM=8;
+  const list=(items,emptyMsg)=> items.length
+    ? items.slice(0,LIM).map(portalRow).join('') + (items.length>LIM?`<div class="pmore">ほか ${items.length-LIM} 件（下のフィードで確認）</div>`:'')
+    : `<div class="pnone">${emptyMsg}</div>`;
+  box.innerHTML=`<div class="ptop">
+    <div class="ptophd">🔔 最新の規制アップデート<span class="ptophint">自動収集：金融庁・日銀ほか6機関の新着＋e-Gov法令データの更新</span></div>
+    <div class="pcols">
+      <div class="pblk"><div class="pblkh">📌 本日の更新 <b>(${todayItems.length})</b><span class="pblksub">${jpDay(today)}</span></div>${list(todayItems,'本日の更新はありません')}</div>
+      <div class="pblk"><div class="pblkh">🗓 直近7日の更新 <b>(${weekItems.length})</b></div>${list(weekItems,'直近7日の更新はありません')}</div>
+    </div>
+  </div>`;
 }
 
 const $ = s => document.querySelector(s);
@@ -1071,6 +1150,7 @@ function showHome(){
   // 代表論点（全て実際にヒットする語を採用＝0件チップを出さない）
   const QSEARCH = ['取引時確認','疑わしい取引','制裁','暗号資産','電子決済手段','資金移動業','前払式支払手段','分別管理','利用者保護','管理態勢'];
   $('#doc').innerHTML = `<div class="wrap home">
+    <div id="portalTop"></div>
     <div class="homepurpose">⚖️ <b>金融コンプライアンス実務者のための無料ツール</b> — 法令・ガイドライン・規制動向・国会審議・報道を<b>1画面</b>で。<span class="hp-aud">（想定ユーザー：資金決済／暗号資産・ステーブルコイン／AML・CFT／証券などの実務担当者）</span></div>
     <div class="qsbar"><span class="qslabel">まず試す（代表論点）:</span>${QSEARCH.map(q=>`<button class="qschip" onclick="quickSearch('${q}')">🔍 ${q}</button>`).join('')}</div>
     <div class="homeintro">・<b>左の一覧</b>＝法令を選ぶと条文が開きます（上の窓で全法令・ガイドラインの横断検索も可）。
@@ -1087,6 +1167,7 @@ function showHome(){
     </div>
     <div class="feedfoot">📖 のついた更新はクリックで該当法令・条文が開きます ／ <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（全件・6機関・Slack通知）↗</a></div>
   </div>`;
+  renderPortalTop();
   renderFeedChips();
   renderRegFeed();
   setupHSplit();
