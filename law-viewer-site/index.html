@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>finoject金融関連法令ビューア｜資金決済・犯収法・金商法</title>
+<title>finoject 金融関連法令・規制ウォッチ｜条文を読む＋当局の規制動向</title>
 <style>
   :root{ --bg:#0b1220; --panel:#111a2c; --line:#26334d; --fg:#e8eefb; --muted:#8da3c6; --accent:#2e6cf0; --hi:#fde68a; }
   *{ box-sizing:border-box; }
@@ -183,9 +183,8 @@
 <body>
 <div id="app">
   <nav id="side">
-    <h1 id="brand" title="トップ（法令選択／全文検索）へ">⚖️ finoject金融関連法令ビューア</h1>
-    <p class="sub">資金決済・犯収法・金商法 ／ e-Gov法令API v2</p>
-    <a id="toReg" href="https://finoject.github.io/finoject-reg-monitor/" target="_blank" rel="noopener">📡 金融規制ウォッチ ↗</a>
+    <h1 id="brand" title="ホームへ戻る">⚖️ finoject 金融関連法令・規制ウォッチ</h1>
+    <p class="sub">金融関連の法令を読む ＋ 当局の規制動向を追う、ひとつの画面で。</p>
     <div id="lawList"></div>
   </nav>
 
@@ -193,7 +192,7 @@
     <div id="top">
       <div class="topbtns">
         <button id="burger">☰ 法令一覧</button>
-        <button id="home">🏠 トップ（法令選択／全文検索）</button>
+        <button id="home">🏠 ホーム（規制動向・法令一覧）</button>
       </div>
       <input id="gsearch" placeholder="🔍 全法令・ガイドラインを横断検索…（例：暗号資産、本人確認、収納代行）">
       <h2 id="lawTitle">法令を選択してください</h2>
@@ -663,9 +662,11 @@ function gSnippet(body, q){
 }
 function showHome(){
   $('#doc').innerHTML = `<div class="wrap home">
-    <div class="homeintro">上の窓で<b>全法令・ガイドラインを横断検索</b>、または左の一覧から法令を選ぶと条文が開きます。各法令ページでは関連する規制動向・報道も条文に重ねて表示されます。</div>
+    <div class="homeintro">このサイトは、金融関連の<b>法令の条文</b>と、当局の<b>最近の規制動向</b>を、ひとつの画面で確認できます。<br>
+      ・<b>左の一覧</b>＝法令を選ぶと条文が開きます（上の窓で全法令・ガイドラインの横断検索も可）。<br>
+      ・<b>下のフィード</b>＝金融庁・日銀など6機関の新着。項目をクリックすると、<b>この画面のまま右側に本文</b>が開きます（別サイトへは飛びません）。</div>
     <div class="feedhead">
-      <span class="feedtitle">📡 金融規制ウォッチ ― 最近の更新</span>
+      <span class="feedtitle">📡 最近の規制動向（金融庁・日銀・JPXほか6機関）</span>
       <span id="feedmeta" class="feedmeta"></span>
     </div>
     <div id="feedchips" class="feedchips"></div>
