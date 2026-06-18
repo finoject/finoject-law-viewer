@@ -116,6 +116,33 @@
   .fk.k-ガイドライン{ background:#7c3aed; } .fk.k-告示,.fk.k-通達等{ background:#475569; }
   .feedfoot{ margin-top:16px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); padding-top:12px; }
   .feedfoot a{ color:#8fd0ff; }
+  /* トップ画面の2カラム（左:フィード／右:本文ビューア） */
+  .homecols{ display:flex; gap:16px; align-items:flex-start; margin-top:6px; }
+  #feedcol{ flex:1 1 44%; min-width:0; }
+  .fitem{ cursor:pointer; border-radius:8px; }
+  .fitem:hover{ background:#0e1a2e; }
+  .fitem.sel{ background:rgba(46,108,240,.16); outline:1px solid #2b66c0; }
+  #regview{ flex:1 1 56%; min-width:0; position:sticky; top:0; height:calc(100vh - 220px); min-height:420px;
+    border:1px solid var(--line); border-radius:10px; background:#0e1a2e; overflow:hidden; display:flex; flex-direction:column; }
+  .rvhint{ color:var(--muted); font-size:13px; padding:28px 18px; text-align:center; margin:auto; }
+  .rvhead{ display:flex; align-items:center; gap:9px; padding:9px 11px; border-bottom:1px solid var(--line); flex:none; }
+  .rvdate{ color:var(--muted); font-size:12px; }
+  .rvext{ margin-left:auto; font-size:12px; color:#8fd0ff; text-decoration:none; }
+  .rvext:hover{ text-decoration:underline; }
+  .rvclose{ background:#16223a; color:#cfe0ff; border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:13px; padding:2px 9px; }
+  .rvtitle{ font-size:13.5px; font-weight:700; padding:10px 12px 4px; line-height:1.5; flex:none; }
+  #regview .fchips{ padding:0 12px 8px; flex:none; }
+  .rvframe{ flex:1; width:100%; border:0; background:#fff; }
+  .rvblocked{ color:var(--muted); font-size:13px; line-height:1.9; padding:20px 16px; }
+  .rvopen{ display:inline-block; margin-top:10px; background:#1d4ed8; color:#fff; text-decoration:none; border-radius:7px; padding:7px 13px; font-weight:700; }
+  .rvnote{ margin-top:14px; font-size:11px; }
+  @media(max-width:860px){
+    .homecols{ flex-direction:column; }
+    #feedcol, #regview{ flex:none; width:100%; }
+    #regview{ position:static; height:auto; }
+    #regview:not(.active){ display:none; }     /* スマホ等では未選択時はビューアを隠す */
+    .rvframe{ height:70vh; }
+  }
   /* カッコの入れ子の深さで背景色を変える */
   .body .p{ border-radius:3px; padding:0 1px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
   /* 入れ子で背景が重なり濃く見えるため、各色の不透明度を元の約8割に下げる（2026-06-17三根さん指示。7割は弱すぎ→8割へ）*/
@@ -213,7 +240,11 @@ let INDEX=null, CUR=null, cache={}, REF=null, REFTITLE='', ARTSET=new Set(), RPC
 const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
 let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGLOADED=false, REG_GEN=null;
-let REGITEMS=[], REGLATEST=null, homeFilterAg='all';   // トップ画面の規制ウォッチ・フィード用
+let REGITEMS=[], REGLATEST=null, homeFilterAg='all', FEED_SHOWN=[];   // トップ画面の規制ウォッチ・フィード用
+// 外部ページ埋め込み用プロキシ(Cloudflare Worker)。設定すると金融庁/日銀等(X-Frame-Options拒否)も画面内表示できる。
+// デプロイ後にここへ workers.dev のURLを入れる（末尾スラッシュ無し）。空のままでも埋め込み可サイト(JSDA/JVCEA)は表示する。
+const PROXY_BASE = '';
+const FRAMABLE_AGENCIES = ['日本証券業協会','JVCEA'];   // X-Frame-Options無し＝プロキシ無しでも直接埋め込み可
 const REG_COLORS = {'金融庁':'#2e6cf0','日本銀行':'#16a34a','日本取引所グループ':'#0d9488','日本証券業協会':'#d97706','JVCEA':'#9333ea','日本公認会計士協会':'#dc2626'};
 const REG_SHORT  = {'金融庁':'金融庁','日本銀行':'日銀','日本取引所グループ':'JPX','日本証券業協会':'日証協','JVCEA':'JVCEA','日本公認会計士協会':'会計士協会'};
 const REG_AGENCIES = ['金融庁','日本銀行','日本取引所グループ','日本証券業協会','JVCEA','日本公認会計士協会'];
@@ -268,7 +299,7 @@ function homeRefsHtml(it){
     const k = (g.kind && g.kind!=='その他') ? `<span class="fk k-${g.kind}">${esc(g.kind)}</span>` : '';
     const a = g.art ? "'"+g.art.replace(/'/g,'')+"'" : 'null';
     const href = '?law='+g.id+(g.art?'&art='+encodeURIComponent(g.art):'');
-    return `<a class="fchip" href="${href}" onclick="openLaw('${g.id}',${a});return false;" title="この法令ビューアで開く">📖 ${esc(g.label)}${k}</a>`;
+    return `<a class="fchip" href="${href}" onclick="event.stopPropagation();openLaw('${g.id}',${a});return false;" title="この法令ビューアで開く">📖 ${esc(g.label)}${k}</a>`;
   }).join('')+'</div>';
 }
 function renderFeedChips(){
@@ -294,15 +325,40 @@ function renderRegFeed(){
   else if(homeFilterAg!=='all') items = items.filter(it=>it.agency===homeFilterAg);
   if(!items.length){ box.innerHTML='<div class="hint" style="margin-top:24px">該当する更新はありません</div>'; return; }
   const SHOWN=60; let html='', cur=null;
-  for(const it of items.slice(0,SHOWN)){
+  FEED_SHOWN = items.slice(0,SHOWN);
+  FEED_SHOWN.forEach(function(it, idx){
     if(it.date!==cur){ cur=it.date; html+=`<div class="fday">${jpDay(it.date)}</div>`; }
     const c=REG_COLORS[it.agency]||'#64748b';
     const isNew = it.detectedAt && REGLATEST && it.detectedAt===REGLATEST;
-    html += `<div class="fitem"><span class="fbadge" style="background:${c}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
-      + `<div class="fbody"><a class="fttl" href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>${isNew?'<span class="fnew">NEW</span>':''}${homeRefsHtml(it)}</div></div>`;
-  }
+    // 行クリックで右の本文ビューアに表示（画面遷移しない）。📖チップはstopPropagationで法令ビューへ。
+    html += `<div class="fitem" data-idx="${idx}" onclick="openRegView(${idx})"><span class="fbadge" style="background:${c}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
+      + `<div class="fbody"><span class="fttl">${esc(it.title)}</span>${isNew?'<span class="fnew">NEW</span>':''}${homeRefsHtml(it)}</div></div>`;
+  });
   if(items.length>SHOWN) html += `<div class="rmore">ほか ${items.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`;
   box.innerHTML=html;
+}
+// 規制項目の本文を右パネルにその場表示（トップ画面のまま）。プロキシ設定時は全ソース、未設定でも埋め込み可サイトは表示。
+function openRegView(idx){
+  const it = FEED_SHOWN[idx]; if(!it) return;
+  const box = document.getElementById('regview'); if(!box) return;
+  document.querySelectorAll('#feedcol .fitem.sel').forEach(e=>e.classList.remove('sel'));
+  const row = document.querySelector('#feedcol .fitem[data-idx="'+idx+'"]'); if(row) row.classList.add('sel');
+  const framable = FRAMABLE_AGENCIES.includes(it.agency);
+  let body;
+  if (PROXY_BASE) body = `<iframe class="rvframe" src="${PROXY_BASE}?url=${encodeURIComponent(it.url)}" referrerpolicy="no-referrer"></iframe>`;
+  else if (framable) body = `<iframe class="rvframe" src="${esc(it.url)}" referrerpolicy="no-referrer"></iframe>`;
+  else body = `<div class="rvblocked">この媒体（${esc(it.agency)}）はページ埋め込みを許可していないため、ここに本文を表示できません。`
+            + `<a class="rvopen" href="${esc(it.url)}" target="_blank" rel="noopener">↗ 原文を新しいタブで開く</a>`
+            + `<div class="rvnote">※ 無料プロキシ（Cloudflare Worker）を設定すると、この欄に金融庁・日銀などの本文も直接表示できます。</div></div>`;
+  box.innerHTML = `<div class="rvhead"><span class="fbadge" style="background:${REG_COLORS[it.agency]||'#64748b'}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
+    + `<span class="rvdate">${jpd(it.date)}</span><a class="rvext" href="${esc(it.url)}" target="_blank" rel="noopener" title="原文を新しいタブで開く">↗ 原文</a>`
+    + `<button class="rvclose" onclick="closeRegView()" title="閉じる">✕</button></div>`
+    + `<div class="rvtitle">${esc(it.title)}</div>${homeRefsHtml(it)}${body}`;
+  box.classList.add('active');
+}
+function closeRegView(){
+  const box=document.getElementById('regview'); if(box){ box.classList.remove('active'); box.innerHTML='<div class="rvhint">← 左の項目をクリックすると、ここに内容が表示されます。</div>'; }
+  document.querySelectorAll('#feedcol .fitem.sel').forEach(e=>e.classList.remove('sel'));
 }
 
 const $ = s => document.querySelector(s);
@@ -613,7 +669,10 @@ function showHome(){
       <span id="feedmeta" class="feedmeta"></span>
     </div>
     <div id="feedchips" class="feedchips"></div>
-    <div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div>
+    <div class="homecols">
+      <div id="feedcol"><div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div></div>
+      <div id="regview"><div class="rvhint">← 項目をクリックすると、ここに内容が表示されます（画面は切り替わりません）。</div></div>
+    </div>
     <div class="feedfoot">📖 のついた更新はクリックで該当法令・条文が開きます ／ <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（全件・6機関・Slack通知）↗</a></div>
   </div>`;
   renderFeedChips();
