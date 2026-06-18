@@ -243,7 +243,7 @@ let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGLOADED=false, REG_GEN=null;
 let REGITEMS=[], REGLATEST=null, homeFilterAg='all', FEED_SHOWN=[];   // トップ画面の規制ウォッチ・フィード用
 // 外部ページ埋め込み用プロキシ(Cloudflare Worker)。設定すると金融庁/日銀等(X-Frame-Options拒否)も画面内表示できる。
 // デプロイ後にここへ workers.dev のURLを入れる（末尾スラッシュ無し）。空のままでも埋め込み可サイト(JSDA/JVCEA)は表示する。
-const PROXY_BASE = '';
+const PROXY_BASE = 'https://finoject-proxy.kimihiro-mine.workers.dev';
 const FRAMABLE_AGENCIES = ['日本証券業協会','JVCEA'];   // X-Frame-Options無し＝プロキシ無しでも直接埋め込み可
 const REG_COLORS = {'金融庁':'#2e6cf0','日本銀行':'#16a34a','日本取引所グループ':'#0d9488','日本証券業協会':'#d97706','JVCEA':'#9333ea','日本公認会計士協会':'#dc2626'};
 const REG_SHORT  = {'金融庁':'金融庁','日本銀行':'日銀','日本取引所グループ':'JPX','日本証券業協会':'日証協','JVCEA':'JVCEA','日本公認会計士協会':'会計士協会'};
