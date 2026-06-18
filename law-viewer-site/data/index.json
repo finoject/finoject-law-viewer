@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T17:16:33.930Z",
+  "generatedAt": "2026-06-18T17:30:52.253Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -431,9 +431,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [
-    "貸金業法",
-    "貸金業法施行規則"
-  ],
+  "changed": [],
   "isFirst": false
 }
