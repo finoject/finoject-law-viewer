@@ -78,6 +78,12 @@
   .rttl:hover{ color:#7fb0ff; text-decoration:underline; }
   .rarts{ font-size:12px; color:#9fd0ff; flex-basis:100%; margin-top:2px; }
   .rarts-w{ color:var(--muted); }
+  .modebtn{ background:#16223a; color:#cfe0ff; border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:13px; cursor:pointer; }
+  .modebtn:hover{ border-color:var(--accent); }
+  /* 学習者モード：条文に集中（規制動向の付帯情報を隠し、行間を広げる） */
+  body.mode-learner .regpanel,
+  body.mode-learner .artreg{ display:none; }
+  body.mode-learner .art .body{ line-height:2.1; }
   .rarts .ra{ color:#8fd0ff; text-decoration:none; margin-right:8px; border-bottom:1px dotted #2b66c0; cursor:pointer; }
   .rsub{ font-size:12px; font-weight:700; color:#9fb4d6; margin:10px 0 2px; padding-top:8px; border-top:1px dashed var(--line); }
   .rsub:first-of-type{ border-top:none; padding-top:0; }
@@ -107,6 +113,9 @@
   #refpop .rpcap{ color:var(--muted); margin-left:6px; font-size:12px; }
   #refpop .rpbody{ color:var(--fg); white-space:normal; }
   @media(max-width:640px){ #refpop{ max-width:92vw; } }
+  /* 定義語（ホバーで定義をポップアップ）：控えめな点線下線 */
+  .gloss{ border-bottom:1px dotted rgba(159,208,255,.55); cursor:help; }
+  .gloss:hover{ border-bottom-color:var(--accent); background:rgba(46,108,240,.10); }
   .rmore{ font-size:12px; color:var(--muted); padding:8px 2px 2px; border-top:1px solid var(--line); }
   .rmore a, .rarts a{ color:#8fd0ff; }
   .rk{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; flex:none; background:#475569; color:#fff; }
@@ -235,6 +244,7 @@
       <div class="topbtns">
         <button id="burger">☰ 法令一覧</button>
         <button id="home">🏠 ホーム（規制動向・法令一覧）</button>
+        <button id="modeBtn" class="modebtn" title="表示の粒度を切替（学習者＝条文に集中／実務者＝規制動向も表示）"></button>
       </div>
       <input id="gsearch" placeholder="🔍 全法令・ガイドラインを横断検索…（例：暗号資産、本人確認、収納代行）">
       <h2 id="lawTitle">法令を選択してください</h2>
@@ -423,13 +433,17 @@ async function boot(){
     e.preventDefault();
     openLawView(a.dataset.lvUrl, a.dataset.lvMode, a.dataset.lvTitle);
   });
-  // 参照条文のホバー・プレビュー（少し待ってから浮かせる／離れたら消す）
+  // 参照条文のホバー・プレビュー＋定義語ポップアップ（少し待ってから浮かせる／離れたら消す）
   const docEl = document.getElementById('doc');
-  docEl.addEventListener('mouseover', e => { const a=e.target.closest('.rf[data-ra]'); if(!a) return;
-    clearTimeout(_rpHideTimer); clearTimeout(_rpTimer); _rpTimer=setTimeout(()=>previewRef(a), 200); });
-  docEl.addEventListener('mouseout', e => { const a=e.target.closest('.rf[data-ra]'); if(!a) return;
+  docEl.addEventListener('mouseover', e => {
+    const rf=e.target.closest('.rf[data-ra]'), gl=e.target.closest('.gloss[data-t]');
+    if(!rf && !gl) return;
+    clearTimeout(_rpHideTimer); clearTimeout(_rpTimer);
+    _rpTimer = setTimeout(()=> rf ? previewRef(rf) : showGlossPop(gl), 200);
+  });
+  docEl.addEventListener('mouseout', e => { if(!e.target.closest('.rf[data-ra],.gloss[data-t]')) return;
     clearTimeout(_rpTimer); _rpHideTimer=setTimeout(hideRefPop, 250); });
-  docEl.addEventListener('scroll', hideRefPop, { passive:true });
+  docEl.addEventListener('scroll', ()=>{ hideRefPop(); clearTimeout(_glossTimer); _glossTimer=setTimeout(markVisibleGloss, 120); }, { passive:true });
   renderSidebar();
   // ディープリンク: ?law=ID&art=第九条
   const q = new URLSearchParams(location.search);
@@ -467,6 +481,7 @@ async function loadLaw(id){
 async function openLaw(id, artNum, para){
   const d = await loadLaw(id);
   CUR = d;
+  buildGlossary(d);                                                 // 定義語辞書（この法令の「○○とは…をいう」）
   REF = LAW_OF[d.law_id] || null;                                   // この文書の「法」が指す親法令
   REFTITLE = REF ? ((INDEX.laws.find(l => l.law_id === REF)||{}).title || '') : '';
   ARTSET = new Set((d.blocks||[]).filter(b => b.num).map(b => b.num));  // 自文書に実在する条番号（自リンクの可否判定用）
@@ -686,6 +701,52 @@ async function previewRef(a){
   _rpEl.style.left=left+'px'; _rpEl.style.top=top+'px';
 }
 function hideRefPop(){ if(_rpEl) _rpEl.classList.add('hidden'); }
+// ===== 定義語ポップアップ（「○○とは…をいう」を抽出し、本文中の定義語にホバーで定義を表示）=====
+let GLOSSARY={}, _glossRe=null, _glossObs=null;
+function buildGlossary(d){
+  const g={}; const re=/「([^「」、。\n]{3,24})」とは[、，]?\s*([^。\n]{4,180}?)を(?:いう|いい)/g;
+  for(const b of (d.blocks||[])){ if(b.t==='h'||!b.body) continue; let m; re.lastIndex=0;
+    while((m=re.exec(b.body))){ const t=m[1].trim(); if(t && !g[t]) g[t]={ def:m[2].trim(), art:b.num }; } }
+  GLOSSARY=g;
+  const terms=Object.keys(g).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  _glossRe = terms.length ? new RegExp(terms.join('|'),'g') : null;
+}
+function markGlossary(artEl){
+  if(!_glossRe || !artEl || artEl.dataset.gl) return; artEl.dataset.gl='1';
+  const bodyEl=artEl.querySelector('.body'); if(!bodyEl) return;
+  const tns=[]; const w=document.createTreeWalker(bodyEl, NodeFilter.SHOW_TEXT, { acceptNode(n){
+    const p=n.parentElement; if(!p||!n.nodeValue) return NodeFilter.FILTER_REJECT;
+    if(p.closest('a,.gloss,mark,.cap,.el')) return NodeFilter.FILTER_REJECT;
+    _glossRe.lastIndex=0; return _glossRe.test(n.nodeValue)? NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT; } });
+  let n; while((n=w.nextNode())) tns.push(n);
+  for(const tn of tns){ const s=tn.nodeValue, frag=document.createDocumentFragment(); let last=0,m; _glossRe.lastIndex=0;
+    while((m=_glossRe.exec(s))){ if(m.index>last) frag.appendChild(document.createTextNode(s.slice(last,m.index)));
+      const sp=document.createElement('span'); sp.className='gloss'; sp.dataset.t=m[0]; sp.textContent=m[0]; frag.appendChild(sp); last=m.index+m[0].length; }
+    if(last<s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+    if(frag.childNodes.length) tn.parentNode.replaceChild(frag,tn); }
+}
+// 表示領域付近の条文だけ定義語マーキング（content-visibilityでも確実。IntersectionObserverは未発火だったため矩形判定方式に）
+function markVisibleGloss(){
+  if(!_glossRe) return;
+  const doc=document.getElementById('doc'); if(!doc) return;
+  const dr=doc.getBoundingClientRect();
+  const arts=document.querySelectorAll('#artbody .art:not([data-gl])');
+  for(const a of arts){ const r=a.getBoundingClientRect();
+    if(r.bottom>=dr.top-400 && r.top<=dr.bottom+400) markGlossary(a); }
+}
+let _glossTimer=null;
+function observeGloss(){ clearTimeout(_glossTimer); _glossTimer=setTimeout(markVisibleGloss, 60); }
+function showGlossPop(a){
+  const t=a.dataset.t, e=GLOSSARY[t]; if(!e) return;
+  if(!_rpEl){ _rpEl=document.createElement('div'); _rpEl.id='refpop'; document.body.appendChild(_rpEl);
+    _rpEl.addEventListener('mouseenter',()=>clearTimeout(_rpHideTimer)); _rpEl.addEventListener('mouseleave',()=>{ _rpHideTimer=setTimeout(hideRefPop,200); }); }
+  _rpEl.innerHTML = '<div class="rphead"><span class="rpnum">定義 「'+esc(t)+'」</span>'+(e.art?'<span class="rpcap">'+esc(e.art)+'</span>':'')+'</div><div class="rpbody">'+esc(e.def)+'をいう。</div>';
+  _rpEl.classList.remove('hidden');
+  const r=a.getBoundingClientRect(), pw=_rpEl.offsetWidth, ph=_rpEl.offsetHeight;
+  let left=Math.min(r.left, window.innerWidth-pw-12); if(left<8) left=8;
+  let top=r.bottom+6; if(top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);
+  _rpEl.style.left=left+'px'; _rpEl.style.top=top+'px';
+}
 // 国会の審議状況（法律案）。施行令・府令・GLのページでは親法令(LAW_OF)の法案を表示。
 function dietSecHtml(lawId){
   const bills = (REGDIET[lawId] && REGDIET[lawId].length) ? REGDIET[lawId] : (REGDIET[LAW_OF[lawId]] || []);
@@ -765,6 +826,7 @@ function renderDoc(kw){
   $('#doc').innerHTML = `<div class="wrap">${panel}<div id="lawview" class="hidden"></div><div id="artbody">${html}</div></div>`;
   curMaxDepth = effMaxDepth(RPC);   // この描画での実効最大カッコ深さ（applyParenが使用）
   applyParen();          // カッコ折り畳み状態を再適用（CSSクラス1発）
+  observeGloss();        // 定義語の遅延マーキング（表示中の条文だけ処理＝高速）
 }
 
 // 本文中の法令参照リンクのクリック → 即時リロードせずアプリ内ジャンプ（ホバーでリンク表示・クリックで移動）
@@ -878,6 +940,17 @@ function goHome(){
 }
 $('#home').addEventListener('click', goHome);
 $('#brand').addEventListener('click', goHome);   // 左上タイトルもトップへ
+
+// ===== 実務者/学習者モード（表示粒度の切替）=====
+// 学習者: 条文に集中（規制動向パネル・条文の📡バッジを隠し、行間を広げる）。実務者: 全部表示（既定）。
+let appMode = localStorage.getItem('appMode') || 'pro';
+function applyMode(){
+  document.body.classList.toggle('mode-learner', appMode==='learner');
+  const b=document.getElementById('modeBtn');
+  if(b) b.textContent = appMode==='learner' ? '🎓 学習者モード（条文に集中）' : '👔 実務者モード（規制動向も表示）';
+}
+$('#modeBtn').addEventListener('click', ()=>{ appMode = appMode==='learner' ? 'pro' : 'learner'; localStorage.setItem('appMode', appMode); applyMode(); });
+applyMode();
 
 // ===== カッコの深さ別 折り畳み（クリックで深度を変化）=====
 let pDepth = 99;   // 深さが pDepth 以上の（）を「（…）」に折り畳む（99=全表示）
