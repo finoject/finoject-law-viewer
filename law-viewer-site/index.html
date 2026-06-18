@@ -127,6 +127,19 @@
   /* 定義語（ホバーで定義をポップアップ）：控えめな点線下線 */
   .gloss{ border-bottom:1px dotted rgba(159,208,255,.55); cursor:help; }
   .gloss:hover{ border-bottom-color:var(--accent); background:rgba(46,108,240,.10); }
+  /* 印刷／PDF：UIを隠し、条文を白地・全文展開で印刷 */
+  @media print{
+    body{ background:#fff; color:#000; }
+    #side, #top, #hsplit, #regview, #lawview, .regpanel, .artreg, #refpop { display:none !important; }
+    #app, #main, #doc, #artbody{ display:block !important; overflow:visible !important; height:auto !important; }
+    #doc{ padding:0; } #doc .wrap{ max-width:none; margin:0; }
+    .art{ content-visibility:visible !important; break-inside:avoid; border-color:#ccc; color:#000; }
+    .art .num{ color:#000; } .art .cap{ color:#333; }
+    .body .p1,.body .p2,.body .p3,.body .p4,.body .p5,.body .p6{ background:transparent; box-shadow:none; }
+    .body .pz{ display:inline !important; } .body .el{ display:none !important; }
+    .body a.rf{ color:#000; border:0; } .gloss{ border:0; }
+    .lawtbl th,.lawtbl td{ border:1px solid #999; color:#000; }
+  }
   .rmore{ font-size:12px; color:var(--muted); padding:8px 2px 2px; border-top:1px solid var(--line); }
   .rmore a, .rarts a{ color:#8fd0ff; }
   .rk{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; flex:none; background:#475569; color:#fff; }
@@ -268,6 +281,7 @@
         <span class="exlabel">この法令を保存:</span>
         <button id="expMd" title="表示中の法令をMarkdownでダウンロード（実務でコピーして使いやすい形）">📥 Markdown</button>
         <button id="expJson" title="表示中の法令を構造化JSONでダウンロード（他ツール/AIで加工しやすい形）">📥 JSON</button>
+        <button id="expPrint" title="表示中の法令を印刷／PDF保存（条文のみの印刷用レイアウト）">🖨 印刷</button>
       </div>
       <input id="search" placeholder="📄 この法令内だけをキーワード検索…（例：暗号資産、本人確認、登録）" class="hidden">
       <div id="pctl" class="hidden">
@@ -496,12 +510,20 @@ function renderSidebar(){
 
 async function loadLaw(id){
   if (cache[id]) return cache[id];
-  const d = await (await fetch(`./data/${id}.json?t=`+Date.now())).json();
-  cache[id] = d; return d;
+  const r = await fetch(`./data/${id}.json?t=`+Date.now());
+  if (!r.ok) throw new Error('HTTP '+r.status);
+  const d = await r.json(); cache[id] = d; return d;
 }
 
 async function openLaw(id, artNum, para){
-  const d = await loadLaw(id);
+  // 大きな法令は読み込み/描画に時間がかかるためローディング表示（キャッシュ済みなら出さない）
+  if (!cache[id]){ $('#lawTitle').textContent='読み込み中…';
+    $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">⏳ 法令データを読み込んでいます…<br><span style="font-size:12px">条数の多い法令（金融商品取引法など）は少し時間がかかります</span></div></div>'; }
+  let d;
+  try { d = await loadLaw(id); }
+  catch(e){ $('#lawTitle').textContent='法令を選択してください';
+    $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">⚠ この法令データを読み込めませんでした。<br><span style="font-size:12px">時間をおいて再度お試しください（データは毎日自動更新されます）。</span></div></div>';
+    return; }
   CUR = d;
   buildGlossary(d);                                                 // 定義語辞書（この文書の「○○とは…」を網羅抽出）
   REF = LAW_OF[d.law_id] || null;                                   // この文書の「法」が指す親法令
@@ -1117,6 +1139,7 @@ function exportLaw(fmt){
 }
 $('#expMd').addEventListener('click', ()=>exportLaw('md'));
 $('#expJson').addEventListener('click', ()=>exportLaw('json'));
+$('#expPrint').addEventListener('click', ()=>{ closeLawView && closeLawView(); window.print(); });
 
 // ===== 実務者/学習者モード（表示粒度の切替）=====
 // 学習者: 条文に集中（規制動向パネル・条文の📡バッジを隠し、行間を広げる）。実務者: 全部表示（既定）。
