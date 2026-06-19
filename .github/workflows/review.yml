@@ -11,7 +11,9 @@ on:
       - 'law-viewer/**'
       - 'proxy/**'
       - '.github/scripts/ai-review.js'
+      - '.github/workflows/review.yml'
       - '!law-viewer-site/data/**'
+  workflow_dispatch:            # 手動でも直近コミットを再レビューできる
 
 permissions:
   contents: read
@@ -37,7 +39,7 @@ jobs:
           fi
           if [ -z "$BEFORE" ]; then BEFORE="$(git hash-object -t tree /dev/null)"; fi
           git diff --unified=3 "$BEFORE" "${{ github.sha }}" -- \
-            'law-viewer-site/**' 'law-viewer/**' 'proxy/**' '.github/scripts/**' \
+            'law-viewer-site/**' 'law-viewer/**' 'proxy/**' '.github/scripts/**' '.github/workflows/review.yml' \
             ':(exclude)law-viewer-site/data/**' > diff.patch || true
           echo "diff bytes: $(wc -c < diff.patch)"
 
