@@ -1186,31 +1186,53 @@ function showHome(){
   setupHSplit();
 }
 // ===== 市況バー（ドル円・日経平均・NYダウ・ビットコイン） =====
-// 為替・株価指数は data/market.json（Actionsが1日3回 Yahoo Financeから取得）を表示＝出典・更新時刻を明示。
-// ビットコインは CoinGecko からクライアント側でリアルタイム再取得して上書き（CORS対応）。
+// 表示中はクライアント側で自動更新する「実況ティッカー」。
+//  ・為替/株価指数: Cloudflare Worker プロキシ経由で Yahoo Finance のJSONを取得（静的サイトはCORS不可のためプロキシで回避）。無料データのため約15分遅れ。
+//  ・ビットコイン: CoinGecko から直接（CORS可・リアルタイム・USD建）。
+//  ・data/market.json（Actionsが1日3回取得）は初期表示の種＆プロキシ未到達時のフォールバック。
+const MKT_DEFS = [ ['usdjpy','JPY=X','ドル円',2,''], ['n225','^N225','日経平均',2,''], ['dji','^DJI','NYダウ',2,''], ['btc',null,'ビットコイン',0,'$'] ];
+let _mktTimer = null, _mktStamp = '';
 function mktFmt(v, dec){ return (v==null)?'—':Number(v).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
 function mktCell(id, it, dec, prefix){
-  if(!it) return `<div class="mkc"><span class="mkl">—</span></div>`;
+  if(!it || it.value==null) return `<div class="mkc" id="mkc-${id}"><span class="mkl">${esc((MKT_DEFS.find(d=>d[0]===id)||[])[2]||id)}</span><span class="mkv">—</span></div>`;
   const ch=it.change, cls=(ch==null)?'':(ch>=0?'up':'down'), arw=(ch==null)?'':(ch>=0?'▲':'▼');
   const chTxt=(ch==null)?'':` <span class="mkch ${cls}">${arw}${Math.abs(ch).toFixed(2)}%</span>`;
   return `<div class="mkc" id="mkc-${id}" title="出典: ${esc(it.source||'')}（${esc(it.note||'')}）">`
     + `<span class="mkl">${esc(it.label||id)}</span>`
     + `<span class="mkv">${prefix||''}${mktFmt(it.value,dec)}</span>${chTxt}</div>`;
 }
+function mktPaint(){
+  const bar=document.getElementById('mktbar'); if(!bar) return;
+  bar.innerHTML='<div class="mkrow">'+MKT_DEFS.map(d=>mktCell(d[0],MKT_CACHE[d[0]],d[3],d[4])).join('')+'</div>'
+    + `<div class="mksrc">為替・株価指数: Yahoo Finance 提供（無料データのため約15分遅れ）／ビットコイン: CoinGecko（USD建）　｜　自動更新（表示中・約1分間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
+}
+let MKT_CACHE = {};
+async function fetchYahoo(symbol){
+  const yurl='https://query1.finance.yahoo.com/v8/finance/chart/'+symbol+'?interval=1d&range=5d';
+  const r=await fetch(PROXY_BASE+'?url='+encodeURIComponent(yurl)); if(!r.ok) throw new Error('proxy '+r.status);
+  const m=(await r.json()).chart.result[0].meta;
+  return { value:m.regularMarketPrice, prev:m.chartPreviousClose };
+}
+async function mktLive(){
+  const jobs=[];
+  for(const [id,sym,label] of MKT_DEFS){
+    if(id==='btc') jobs.push(fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true')
+      .then(r=>r.json()).then(j=>{ if(j&&j.bitcoin) MKT_CACHE.btc={label,value:j.bitcoin.usd,change:j.bitcoin.usd_24h_change,source:'CoinGecko',note:'リアルタイム・USD建'}; }).catch(()=>{}));
+    else jobs.push(fetchYahoo(sym).then(d=>{ MKT_CACHE[id]={label,value:d.value,prev:d.prev,change:d.prev?((d.value-d.prev)/d.prev*100):null,source:'Yahoo Finance',note:'約15分遅れ'}; }).catch(()=>{}));
+  }
+  await Promise.all(jobs);
+  _mktStamp = jpDateTime(new Date().toISOString());
+  mktPaint();
+}
 async function renderMarket(){
   const bar=document.getElementById('mktbar'); if(!bar) return;
-  let m; try{ m=await (await fetch('./data/market.json?t='+Date.now())).json(); }
-  catch(e){ bar.style.display='none'; return; }                       // 市況データ未生成なら静かに非表示
-  const it=m.items||{};
-  const cells=[ mktCell('usdjpy',it.usdjpy,2,''), mktCell('n225',it.n225,2,''), mktCell('dji',it.dji,2,''), mktCell('btc',it.btc,0,'$') ];
-  const stamp=m.fetchedAt?jpDateTime(m.fetchedAt):'';
-  bar.innerHTML='<div class="mkrow">'+cells.join('')+'</div>'
-    + `<div class="mksrc">為替・株価指数: Yahoo Finance（約15分遅れ・巡回時点 ${stamp}／1日3回更新）　｜　ビットコイン: CoinGecko（リアルタイム・USD建）</div>`;
-  // ビットコインはクライアント側でリアルタイム再取得して上書き（CORS可）
-  fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true')
-    .then(r=>r.json()).then(j=>{ if(j&&j.bitcoin){ const el=document.getElementById('mkc-btc');
-      if(el) el.outerHTML=mktCell('btc',{label:'ビットコイン',value:j.bitcoin.usd,change:j.bitcoin.usd_24h_change,source:'CoinGecko',note:'リアルタイム・USD建'},0,'$'); } })
-    .catch(()=>{});
+  if(_mktTimer){ clearInterval(_mktTimer); _mktTimer=null; }
+  // ① 種: market.json（あれば即時表示。無くてもライブ取得で埋まる）
+  try{ const m=await (await fetch('./data/market.json?t='+Date.now())).json(); MKT_CACHE={...(m.items||{})}; }catch(e){}
+  mktPaint();
+  // ② ライブ取得（プロキシ経由Yahoo＋CoinGecko）→自動更新（表示中のみ・約1分間隔）
+  mktLive();
+  _mktTimer = setInterval(()=>{ if(document.getElementById('mktbar')) mktLive(); else { clearInterval(_mktTimer); _mktTimer=null; } }, 60000);
 }
 function jpDateTime(iso){ try{ const d=new Date(iso), j=new Date(d.getTime()+9*3600000), p=n=>String(n).padStart(2,'0');
   return `${j.getUTCMonth()+1}/${j.getUTCDate()} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`; }catch(e){ return ''; } }

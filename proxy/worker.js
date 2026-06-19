@@ -8,7 +8,7 @@
 // 例:      https://finoject-proxy.example.workers.dev/?url=https%3A%2F%2Fwww.fsa.go.jp%2Fnews%2F...
 
 const ALLOW = ['fsa.go.jp', 'boj.or.jp', 'jpx.co.jp', 'jsda.or.jp', 'jvcea.or.jp', 'jicpa.or.jp',
-  'yahoo.co.jp', 'shugiin.go.jp', 'sangiin.go.jp'];   // yahoo=関連ニュース(news.yahoo.co.jp)、衆参=将来の議案ページ用
+  'yahoo.co.jp', 'shugiin.go.jp', 'sangiin.go.jp', 'finance.yahoo.com'];   // yahoo=関連ニュース(news.yahoo.co.jp)、衆参=議案ページ、finance.yahoo.com=市況(ドル円/日経/ダウ)のJSON取得
 
 export default {
   async fetch(request) {
@@ -28,7 +28,7 @@ export default {
     let upstream;
     try {
       upstream = await fetch(t.href, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; finoject-viewer/1.0)', 'Accept-Language': 'ja,en;q=0.8' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 'Accept-Language': 'ja,en;q=0.8' },
         redirect: 'follow',
       });
     } catch (e) {
