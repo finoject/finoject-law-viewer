@@ -19,7 +19,8 @@ function aiJson(obj, status, extra) { return new Response(JSON.stringify(obj), {
 async function handleAI(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...AI_CORS, 'access-control-max-age': '86400' } });
   if (request.method !== 'POST') return aiJson({ error: 'method not allowed' }, 405);
-  if (!env || !env.ANTHROPIC_API_KEY) return aiJson({ error: 'ANTHROPIC_API_KEY not configured on the worker' }, 500);
+  const KEY = ((env && env.ANTHROPIC_API_KEY) || '').trim();   // 貼り付け時に混入しがちな前後の空白・改行を除去（"Invalid header value" 対策）
+  if (!KEY) return aiJson({ error: 'ANTHROPIC_API_KEY not configured on the worker' }, 500);
   let body; try { body = await request.json(); } catch { return aiJson({ error: 'bad json' }, 400); }
   const task = body && body.task, p = (body && body.payload) || {};
   const MODEL = env.CLAUDE_MODEL || 'claude-haiku-4-5';   // 既定は最安の Haiku（短い要約/解説に十分）。品質を上げたい時は CLAUDE_MODEL=claude-sonnet-4-6 等を設定
@@ -40,7 +41,7 @@ async function handleAI(request, env) {
   try {
     r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      headers: { 'x-api-key': KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }], output_config: { format: { type: 'json_schema', schema } } }),
     });
   } catch (e) { return aiJson({ error: 'upstream: ' + e }, 502); }
