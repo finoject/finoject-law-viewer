@@ -159,6 +159,17 @@
   .artreg:hover{ filter:brightness(1.15); }
   /* トップ画面の規制ウォッチ・フィード */
   .home{ padding-bottom:40px; }
+  /* ブロック並び替え（ドラッグ） */
+  .layoutbar{ font-size:11.5px; color:var(--muted); background:#0e1a2e; border:1px dashed #2b66c0; border-radius:8px; padding:6px 10px; margin:2px 0 10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .lreset{ font-size:11px; padding:3px 9px; border-radius:6px; cursor:pointer; background:#16223a; color:#cfe0ff; border:1px solid var(--line); }
+  .lreset:hover{ border-color:var(--accent); }
+  .hsec{ position:relative; }
+  .hgrip{ position:absolute; top:6px; right:6px; z-index:5; cursor:grab; color:var(--muted); font-size:15px; line-height:1; padding:2px 6px; border-radius:6px; background:rgba(14,26,46,.7); border:1px solid transparent; user-select:none; opacity:.5; transition:opacity .15s; }
+  .hsec:hover .hgrip{ opacity:1; border-color:var(--line); }
+  .hgrip:active{ cursor:grabbing; }
+  .hsec.dragging{ opacity:.45; outline:2px dashed var(--accent); outline-offset:2px; border-radius:10px; }
+  body.reordering iframe{ pointer-events:none; }
+  body.reordering{ cursor:grabbing; }
   /* 最上部の市況バー（ドル円・日経・ダウ・BTC） */
   .mkt{ margin:2px 0 10px; }
   .mkrow{ display:flex; flex-wrap:wrap; gap:8px; }
@@ -1165,33 +1176,68 @@ function gSnippet(body, q){
   const t = (s>0?'…':'') + body.slice(s,e).replace(/\n/g,' ') + (e<body.length?'…':'');
   return esc(t).split(esc(q)).join('<mark>'+esc(q)+'</mark>');
 }
-function showHome(){
-  // 代表論点（全て実際にヒットする語を採用＝0件チップを出さない）
+// ホームの並び替え可能ブロック定義（data-sec キーで localStorage 'homeOrder' に順序保存）
+function homeSections(){
   const QSEARCH = ['取引時確認','疑わしい取引','制裁','暗号資産','電子決済手段','資金移動業','前払式支払手段','分別管理','利用者保護','管理態勢'];
+  return [
+    { k:'mkt',    title:'市況', html:`<div id="mktbar" class="mkt"></div>` },
+    { k:'portal', title:'最新の規制アップデート', html:`<div id="portalTop"></div>` },
+    { k:'guide',  title:'このツールについて・代表論点', html:
+        `<div class="homepurpose">⚖️ <b>金融コンプライアンス実務者のための無料ツール</b> — 法令・ガイドライン・規制動向・国会審議・報道を<b>1画面</b>で。<span class="hp-aud">（想定ユーザー：資金決済／暗号資産・ステーブルコイン／AML・CFT／証券などの実務担当者）</span></div>`
+      + `<div class="qsbar"><span class="qslabel">まず試す（代表論点）:</span>${QSEARCH.map(q=>`<button class="qschip" onclick="quickSearch('${q}')">🔍 ${q}</button>`).join('')}</div>`
+      + `<div class="homeintro">・<b>左の一覧</b>＝法令を選ぶと条文が開きます（上の窓で全法令・ガイドラインの横断検索も可）。 ・<b>下のフィード</b>＝金融庁・日銀など6機関の新着。項目をクリックすると、<b>この画面のまま右側に本文</b>が開きます（別サイトへは飛びません）。</div>` },
+    { k:'feed',   title:'規制動向フィード', html:
+        `<div class="feedhead"><span class="feedtitle">📡 最近の規制動向（金融庁・日銀・JPXほか6機関）</span><span id="feedmeta" class="feedmeta"></span></div>`
+      + `<div id="feedchips" class="feedchips"></div>`
+      + `<div class="homecols"><div id="feedcol"><div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div></div>`
+      + `<div id="hsplit" title="ドラッグで左右の幅を調整"></div>`
+      + `<div id="regview"><div class="rvhint">← 上の「最新の規制アップデート」や下のフィードの項目を選ぶと、その本文（公表資料・パブコメ等）をこの欄に表示します（別サイトへ移動しません）。</div></div></div>`
+      + `<div class="feedfoot">📖 のついた更新はクリックで該当法令・条文が開きます ／ <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（全件・6機関・Slack通知）↗</a></div>` },
+  ];
+}
+function showHome(){
+  const secs = homeSections();
+  let order = []; try{ order = JSON.parse(localStorage.getItem('homeOrder')||'[]'); }catch(e){}
+  const byK = Object.fromEntries(secs.map(s=>[s.k,s]));
+  const ordered = [...order.filter(k=>byK[k]), ...secs.map(s=>s.k).filter(k=>!order.includes(k))].map(k=>byK[k]);  // 保存順→未知/新規は既定位置で追加
+  const secHtml = ordered.map(s=>
+    `<section class="hsec" data-sec="${s.k}"><span class="hgrip" draggable="true" title="ドラッグで並び替え">⠿</span>${s.html}</section>`).join('');
   $('#doc').innerHTML = `<div class="wrap home">
-    <div id="mktbar" class="mkt"></div>
-    <div id="portalTop"></div>
-    <div class="homepurpose">⚖️ <b>金融コンプライアンス実務者のための無料ツール</b> — 法令・ガイドライン・規制動向・国会審議・報道を<b>1画面</b>で。<span class="hp-aud">（想定ユーザー：資金決済／暗号資産・ステーブルコイン／AML・CFT／証券などの実務担当者）</span></div>
-    <div class="qsbar"><span class="qslabel">まず試す（代表論点）:</span>${QSEARCH.map(q=>`<button class="qschip" onclick="quickSearch('${q}')">🔍 ${q}</button>`).join('')}</div>
-    <div class="homeintro">・<b>左の一覧</b>＝法令を選ぶと条文が開きます（上の窓で全法令・ガイドラインの横断検索も可）。
-      ・<b>下のフィード</b>＝金融庁・日銀など6機関の新着。項目をクリックすると、<b>この画面のまま右側に本文</b>が開きます（別サイトへは飛びません）。</div>
-    <div class="feedhead">
-      <span class="feedtitle">📡 最近の規制動向（金融庁・日銀・JPXほか6機関）</span>
-      <span id="feedmeta" class="feedmeta"></span>
-    </div>
-    <div id="feedchips" class="feedchips"></div>
-    <div class="homecols">
-      <div id="feedcol"><div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div></div>
-      <div id="hsplit" title="ドラッグで左右の幅を調整"></div>
-      <div id="regview"><div class="rvhint">← 上の「最新の規制アップデート」や下のフィードの項目を選ぶと、その本文（公表資料・パブコメ等）をこの欄に表示します（別サイトへ移動しません）。</div></div>
-    </div>
-    <div class="feedfoot">📖 のついた更新はクリックで該当法令・条文が開きます ／ <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（全件・6機関・Slack通知）↗</a></div>
+    <div class="layoutbar">🧩 ブロックは右上の <b>⠿</b> をドラッグして並び替えできます（保存されます）<button class="lreset" onclick="resetHomeLayout()">既定の並びに戻す</button></div>
+    <div id="homeSecs">${secHtml}</div>
   </div>`;
+  setupSecDrag();
   renderMarket();
   renderPortalTop();
   renderFeedChips();
   renderRegFeed();
   setupHSplit();
+}
+// ===== ホームのブロック並び替え（⠿をドラッグ→順序をlocalStorageに保存） =====
+let _dragSec = null;
+function saveHomeOrder(){
+  const cont=document.getElementById('homeSecs'); if(!cont) return;
+  const order=[...cont.querySelectorAll('.hsec')].map(s=>s.dataset.sec);
+  localStorage.setItem('homeOrder', JSON.stringify(order));
+}
+function resetHomeLayout(){ localStorage.removeItem('homeOrder'); showHome(); }
+function dragAfter(cont, y){   // ドロップ位置の直後にくる .hsec を返す（中点比較）
+  const els=[...cont.querySelectorAll('.hsec:not(.dragging)')];
+  let best={off:-Infinity, el:null};
+  for(const el of els){ const b=el.getBoundingClientRect(); const off=y-b.top-b.height/2; if(off<0 && off>best.off) best={off, el}; }
+  return best.el;
+}
+function setupSecDrag(){
+  const cont=document.getElementById('homeSecs'); if(!cont) return;
+  cont.querySelectorAll('.hgrip').forEach(g=>{
+    g.addEventListener('dragstart', e=>{ _dragSec=g.closest('.hsec'); _dragSec.classList.add('dragging');
+      document.body.classList.add('reordering');                 // ドラッグ中はiframeがdragoverを奪わないよう無効化
+      e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain','');}catch(_){} });
+    g.addEventListener('dragend', ()=>{ if(_dragSec)_dragSec.classList.remove('dragging'); document.body.classList.remove('reordering'); _dragSec=null; saveHomeOrder(); });
+  });
+  cont.addEventListener('dragover', e=>{ if(!_dragSec) return; e.preventDefault();
+    const after=dragAfter(cont, e.clientY);
+    if(after==null) cont.appendChild(_dragSec); else cont.insertBefore(_dragSec, after); });
 }
 // ===== 市況バー（ドル円・日経平均・NYダウ・ビットコイン） =====
 // 表示中はクライアント側で自動更新する「実況ティッカー」。
