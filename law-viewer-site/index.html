@@ -222,6 +222,12 @@
   .ptitle{ color:#cfe0ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
   .pimp{ flex:none; font-size:10px; font-weight:700; color:#fff; background:#c2410c; border-radius:4px; padding:1px 5px; }
   .pref{ flex:none; font-size:11px; color:#8fd0ff; white-space:nowrap; }
+  .prow.has-sum{ flex-direction:column; align-items:stretch; gap:3px; }
+  .prow-h{ display:flex; align-items:center; gap:7px; min-width:0; }
+  .psum{ padding-left:9px; border-left:2px solid #2a3a5a; margin:1px 0 1px 2px; }
+  .psl{ color:#9fb3d4; font-size:11.5px; line-height:1.5; }
+  .psl::before{ content:"・"; color:#5b76a8; }
+  .fsum1{ color:#90a4c6; font-size:11.5px; line-height:1.45; margin-top:2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .pmore{ font-size:11.5px; color:var(--muted); padding:6px 2px 2px; }
   @media (max-width:760px){ .pcols{ grid-template-columns:1fr; } }
   .homepurpose{ font-size:14px; line-height:1.7; color:var(--fg); background:linear-gradient(180deg,#10243f,#0e1a2e); border:1px solid #2b66c0; border-radius:10px; padding:12px 15px; margin:2px 0 10px; }
@@ -592,8 +598,9 @@ function renderRegFeed(){
     // 行クリックで右の本文ビューアに表示（画面遷移しない）。📖チップはstopPropagationで法令ビューへ。
     // 📖法令リンク（種別バッジ含む）は「法令リンクあり」フィルタを押したときだけ表示＝既定の一覧は全項目同じ見た目に統一（三根さん指摘：押していないのに一部だけ法令情報が出るのは不整合）。
     const refsHtml = (homeFilterAg==='__lawlinked__') ? homeRefsHtml(it) : '';
+    const sum1 = (Array.isArray(it.aiSummary)&&it.aiSummary[0]) ? `<div class="fsum1">${esc(it.aiSummary[0])}</div>` : '';   // 事前生成要点の1行プレビュー
     html += `<div class="fitem" data-idx="${idx}" onclick="openRegView(${idx})"><span class="fbadge" style="background:${c}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
-      + `<div class="fbody"><span class="fttl">${esc(it.title)}</span>${isNew?'<span class="fnew">NEW</span>':''}${refsHtml}</div></div>`;
+      + `<div class="fbody"><span class="fttl">${esc(it.title)}</span>${isNew?'<span class="fnew">NEW</span>':''}${refsHtml}${sum1}</div></div>`;
   });
   if(items.length>SHOWN) html += `<div class="rmore">ほか ${items.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`;
   box.innerHTML=html;
@@ -705,25 +712,32 @@ function renderRegView(it){
   // 理解パネル: ①AI要点(3行・接続時に自動生成/未接続はプレースホルダ) ②実務影響タグ(キーワード抽出・即時) ③関係法令(自動検出) ④原文
   const tags = impactTagsHtml(it.title);
   const aiId = 'aiu-' + Math.abs([...it.url].reduce((a,c)=>((a*31+c.charCodeAt(0))|0),7));
+  const hasSum = Array.isArray(it.aiSummary) && it.aiSummary.length;   // 事前生成済み(夜間バッチ)＝即表示・フェッチ不要
+  const aiInit = hasSum ? aiLinesHtml(it.aiSummary) : '<span class="ai-load">生成中…</span>';
   box.innerHTML = `<div class="rvhead"><span class="fbadge" style="background:${REG_COLORS[it.agency]||'#64748b'}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
     + `<span class="rvdate">${jpd(it.date)}</span><a class="rvext" href="${esc(it.url)}" target="_blank" rel="noopener" title="原文を新しいタブで開く">↗ 原文</a>`
     + `<button class="rvclose" onclick="closeRegView()" title="閉じる">✕</button></div>`
     + `<div class="rvtitle">${esc(it.title)}</div>`
     + `<div class="understand">`
-    +   `<div class="usec"><div class="usec-h">🤖 要点</div><div class="usec-b" id="${aiId}"><span class="ai-load">生成中…</span></div></div>`
+    +   `<div class="usec"><div class="usec-h">🤖 要点</div><div class="usec-b" id="${aiId}">${aiInit}</div></div>`
     +   `<div class="usec"><div class="usec-h">🏷 実務影響</div><div class="usec-b">${tags || '<span class="ai-empty">主要タグは検出されませんでした</span>'}</div></div>`
     +   `<div class="usec"><div class="usec-h">📎 関係法令</div><div class="usec-b ai-laws">${relatedLawsHtml(it)}</div></div>`
     + `</div>`
     + `<div class="rvorigh">📄 原文</div>${body}`;
   box.classList.add('active');
-  fillUpdateSummary(aiId, it);   // AI要点を非同期で充填（接続時はClaude、未接続は受け皿表示）
+  if(!hasSum) fillUpdateSummary(aiId, it);   // 事前生成が無い時だけオンデマンドで充填（接続時はClaude、未接続は受け皿表示）
 }
-// AI要点の充填: 接続時はAIX.explainUpdate、未接続/失敗時は受け皿（接続を促す）＋確認の手掛かりを表示
+// 3行要点のHTML（事前生成・オンデマンド共用）
+function aiLinesHtml(lines){
+  return '<ul class="ai-lines">'+lines.slice(0,4).map(l=>'<li>'+esc(l)+'</li>').join('')+'</ul><div class="ai-by">Claudeによる自動要約</div>';
+}
+// AI要点の充填: ①事前生成(it.aiSummary)があれば即表示 ②なければAIX.explainUpdate ③未接続/失敗時は受け皿
 async function fillUpdateSummary(elId, it){
   const el = document.getElementById(elId); if(!el) return;
+  if(Array.isArray(it.aiSummary) && it.aiSummary.length){ el.innerHTML = aiLinesHtml(it.aiSummary); return; }
   const r = await AIX.explainUpdate(it).catch(()=>null);
   if(r && r.lines && r.lines.length){
-    el.innerHTML = '<ul class="ai-lines">'+r.lines.slice(0,4).map(l=>'<li>'+esc(l)+'</li>').join('')+'</ul><div class="ai-by">Claudeによる自動要約</div>';
+    el.innerHTML = aiLinesHtml(r.lines);
   } else {
     el.innerHTML = `<div class="ai-placeholder">この更新の3行要点（<b>何が起きたか／誰に関係するか／どの論点か</b>）は、AI解説を接続すると自動生成されます。`
       + `<span class="ai-note">現在はAI未接続。下の「実務影響」「関係法令」で当たりを付けられます。</span></div>`;
@@ -742,7 +756,7 @@ function isoJST(offsetDays){
 // 規制動向（REGITEMS）＋法令データ更新（INDEX.laws[].updated）を日付付きの共通形に集約
 function portalItems(){
   const out=[];
-  REGITEMS.forEach((it,gi)=>{ if(it.date) out.push({date:it.date, kind:'reg', agency:it.agency, title:it.title, gi, refs:it.lawrefs||[]}); });
+  REGITEMS.forEach((it,gi)=>{ if(it.date) out.push({date:it.date, kind:'reg', agency:it.agency, title:it.title, gi, refs:it.lawrefs||[], aiSummary:it.aiSummary}); });
   const changed=new Set(INDEX&&INDEX.changed||[]);
   ((INDEX&&INDEX.laws)||[]).forEach(l=>{ const u=(l.updated||'').slice(0,10); if(u) out.push({date:u, kind:'law', title:l.title, lawId:l.law_id, ltype:l.type, changed:changed.has(l.title)}); });
   return out;
@@ -753,7 +767,10 @@ function portalRow(x){
     const c=REG_COLORS[x.agency]||'#64748b';
     const imp=(x.refs&&x.refs.length)?'<span class="pimp" title="条文に紐づく更新">重要</span>':'';   // 法令条文に紐づく更新＝実務影響が大きい目印
     const refs=(x.refs&&x.refs.length)?'<span class="pref">📖 '+esc((x.refs[0].label||'').replace(/\s*第.+$/,''))+(x.refs.length>1?` ほか${x.refs.length-1}`:'')+'</span>':'';
-    return `<div class="prow" onclick="openRegViewItem(${x.gi})" title="クリックで右側に本文を表示"><span class="pdate">${d}</span><span class="fbadge" style="background:${c}">${esc(REG_SHORT[x.agency]||x.agency)}</span><span class="ptitle">${esc(x.title)}</span>${imp}${refs}</div>`;
+    const sum=(Array.isArray(x.aiSummary)&&x.aiSummary.length)   // 事前生成の3行要点を一覧に直接表示（クリック不要）
+      ? '<div class="psum">'+x.aiSummary.map(l=>'<div class="psl">'+esc(l)+'</div>').join('')+'</div>' : '';
+    return `<div class="prow${sum?' has-sum':''}" onclick="openRegViewItem(${x.gi})" title="クリックで右側に本文を表示">`
+      + `<div class="prow-h"><span class="pdate">${d}</span><span class="fbadge" style="background:${c}">${esc(REG_SHORT[x.agency]||x.agency)}</span><span class="ptitle">${esc(x.title)}</span>${imp}${refs}</div>${sum}</div>`;
   }
   const ch=x.changed?'<span class="pimp" title="直近の自動巡回でデータが変化">改正反映</span>':'';
   return `<div class="prow" onclick="openLaw('${x.lawId}')" title="クリックで条文を開く"><span class="pdate">${d}</span><span class="fbadge pbk-law">法令</span><span class="ptitle">${esc(x.title)}</span>${ch}</div>`;
