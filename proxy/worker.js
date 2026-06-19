@@ -18,8 +18,12 @@ const AI_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-meth
 function aiJson(obj, status, extra) { return new Response(JSON.stringify(obj), { status: status || 200, headers: { 'content-type': 'application/json; charset=utf-8', ...AI_CORS, ...(extra || {}) } }); }
 async function handleAI(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...AI_CORS, 'access-control-max-age': '86400' } });
+  const rawKey = (env && env.ANTHROPIC_API_KEY) || '';
+  const KEY = rawKey.replace(/\s/g, '');   // 途中も含め全ての空白・改行を除去（"Invalid header value" 対策。APIキーに空白は含まれない）
+  if (request.method === 'GET') {          // ブラウザで開くと安全な診断（キー本体は出さない。先頭sk-ant-と長さのみ）
+    return aiJson({ deployed: '2026-06-19d', model: (env.CLAUDE_MODEL || 'claude-haiku-4-5'), keyConfigured: !!KEY, keyLen: KEY.length, keyPrefix: KEY.slice(0, 7), rawHadWhitespace: (rawKey !== KEY) });
+  }
   if (request.method !== 'POST') return aiJson({ error: 'method not allowed' }, 405);
-  const KEY = ((env && env.ANTHROPIC_API_KEY) || '').trim();   // 貼り付け時に混入しがちな前後の空白・改行を除去（"Invalid header value" 対策）
   if (!KEY) return aiJson({ error: 'ANTHROPIC_API_KEY not configured on the worker' }, 500);
   let body; try { body = await request.json(); } catch { return aiJson({ error: 'bad json' }, 400); }
   const task = body && body.task, p = (body && body.payload) || {};
