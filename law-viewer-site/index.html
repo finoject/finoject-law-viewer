@@ -161,12 +161,16 @@
   .home{ padding-bottom:40px; }
   /* ブロック並び替え（ドラッグ） */
   .layoutbar{ font-size:11.5px; color:var(--muted); background:#0e1a2e; border:1px dashed #2b66c0; border-radius:8px; padding:6px 10px; margin:2px 0 10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .lreset{ font-size:11px; padding:3px 9px; border-radius:6px; cursor:pointer; background:#16223a; color:#cfe0ff; border:1px solid var(--line); }
-  .lreset:hover{ border-color:var(--accent); }
+  .lreset,.lshow{ font-size:11px; padding:3px 9px; border-radius:6px; cursor:pointer; background:#16223a; color:#cfe0ff; border:1px solid var(--line); }
+  .lreset:hover,.lshow:hover{ border-color:var(--accent); }
+  .lshow{ margin-left:5px; border-color:#2b66c0; color:#8fd0ff; }
   .hsec{ position:relative; }
-  .hgrip{ position:absolute; top:6px; right:6px; z-index:5; cursor:grab; color:var(--muted); font-size:15px; line-height:1; padding:2px 6px; border-radius:6px; background:rgba(14,26,46,.7); border:1px solid transparent; user-select:none; opacity:.5; transition:opacity .15s; }
-  .hsec:hover .hgrip{ opacity:1; border-color:var(--line); }
+  .hctl{ position:absolute; top:6px; right:6px; z-index:5; display:flex; gap:4px; opacity:.5; transition:opacity .15s; }
+  .hsec:hover .hctl{ opacity:1; }
+  .hgrip{ cursor:grab; color:var(--muted); font-size:15px; line-height:1; padding:2px 6px; border-radius:6px; background:rgba(14,26,46,.75); border:1px solid var(--line); user-select:none; }
   .hgrip:active{ cursor:grabbing; }
+  .hhide{ cursor:pointer; color:var(--muted); font-size:12px; line-height:1; padding:2px 7px; border-radius:6px; background:rgba(14,26,46,.75); border:1px solid var(--line); }
+  .hhide:hover{ border-color:#f87171; color:#f87171; }
   .hsec.dragging{ opacity:.45; outline:2px dashed var(--accent); outline-offset:2px; border-radius:10px; }
   body.reordering iframe{ pointer-events:none; }
   body.reordering{ cursor:grabbing; }
@@ -1198,12 +1202,18 @@ function homeSections(){
 function showHome(){
   const secs = homeSections();
   let order = []; try{ order = JSON.parse(localStorage.getItem('homeOrder')||'[]'); }catch(e){}
+  let hidden = []; try{ hidden = JSON.parse(localStorage.getItem('homeHidden')||'[]'); }catch(e){}
   const byK = Object.fromEntries(secs.map(s=>[s.k,s]));
   const ordered = [...order.filter(k=>byK[k]), ...secs.map(s=>s.k).filter(k=>!order.includes(k))].map(k=>byK[k]);  // 保存順→未知/新規は既定位置で追加
-  const secHtml = ordered.map(s=>
-    `<section class="hsec" data-sec="${s.k}"><span class="hgrip" draggable="true" title="ドラッグで並び替え">⠿</span>${s.html}</section>`).join('');
+  const hideSet = new Set(hidden.filter(k=>byK[k]));
+  const secHtml = ordered.filter(s=>!hideSet.has(s.k)).map(s=>
+    `<section class="hsec" data-sec="${s.k}"><span class="hctl"><span class="hgrip" draggable="true" title="ドラッグで並び替え">⠿</span>`
+    + `<button class="hhide" title="このブロックを隠す" onclick="hideSection('${s.k}')">✕</button></span>${s.html}</section>`).join('');
+  const hiddenChips = [...hideSet].length
+    ? `　｜　非表示中: ` + [...hideSet].map(k=>`<button class="lshow" onclick="showSection('${k}')" title="再表示">＋ ${esc(byK[k].title)}</button>`).join('')
+    : '';
   $('#doc').innerHTML = `<div class="wrap home">
-    <div class="layoutbar">🧩 ブロックは右上の <b>⠿</b> をドラッグして並び替えできます（保存されます）<button class="lreset" onclick="resetHomeLayout()">既定の並びに戻す</button></div>
+    <div class="layoutbar">🧩 ブロックは右上の <b>⠿</b> で並び替え、<b>✕</b> で非表示にできます（保存されます）<button class="lreset" onclick="resetHomeLayout()">既定に戻す</button>${hiddenChips}</div>
     <div id="homeSecs">${secHtml}</div>
   </div>`;
   setupSecDrag();
@@ -1220,7 +1230,10 @@ function saveHomeOrder(){
   const order=[...cont.querySelectorAll('.hsec')].map(s=>s.dataset.sec);
   localStorage.setItem('homeOrder', JSON.stringify(order));
 }
-function resetHomeLayout(){ localStorage.removeItem('homeOrder'); showHome(); }
+function resetHomeLayout(){ localStorage.removeItem('homeOrder'); localStorage.removeItem('homeHidden'); showHome(); }
+function getHidden(){ try{ return JSON.parse(localStorage.getItem('homeHidden')||'[]'); }catch(e){ return []; } }
+function hideSection(k){ const h=new Set(getHidden()); h.add(k); localStorage.setItem('homeHidden', JSON.stringify([...h])); showHome(); }
+function showSection(k){ const h=new Set(getHidden()); h.delete(k); localStorage.setItem('homeHidden', JSON.stringify([...h])); showHome(); }
 function dragAfter(cont, y){   // ドロップ位置の直後にくる .hsec を返す（中点比較）
   const els=[...cont.querySelectorAll('.hsec:not(.dragging)')];
   let best={off:-Infinity, el:null};
