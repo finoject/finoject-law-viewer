@@ -20,8 +20,8 @@ async function handleAI(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...AI_CORS, 'access-control-max-age': '86400' } });
   const rawKey = (env && env.ANTHROPIC_API_KEY) || '';
   const KEY = rawKey.replace(/\s/g, '');   // 途中も含め全ての空白・改行を除去（"Invalid header value" 対策。APIキーに空白は含まれない）
-  if (request.method === 'GET') {          // ブラウザで開くと安全な診断（キー本体は出さない。先頭sk-ant-と長さのみ）
-    return aiJson({ deployed: '2026-06-19d', model: (env.CLAUDE_MODEL || 'claude-haiku-4-5'), keyConfigured: !!KEY, keyLen: KEY.length, keyPrefix: KEY.slice(0, 7), rawHadWhitespace: (rawKey !== KEY) });
+  if (request.method === 'GET') {          // ブラウザで開ける簡易ヘルスチェック（鍵の内部情報は出さない）
+    return aiJson({ ok: true, deployed: '2026-06-19e', model: (env.CLAUDE_MODEL || 'claude-haiku-4-5'), keyConfigured: !!KEY });
   }
   if (request.method !== 'POST') return aiJson({ error: 'method not allowed' }, 405);
   if (!KEY) return aiJson({ error: 'ANTHROPIC_API_KEY not configured on the worker' }, 500);
