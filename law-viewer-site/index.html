@@ -293,6 +293,35 @@
   .rvblocked{ color:var(--muted); font-size:13px; line-height:1.9; padding:20px 16px; }
   .rvopen{ display:inline-block; margin-top:10px; background:#1d4ed8; color:#fff; text-decoration:none; border-radius:7px; padding:7px 13px; font-weight:700; }
   .rvnote{ margin-top:14px; font-size:11px; }
+  /* ===== AI解説レイヤー（理解パネル／条文解説／実務影響タグ）===== */
+  .understand{ padding:10px 12px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:9px; flex:none; max-height:42%; overflow:auto; }
+  .usec-h{ font-size:11px; font-weight:700; color:#9fd0ff; margin-bottom:3px; }
+  .usec-b{ font-size:12.5px; color:#dce7f7; line-height:1.6; }
+  .rvorigh{ font-size:11px; font-weight:700; color:var(--muted); padding:6px 12px 0; flex:none; }
+  .ai-load{ font-size:12px; color:var(--muted); } .ai-load::after{ content:'…'; }
+  .ai-empty{ font-size:12px; color:var(--muted); }
+  .ai-placeholder{ font-size:12px; color:var(--muted); line-height:1.7; background:#10243f; border:1px dashed #2b66c0; border-radius:8px; padding:8px 10px; }
+  .ai-placeholder b{ color:#cfe0ff; } .ai-note{ display:block; margin-top:4px; color:#7f93b5; font-size:11px; }
+  .ai-lines{ margin:0; padding-left:18px; } .ai-lines li{ margin:2px 0; }
+  .ai-txt{ white-space:pre-wrap; }
+  .ai-by{ margin-top:5px; font-size:10px; color:#7f93b5; }
+  .ai-laws{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ai-law{ font-size:11.5px; padding:3px 9px; border-radius:7px; background:#13243f; color:#8fd0ff; border:1px solid #2b66c0; text-decoration:none; }
+  .ai-law:hover{ background:#1c3a63; color:#fff; }
+  /* 実務影響タグ（種別ごとに色を固定＝意味の一貫性）。aml=橙系/cust=青/fin=緑/reg=紫/gov=赤系/sys=シアン */
+  .itag{ display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin:0 5px 5px 0; border:1px solid transparent; }
+  .it-aml{ background:rgba(194,65,12,.18); color:#fb923c; border-color:rgba(194,65,12,.5); }
+  .it-cust{ background:rgba(37,99,235,.18); color:#7fb0ff; border-color:rgba(37,99,235,.5); }
+  .it-fin{ background:rgba(21,128,61,.18); color:#4ade80; border-color:rgba(21,128,61,.5); }
+  .it-reg{ background:rgba(147,51,234,.18); color:#c084fc; border-color:rgba(147,51,234,.5); }
+  .it-gov{ background:rgba(190,24,93,.18); color:#f472b6; border-color:rgba(190,24,93,.5); }
+  .it-sys{ background:rgba(13,148,136,.18); color:#2dd4bf; border-color:rgba(13,148,136,.5); }
+  /* 条文の「やさしく解説」 */
+  .aiart{ margin:4px 0 0; font-size:11px; cursor:pointer; background:#13202f; color:#8fb6e8; border:1px solid var(--line); border-radius:7px; padding:3px 10px; }
+  .aiart:hover{ border-color:var(--accent); color:#cfe0ff; }
+  body.mode-learner .aiart{ display:none; }   /* 学習者モードは条文に集中＝AIボタンも隠す（既存方針に追従） */
+  .aiart-panel{ margin:7px 0 2px; padding:9px 11px; background:#0e1a2e; border:1px solid #21406e; border-radius:9px; display:flex; flex-direction:column; gap:7px; }
+  .aiart-panel.hidden{ display:none; }
   @media(max-width:860px){
     .homecols{ flex-direction:column; height:auto !important; }
     #feedcol, #regview{ flex:none !important; width:100%; }
@@ -369,7 +398,7 @@
         <button id="modeBtn" class="modebtn" title="表示の粒度を切替（学習者＝条文に集中／実務者＝規制動向も表示）"></button>
       </div>
       <input id="gsearch" placeholder="🔍 横断検索（スペース=AND / or / and 対応。例：本人 確認、信託 or 分別、電子 and 計算 or 書面）">
-      <h2 id="lawTitle">法令を選択してください</h2>
+      <h2 id="lawTitle">金融規制ワークベンチ — 読む・探す・追う・理解する</h2>
       <p id="lawMeta"></p>
       <div id="exportBox" class="hidden">
         <span class="exlabel">この法令を保存:</span>
@@ -588,6 +617,76 @@ function openRegViewItem(gi){
   const box=document.getElementById('regview'); if(box) box.scrollIntoView({block:'nearest', behavior:'smooth'});
 }
 // 規制項目（item オブジェクト）の本文を右パネルに描画する共通処理
+// ===== AI解説レイヤー（Claude）=====
+// セキュリティ: APIキーはクライアントに出さない。本番は serverless（Cloudflare Worker等）の /ai エンドポイント経由でClaudeを呼ぶ。
+// 未接続時は null を返し、呼び出し側が「キーワード抽出」などの非AI簡易表示にフォールバック（受け皿UIだけ先に成立させる）。
+// 接続するには localStorage に aiEndpoint を設定（例: localStorage.aiEndpoint='https://xxx.workers.dev/ai'）。差し替えはこの1点のみ。
+const AIX = {
+  get endpoint(){ try{ return localStorage.getItem('aiEndpoint')||''; }catch(e){ return ''; } },
+  get enabled(){ return !!this.endpoint; },
+  async call(task, payload){                      // {task, payload} を渡しJSONで受け取る共通I/F。Worker側でClaude messages APIに整形する想定。
+    if(!this.endpoint) return null;
+    try{ const r=await fetch(this.endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({task, payload})});
+      return r.ok ? await r.json() : null; }catch(e){ return null; }
+  },
+  async explainUpdate(it){                         // 規制更新の3行要点（何が起きたか/誰に/どの論点）
+    const r = await this.call('update', {title:it.title, agency:it.agency, date:it.date, lawrefs:(it.lawrefs||[]).map(x=>x.label)});
+    return (r && Array.isArray(r.lines)) ? {lines:r.lines, source:'ai'} : null;
+  },
+  async explainArticle(p){                         // 条文の平易な解説（何を言っているか/実務でどこで効くか/確認点）
+    const r = await this.call('article', {law:p.law, num:p.num, body:(p.body||'').slice(0,4000)});
+    return (r && r.text) ? {text:r.text, points:r.points||[], source:'ai'} : null;
+  },
+};
+// 実務影響タグ（キーワード抽出・非AIでも即時に有用。種別ごとに色を固定＝意味の一貫性）
+const IMPACT_TAGS = [
+  {t:'取引時確認',   c:'aml',  re:/取引時確認/},
+  {t:'本人確認/KYC', c:'aml',  re:/本人確認|本人特定事項|確認記録|KYC|顧客管理|ＣＤＤ|CDD/},
+  {t:'疑わしい取引', c:'aml',  re:/疑わしい取引|疑わしい点|ＳＴＲ|STR/},
+  {t:'AML/CFT',      c:'aml',  re:/マネー・?ローンダリング|資金洗浄|マネロン|テロ資金|犯罪による収益|犯罪収益/},
+  {t:'制裁/資産凍結',c:'aml',  re:/制裁|資産凍結|経済制裁|外国為替.*許可|資産の凍結/},
+  {t:'顧客説明',     c:'cust', re:/説明義務|重要事項|契約締結前|顧客への説明|誠実(かつ公正)?/},
+  {t:'広告/勧誘',    c:'cust', re:/広告|勧誘|不当な表示|表示方法/},
+  {t:'利用者保護',   c:'cust', re:/利用者(の)?保護|顧客保護|利用者財産/},
+  {t:'分別管理',     c:'fin',  re:/分別管理|区分(して)?管理|信託(して)?保全|供託/},
+  {t:'登録/届出',    c:'reg',  re:/登録|届出|認可|免許|登録申請|変更届/},
+  {t:'報告/開示',    c:'reg',  re:/報告(書|義務|を要)|開示|公表|提出/},
+  {t:'管理態勢',     c:'gov',  re:/管理態勢|内部管理|態勢(の)?整備|内部統制|コンプライアンス/},
+  {t:'システム対応', c:'sys',  re:/システム|電子情報処理組織|オンライン|電磁的|API/},
+  {t:'規程改定',     c:'gov',  re:/規程|社内規則|内部規則|業務方法書/},
+];
+function impactTags(text, max){ text=text||''; const out=[]; for(const x of IMPACT_TAGS){ if(x.re.test(text)) out.push(x); if(out.length>=(max||6)) break; } return out; }
+function impactTagsHtml(text, max){ const ts=impactTags(text,max); return ts.length ? ts.map(x=>`<span class="itag it-${x.c}">${x.t}</span>`).join('') : ''; }
+// 関係法令チップ（lawrefsから。クリックで法令ビューアの該当条へ）
+function relatedLawsHtml(it){
+  if(!it.lawrefs || !it.lawrefs.length) return '<div class="ai-empty">関係法令は自動検出されていません</div>';
+  const byId={}; for(const r of it.lawrefs){ if(!byId[r.id]) byId[r.id]={id:r.id, art:r.art, label:(r.label||'').replace(/\s*第.+$/,'')}; if(r.art&&!byId[r.id].art) byId[r.id].art=r.art; }
+  return Object.values(byId).slice(0,6).map(g=>{ const a=g.art?"'"+g.art.replace(/'/g,'')+"'":'null';
+    return `<a class="ai-law" href="?law=${g.id}${g.art?'&art='+encodeURIComponent(g.art):''}" onclick="openLaw('${g.id}',${a});return false;" title="法令ビューアで開く">📎 ${esc(g.label)}${g.art?' '+esc(g.art):''}</a>`; }).join('');
+}
+
+// 条文の「やさしく解説」パネルを開閉。実務影響タグ(キーワード抽出・即時)＋AI平易解説(接続時)/受け皿(未接続)。
+async function toggleArticleAI(num){
+  const panel = document.querySelector('.aiart-panel[data-aip="'+CSS.escape(num)+'"]'); if(!panel) return;
+  if(!panel.classList.contains('hidden')){ panel.classList.add('hidden'); return; }   // 既に開いていれば閉じる
+  panel.classList.remove('hidden');
+  const b = (CUR && CUR.blocks || []).find(x=>x.num===num);
+  const txt = b ? searchText(b) : '';
+  const tags = impactTagsHtml(txt, 6);
+  panel.innerHTML = `<div class="usec-h">🏷 実務影響</div><div class="usec-b">${tags||'<span class="ai-empty">主要タグは検出されませんでした</span>'}</div>`
+    + `<div class="usec-h">🤖 平易な解説</div><div class="usec-b" id="aiart-b"><span class="ai-load">生成中…</span></div>`;
+  const out = panel.querySelector('#aiart-b');
+  const r = b ? await AIX.explainArticle({law:CUR.law_id, num, body:b.body}).catch(()=>null) : null;
+  if(r && r.text){
+    out.innerHTML = '<div class="ai-txt">'+esc(r.text)+'</div>'
+      + (r.points&&r.points.length?'<ul class="ai-lines">'+r.points.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul>':'')
+      + '<div class="ai-by">Claudeによる解説</div>';
+  } else {
+    out.innerHTML = `<div class="ai-placeholder">この条文の平易な解説（<b>何を言っているか／実務でどこで効くか／確認すべき点／よく一緒に見る条文</b>）は、AI解説を接続すると自動生成されます。`
+      + `<span class="ai-note">現在はAI未接続。上の「実務影響」タグと、本文中の青い参照リンク・点線の定義語が手掛かりになります。</span></div>`;
+  }
+}
+
 function renderRegView(it){
   const box = document.getElementById('regview'); if(!box) return;
   const framable = FRAMABLE_AGENCIES.includes(it.agency);
@@ -599,11 +698,32 @@ function renderRegView(it){
   else body = `<div class="rvblocked">この媒体（${esc(it.agency)}）はページ埋め込みを許可していないため、ここに本文を表示できません。`
             + `<a class="rvopen" href="${esc(it.url)}" target="_blank" rel="noopener">↗ 原文を新しいタブで開く</a>`
             + `<div class="rvnote">※ 無料プロキシ（Cloudflare Worker）を設定すると、この欄に金融庁・日銀などの本文も直接表示できます。</div></div>`;
+  // 理解パネル: ①AI要点(3行・接続時に自動生成/未接続はプレースホルダ) ②実務影響タグ(キーワード抽出・即時) ③関係法令(自動検出) ④原文
+  const tags = impactTagsHtml(it.title);
+  const aiId = 'aiu-' + Math.abs([...it.url].reduce((a,c)=>((a*31+c.charCodeAt(0))|0),7));
   box.innerHTML = `<div class="rvhead"><span class="fbadge" style="background:${REG_COLORS[it.agency]||'#64748b'}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
     + `<span class="rvdate">${jpd(it.date)}</span><a class="rvext" href="${esc(it.url)}" target="_blank" rel="noopener" title="原文を新しいタブで開く">↗ 原文</a>`
     + `<button class="rvclose" onclick="closeRegView()" title="閉じる">✕</button></div>`
-    + `<div class="rvtitle">${esc(it.title)}</div>${homeRefsHtml(it)}${body}`;
+    + `<div class="rvtitle">${esc(it.title)}</div>`
+    + `<div class="understand">`
+    +   `<div class="usec"><div class="usec-h">🤖 要点</div><div class="usec-b" id="${aiId}"><span class="ai-load">生成中…</span></div></div>`
+    +   `<div class="usec"><div class="usec-h">🏷 実務影響</div><div class="usec-b">${tags || '<span class="ai-empty">主要タグは検出されませんでした</span>'}</div></div>`
+    +   `<div class="usec"><div class="usec-h">📎 関係法令</div><div class="usec-b ai-laws">${relatedLawsHtml(it)}</div></div>`
+    + `</div>`
+    + `<div class="rvorigh">📄 原文</div>${body}`;
   box.classList.add('active');
+  fillUpdateSummary(aiId, it);   // AI要点を非同期で充填（接続時はClaude、未接続は受け皿表示）
+}
+// AI要点の充填: 接続時はAIX.explainUpdate、未接続/失敗時は受け皿（接続を促す）＋確認の手掛かりを表示
+async function fillUpdateSummary(elId, it){
+  const el = document.getElementById(elId); if(!el) return;
+  const r = await AIX.explainUpdate(it).catch(()=>null);
+  if(r && r.lines && r.lines.length){
+    el.innerHTML = '<ul class="ai-lines">'+r.lines.slice(0,4).map(l=>'<li>'+esc(l)+'</li>').join('')+'</ul><div class="ai-by">Claudeによる自動要約</div>';
+  } else {
+    el.innerHTML = `<div class="ai-placeholder">この更新の3行要点（<b>何が起きたか／誰に関係するか／どの論点か</b>）は、AI解説を接続すると自動生成されます。`
+      + `<span class="ai-note">現在はAI未接続。下の「実務影響」「関係法令」で当たりを付けられます。</span></div>`;
+  }
 }
 function closeRegView(){
   const box=document.getElementById('regview'); if(box){ box.classList.remove('active'); box.innerHTML='<div class="rvhint">← 左の更新項目を選ぶと、その本文（公表資料・パブコメ等）をこの欄に表示します（別サイトへ移動しません）。</div>'; }
@@ -665,6 +785,8 @@ async function boot(){
   setInterval(() => loadRegNews(true), 12*60*1000);   // タブを開いたまま12分おきにニュース/動向を最新化（変化時のみパネル差し替え）
   // パネル内の「.lvlink」クリック → 条文の場所にその本文を差し込み表示（#docは再描画で中身が変わるが要素自体は残るので委譲）
   document.getElementById('doc').addEventListener('click', e => {
+    const ai = e.target.closest('.aiart');
+    if(ai){ e.preventDefault(); toggleArticleAI(ai.dataset.ainum); return; }
     const a = e.target.closest('.lvlink'); if(!a) return;
     e.preventDefault();
     openLawView(a.dataset.lvUrl, a.dataset.lvMode, a.dataset.lvTitle);
@@ -750,7 +872,7 @@ async function openLaw(id, artNum, para){
     $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">⏳ 法令データを読み込んでいます…<br><span style="font-size:12px">条数の多い法令（金融商品取引法など）は少し時間がかかります</span></div></div>'; }
   let d;
   try { d = await loadLaw(id); }
-  catch(e){ $('#lawTitle').textContent='法令を選択してください';
+  catch(e){ $('#lawTitle').textContent='金融規制ワークベンチ — 読む・探す・追う・理解する';
     $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">⚠ この法令データを読み込めませんでした。<br><span style="font-size:12px">時間をおいて再度お試しください（データは毎日自動更新されます）。</span></div></div>';
     return; }
   CUR = d;
@@ -1229,7 +1351,9 @@ function renderDoc(kw){
       const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
       let rbadge = '';
       if (CUR && b.num && !badgedNums.has(b.num)){ rbadge = regArtBadge(CUR.law_id, b.num); if (rbadge) badgedNums.add(b.num); }
-      html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}${rbadge}<div class="body">${body}</div></div>`;
+      html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}${rbadge}<div class="body">${body}</div>`
+        + `<button class="aiart" data-ainum="${esc(b.num)}" title="この条文をやさしく解説（実務影響・確認ポイント）">🤖 やさしく解説</button>`
+        + `<div class="aiart-panel hidden" data-aip="${esc(b.num)}"></div></div>`;
     }
   }
   if (k && !/class="art"/.test(html)) html = `<div class="hint">「${esc(k)}」に一致する条文はありません</div>`;
@@ -1543,7 +1667,7 @@ function goHome(){
   CUR = null;
   history.pushState(null, '', location.pathname);
   document.querySelectorAll('.law.active').forEach(b => b.classList.remove('active'));
-  $('#lawTitle').textContent = '法令を選択してください';
+  $('#lawTitle').textContent = '金融規制ワークベンチ — 読む・探す・追う・理解する';
   $('#lawMeta').innerHTML = '';
   const s = $('#search'); s.classList.add('hidden'); s.value = '';
   $('#pctl').classList.add('hidden');
