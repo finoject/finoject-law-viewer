@@ -1216,8 +1216,10 @@ function mktPaint(){
 }
 let MKT_CACHE = {};
 async function fetchYahoo(symbol){
-  const yurl='https://query1.finance.yahoo.com/v8/finance/chart/'+symbol+'?interval=1d&range=5d';
-  const r=await fetch(PROXY_BASE+'?url='+encodeURIComponent(yurl)); if(!r.ok) throw new Error('proxy '+r.status);
+  // 末尾の &_=<時刻> でキャッシュ破棄。これが無いと同一URLをブラウザがWorkerのmax-age(=最大5分)分キャッシュし、値が動かない。
+  // バスターを内側のYahoo URLに入れることで、ブラウザ／CDNの両方を毎回すり抜けて最新値を取得（=15秒ごとに実際に動く）。
+  const yurl='https://query1.finance.yahoo.com/v8/finance/chart/'+symbol+'?interval=1d&range=5d&_='+Date.now();
+  const r=await fetch(PROXY_BASE+'?url='+encodeURIComponent(yurl), {cache:'no-store'}); if(!r.ok) throw new Error('proxy '+r.status);
   const m=(await r.json()).chart.result[0].meta;
   return { value:m.regularMarketPrice, prev:m.chartPreviousClose };
 }
