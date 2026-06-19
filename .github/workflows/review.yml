@@ -13,7 +13,12 @@ on:
       - '.github/scripts/ai-review.js'
       - '.github/workflows/review.yml'
       - '!law-viewer-site/data/**'
-  workflow_dispatch:            # 手動でも直近コミットを再レビューできる
+  workflow_dispatch:            # 手動でも再レビューできる（※paths フィルタは push/PR 専用で dispatch には適用されない＝GitHub Actions仕様）
+    inputs:
+      base_sha:
+        description: 'diff の基準SHA（省略時は HEAD~1＝直近コミットを対象）'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -33,11 +38,16 @@ jobs:
 
       - name: 差分を抽出（ソースのみ・データ除外）
         run: |
-          BEFORE="${{ github.event.before }}"
-          if [ -z "$BEFORE" ] || echo "$BEFORE" | grep -qE '^0+$'; then
-            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          if [ -n "${{ github.event.inputs.base_sha }}" ]; then
+            BEFORE="${{ github.event.inputs.base_sha }}"              # 手動指定があれば最優先
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || true)"      # 手動実行は直近コミットを対象
+          else
+            BEFORE="${{ github.event.before }}"                       # push: 直前のmain
+            if echo "$BEFORE" | grep -qE '^0+$'; then BEFORE="$(git rev-parse HEAD~1 2>/dev/null || true)"; fi
           fi
-          if [ -z "$BEFORE" ]; then BEFORE="$(git hash-object -t tree /dev/null)"; fi
+          # 空ツリー差分(=全履歴=コスト爆発)は使わない。解決不能なら直近コミットのみ(=最悪でも空差分→投稿スキップ)に限定。
+          if [ -z "$BEFORE" ]; then BEFORE="${{ github.sha }}"; fi
           git diff --unified=3 "$BEFORE" "${{ github.sha }}" -- \
             'law-viewer-site/**' 'law-viewer/**' 'proxy/**' '.github/scripts/**' '.github/workflows/review.yml' \
             ':(exclude)law-viewer-site/data/**' > diff.patch || true
