@@ -22,7 +22,7 @@ async function handleAI(request, env) {
   if (!env || !env.ANTHROPIC_API_KEY) return aiJson({ error: 'ANTHROPIC_API_KEY not configured on the worker' }, 500);
   let body; try { body = await request.json(); } catch { return aiJson({ error: 'bad json' }, 400); }
   const task = body && body.task, p = (body && body.payload) || {};
-  const MODEL = env.CLAUDE_MODEL || 'claude-opus-4-8';
+  const MODEL = env.CLAUDE_MODEL || 'claude-haiku-4-5';   // 既定は最安の Haiku（短い要約/解説に十分）。品質を上げたい時は CLAUDE_MODEL=claude-sonnet-4-6 等を設定
   let system, user, schema, maxTokens;
   if (task === 'update') {
     system = 'あなたは日本の金融規制に精通したコンプライアンス実務の専門家です。与えられた当局の公表物について、実務担当者向けに日本語で簡潔な「3行の要点」を作ります。各行は ①何が起きたか ②誰に関係するか ③どの法令・論点に関係するか。各行40〜70字程度、事実ベースで、前置き・推測・誇張は避ける。与えられた情報の範囲で書く。';
