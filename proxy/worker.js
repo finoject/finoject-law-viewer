@@ -21,7 +21,7 @@ async function handleAI(request, env) {
   const rawKey = (env && env.ANTHROPIC_API_KEY) || '';
   const KEY = rawKey.replace(/\s/g, '');   // 途中も含め全ての空白・改行を除去（"Invalid header value" 対策。APIキーに空白は含まれない）
   if (request.method === 'GET') {          // ブラウザで開ける簡易ヘルスチェック（鍵の内部情報は出さない）
-    return aiJson({ ok: true, deployed: '2026-06-19e', model: (env.CLAUDE_MODEL || 'claude-haiku-4-5'), keyConfigured: !!KEY });
+    return aiJson({ ok: true, deployed: '2026-06-19f', model: (env.CLAUDE_MODEL || 'claude-haiku-4-5'), keyConfigured: !!KEY });
   }
   if (request.method !== 'POST') return aiJson({ error: 'method not allowed' }, 405);
   if (!KEY) return aiJson({ error: 'ANTHROPIC_API_KEY not configured on the worker' }, 500);
@@ -30,10 +30,11 @@ async function handleAI(request, env) {
   const MODEL = env.CLAUDE_MODEL || 'claude-haiku-4-5';   // 既定は最安の Haiku（短い要約/解説に十分）。品質を上げたい時は CLAUDE_MODEL=claude-sonnet-4-6 等を設定
   let system, user, schema, maxTokens;
   if (task === 'update') {
-    system = 'あなたは日本の金融規制に精通したコンプライアンス実務の専門家です。与えられた当局の公表物について、実務担当者向けに日本語で簡潔な「3行の要点」を作ります。各行は ①何が起きたか ②誰に関係するか ③どの法令・論点に関係するか。各行40〜70字程度、事実ベースで、前置き・推測・誇張は避ける。与えられた情報の範囲で書く。';
-    user = `機関: ${p.agency || ''}\n日付: ${p.date || ''}\nタイトル: ${p.title || ''}\n関連法令(自動検出): ${(p.lawrefs || []).join('、') || 'なし'}`;
+    const body = (p.body || '').slice(0, 6000);
+    system = 'あなたは日本の金融規制に精通したコンプライアンス実務の専門家です。当局の公表物の【本文】から、実務担当者が知るべき具体的な内容を3行で抽出します。**タイトルの言い換えや一般論は禁止**。本文にある具体（改正・新設・廃止された条項／基準値・金額・期限／対象事業者／適用開始日／必要な手続）を優先して書く。各行は ①何が具体的に変わった/示されたか ②誰が何をすべきか（対象者と対応） ③いつから／どの法令・どの条項に関わるか。各行40〜80字、事実ベース、本文に無いことは断定しない。本文が乏しい場合のみタイトル・関連法令から最小限の推定をし、その場合も「〜とみられる」等は付けず簡潔に述べる。';
+    user = `機関: ${p.agency || ''}\n日付: ${p.date || ''}\nタイトル: ${p.title || ''}\n関連法令(自動検出): ${(p.lawrefs || []).join('、') || 'なし'}\n\n【本文(抜粋)】\n${body || '(本文の取得なし。タイトル・関連法令から簡潔に。)'}`;
     schema = { type: 'object', properties: { lines: { type: 'array', items: { type: 'string' } } }, required: ['lines'], additionalProperties: false };
-    maxTokens = 600;
+    maxTokens = 700;
   } else if (task === 'article') {
     system = 'あなたは日本の金融関連法令に精通した実務家です。与えられた条文を、コンプライアンス実務者向けに日本語でやさしく解説します。text には「この条文が何を言っているか」を2〜3文で平易に。points には「実務でどこで効くか」「確認すべき点」「よく一緒に見る条文や留意点」を簡潔に（各1文・最大4件）。条文に書かれていない断定は避け、事実ベースで。';
     user = `法令: ${p.law || ''}\n条: ${p.num || ''}\n本文:\n${(p.body || '').slice(0, 4000)}`;
