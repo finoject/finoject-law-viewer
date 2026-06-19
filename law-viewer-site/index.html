@@ -237,8 +237,14 @@
   .feedfoot{ margin-top:16px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); padding-top:12px; }
   .feedfoot a{ color:#8fd0ff; }
   /* トップ画面の2カラム（左:フィード／右:本文ビューア）。中央のスプリッタをドラッグで幅可変（ウルトラワイド対応） */
-  .homecols{ display:flex; gap:0; align-items:stretch; margin-top:6px; }
-  #feedcol{ flex:0 0 44%; min-width:0; }
+  .homecols{ display:flex; gap:0; align-items:stretch; margin-top:6px; height:var(--colsH, calc(100vh - 170px)); min-height:340px; }
+  #feedcol{ flex:0 0 44%; min-width:0; height:100%; overflow:auto; }
+  /* 上下リサイズ用バー（高さを掴んで変更） */
+  #vsplit{ height:14px; cursor:row-resize; position:relative; margin:0 2px; }
+  #vsplit::before{ content:""; position:absolute; left:0; right:0; top:6px; height:2px; background:var(--line); border-radius:2px; }
+  #vsplit::after{ content:"⋯"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:16px; letter-spacing:2px; color:#5f7196; background:#16223a; border:1px solid #2b66c0; border-radius:6px; padding:0 8px; line-height:1.2; }
+  #vsplit:hover::before, #vsplit.drag::before{ background:var(--accent); }
+  #vsplit:hover::after, #vsplit.drag::after{ color:#cfe0ff; border-color:var(--accent); }
   #hsplit{ flex:0 0 16px; align-self:stretch; cursor:col-resize; position:relative; }
   #hsplit::before{ content:""; position:absolute; left:7px; top:0; bottom:0; width:2px; background:var(--line); border-radius:2px; }
   /* ドラッグ可能と分かるグリップ（⋮）を中央に表示 */
@@ -249,7 +255,7 @@
   .fitem{ cursor:pointer; border-radius:8px; }
   .fitem:hover{ background:#0e1a2e; }
   .fitem.sel{ background:rgba(46,108,240,.16); outline:1px solid #2b66c0; }
-  #regview{ flex:1 1 0; min-width:0; position:sticky; top:0; height:calc(100vh - 150px); min-height:520px;
+  #regview{ flex:1 1 0; min-width:0; height:100%; min-height:0;
     border:1px solid var(--line); border-radius:10px; background:#0e1a2e; overflow:hidden; display:flex; flex-direction:column; }
   .rvhint{ color:var(--muted); font-size:13px; padding:28px 18px; text-align:center; margin:auto; }
   .rvhead{ display:flex; align-items:center; gap:9px; padding:9px 11px; border-bottom:1px solid var(--line); flex:none; }
@@ -264,10 +270,11 @@
   .rvopen{ display:inline-block; margin-top:10px; background:#1d4ed8; color:#fff; text-decoration:none; border-radius:7px; padding:7px 13px; font-weight:700; }
   .rvnote{ margin-top:14px; font-size:11px; }
   @media(max-width:860px){
-    .homecols{ flex-direction:column; }
+    .homecols{ flex-direction:column; height:auto !important; }
     #feedcol, #regview{ flex:none !important; width:100%; }
-    #hsplit{ display:none; }                    /* モバイルは縦積み＝スプリッタ不要 */
-    #regview{ position:static; height:auto; }
+    #feedcol{ height:auto; overflow:visible; }
+    #hsplit, #vsplit{ display:none; }            /* モバイルは縦積み＝スプリッタ不要 */
+    #regview{ position:static; height:auto; min-height:60vh; }
     #regview:not(.active){ display:none; }     /* スマホ等では未選択時はビューアを隠す */
     .rvframe{ height:74vh; }
     /* モバイル: タップ領域を広げる（指で押しやすく） */
@@ -1196,6 +1203,7 @@ function homeSections(){
       + `<div class="homecols"><div id="feedcol"><div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div></div>`
       + `<div id="hsplit" title="ドラッグで左右の幅を調整"></div>`
       + `<div id="regview"><div class="rvhint">← 上の「最新の規制アップデート」や下のフィードの項目を選ぶと、その本文（公表資料・パブコメ等）をこの欄に表示します（別サイトへ移動しません）。</div></div></div>`
+      + `<div id="vsplit" title="ドラッグで高さ（上下）を調整"></div>`
       + `<div class="feedfoot">📖 のついた更新はクリックで該当法令・条文が開きます ／ <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（全件・6機関・Slack通知）↗</a></div>` },
   ];
 }
@@ -1222,7 +1230,18 @@ function showHome(){
   renderFeedChips();
   renderRegFeed();
   setupHSplit();
+  setupVSplit();
 }
+// 上下リサイズ: #vsplit をドラッグして .homecols の高さを変更（localStorage 'colsHeight' に保存）。
+// window リスナーは一度だけ登録（showHome 連打でも多重登録しない）。掴み直しは sp.onmousedown 代入で都度更新。
+let _vsDrag = null;
+function setupVSplit(){
+  const sp=document.getElementById('vsplit'), cols=document.querySelector('.homecols'); if(!sp||!cols) return;
+  const saved=parseInt(localStorage.getItem('colsHeight'),10); if(saved>=300) cols.style.height=saved+'px';
+  sp.onmousedown=e=>{ _vsDrag={ y:e.clientY, h:cols.getBoundingClientRect().height, cols, sp }; sp.classList.add('drag'); document.body.style.userSelect='none'; e.preventDefault(); };
+}
+window.addEventListener('mousemove', e=>{ if(!_vsDrag) return; let h=_vsDrag.h+(e.clientY-_vsDrag.y); h=Math.max(300, Math.min(3000, h)); _vsDrag.cols.style.height=h+'px'; });
+window.addEventListener('mouseup', ()=>{ if(!_vsDrag) return; localStorage.setItem('colsHeight', Math.round(_vsDrag.cols.getBoundingClientRect().height)); _vsDrag.sp.classList.remove('drag'); document.body.style.userSelect=''; _vsDrag=null; });
 // ===== ホームのブロック並び替え（⠿をドラッグ→順序をlocalStorageに保存） =====
 let _dragSec = null;
 function saveHomeOrder(){
