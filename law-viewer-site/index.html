@@ -1245,7 +1245,7 @@ async function renderMarket(){
   _mktTimer = setInterval(()=>{ if(document.getElementById('mktbar')) mktLive(); else { clearInterval(_mktTimer); _mktTimer=null; } }, 15000);
 }
 function jpDateTime(iso){ try{ const d=new Date(iso), j=new Date(d.getTime()+9*3600000), p=n=>String(n).padStart(2,'0');
-  return `${j.getUTCMonth()+1}/${j.getUTCDate()} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`; }catch(e){ return ''; } }
+  return `${j.getUTCMonth()+1}/${j.getUTCDate()} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}:${p(j.getUTCSeconds())}`; }catch(e){ return ''; } }
 // おすすめ検索チップ：クリックで横断検索を実行（初見ユーザーの立ち上がりを速くする）
 function quickSearch(q){ const g=$('#gsearch'); if(g) g.value=q; globalSearch(q); }
 // トップの左右フレーム幅をドラッグで可変に（ウルトラワイドで便利。比率はlocalStorageに保存）
