@@ -37,18 +37,27 @@ jobs:
           fetch-depth: 0          # 親コミットとの差分を取るため全履歴
 
       - name: 差分を抽出（ソースのみ・データ除外）
+        # ${{ }} は run 内に直接書かず env 経由で受ける＝シェルインジェクション対策（特に自由入力 base_sha）。
+        env:
+          INPUT_BASE_SHA: ${{ github.event.inputs.base_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          if [ -n "${{ github.event.inputs.base_sha }}" ]; then
-            BEFORE="${{ github.event.inputs.base_sha }}"              # 手動指定があれば最優先
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || true)"      # 手動実行は直近コミットを対象
+          if [ -n "$INPUT_BASE_SHA" ]; then
+            if ! echo "$INPUT_BASE_SHA" | grep -qE '^[0-9a-fA-F]{7,40}$|^[A-Za-z0-9._/-]{1,200}$'; then
+              echo "::error::base_sha の形式が不正です"; exit 1     # 書式バリデーション（不正値・濫用防止）
+            fi
+            BEFORE="$INPUT_BASE_SHA"                               # 手動指定があれば最優先
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || true)"   # 手動実行は直近コミットを対象
           else
-            BEFORE="${{ github.event.before }}"                       # push: 直前のmain
+            BEFORE="$PUSH_BEFORE"                                  # push: 直前のmain
             if echo "$BEFORE" | grep -qE '^0+$'; then BEFORE="$(git rev-parse HEAD~1 2>/dev/null || true)"; fi
           fi
           # 空ツリー差分(=全履歴=コスト爆発)は使わない。解決不能なら直近コミットのみ(=最悪でも空差分→投稿スキップ)に限定。
-          if [ -z "$BEFORE" ]; then BEFORE="${{ github.sha }}"; fi
-          git diff --unified=3 "$BEFORE" "${{ github.sha }}" -- \
+          if [ -z "$BEFORE" ]; then BEFORE="$HEAD_SHA"; fi
+          git diff --unified=3 "$BEFORE" "$HEAD_SHA" -- \
             'law-viewer-site/**' 'law-viewer/**' 'proxy/**' '.github/scripts/**' '.github/workflows/review.yml' \
             ':(exclude)law-viewer-site/data/**' > diff.patch || true
           echo "diff bytes: $(wc -c < diff.patch)"
