@@ -35,8 +35,17 @@
   #toReg{ display:inline-block; font-size:12px; color:#9fd0ff; text-decoration:none; margin:0 4px 10px;
     padding:5px 10px; border:1px solid #2b66c0; border-radius:8px; background:#13243f; }
   #toReg:hover{ background:#1c3a63; }
-  .grp{ font-size:11px; color:var(--muted); margin:14px 6px 2px; letter-spacing:.04em; border-left:3px solid var(--accent); padding-left:8px; }
+  .grp{ font-size:11px; color:var(--muted); margin:14px 6px 2px; letter-spacing:.04em; border-left:3px solid var(--accent); padding-left:8px; display:flex; align-items:center; gap:6px; }
   .grpdesc{ font-size:10.5px; color:var(--muted); margin:0 6px 7px; padding-left:11px; line-height:1.45; opacity:.85; }
+  /* グループ並び替え */
+  .sgrphint{ font-size:10px; color:var(--muted); margin:2px 6px 4px; display:flex; align-items:center; gap:6px; }
+  .sgreset{ font-size:10px; padding:2px 7px; border-radius:5px; cursor:pointer; background:#16223a; color:#cfe0ff; border:1px solid var(--line); }
+  .sgreset:hover{ border-color:var(--accent); }
+  .sgrp{ border-radius:8px; }
+  .sgrp.dragging{ opacity:.5; outline:2px dashed var(--accent); }
+  .sgrip{ cursor:grab; color:#5f7196; font-size:12px; line-height:1; user-select:none; padding:0 2px; }
+  .grp:hover .sgrip{ color:#9fd0ff; }
+  .sgrip:active{ cursor:grabbing; }
   .law{ display:block; width:100%; text-align:left; cursor:pointer; border:1px solid var(--line);
     background:#16223a; color:#cfe0ff; border-radius:8px; padding:9px 10px; margin:6px 0; font-size:13px; line-height:1.4; }
   .law:hover{ border-color:var(--accent); }
@@ -678,25 +687,52 @@ async function boot(){
   else showHome();
 }
 
+// サイドバーの法令グループ並び順（ユーザーがドラッグで変更→localStorage 'sideGroupOrder' に保存）
+function sideGroupOrder(byG){
+  const def = [...G_ORDER, ...Object.keys(byG).filter(g => !G_ORDER.includes(g))].filter(g=>byG[g]);  // 既定順（実在グループのみ）
+  let saved=[]; try{ saved=JSON.parse(localStorage.getItem('sideGroupOrder')||'[]'); }catch(e){}
+  return [...saved.filter(g=>byG[g]), ...def.filter(g=>!saved.includes(g))];   // 保存順→未知/新規は既定位置で追加
+}
+function saveSideGroupOrder(){
+  const order=[...document.querySelectorAll('#lawList .sgrp')].map(s=>s.dataset.grp);
+  localStorage.setItem('sideGroupOrder', JSON.stringify(order));
+}
+function resetSideGroups(){ localStorage.removeItem('sideGroupOrder'); renderSidebar(); }
 function renderSidebar(){
   const byG = {};
   for (const l of INDEX.laws){ (byG[l.group]=byG[l.group]||[]).push(l); }
-  let html='';
-  // 既定順のグループ＋未知グループ（会社法・民法等を追加しても自動表示）
-  const groups = [...G_ORDER, ...Object.keys(byG).filter(g => !G_ORDER.includes(g))];
-  for (const g of groups){
+  const order = sideGroupOrder(byG);
+  const custom = !!localStorage.getItem('sideGroupOrder');
+  let html = `<div class="sgrphint">⠿ でグループを並び替え${custom?' <button class="sgreset" onclick="resetSideGroups()">既定に戻す</button>':''}</div>`;
+  for (const g of order){
     if(!byG[g]) continue;
-    html += `<div class="grp">${esc(GLABEL[g]||g)}</div>`;
-    if (GDESC[g]) html += `<div class="grpdesc">${esc(GDESC[g])}</div>`;
+    let inner = `<div class="grp"><span class="sgrip" draggable="true" title="ドラッグでグループを並び替え">⠿</span>${esc(GLABEL[g]||g)}</div>`;
+    if (GDESC[g]) inner += `<div class="grpdesc">${esc(GDESC[g])}</div>`;
     for (const l of byG[g]){
       const upd = (INDEX.changed||[]).includes(l.title) ? '<span class="upd">更新</span>' : '';
-      html += `<button class="law" data-id="${l.law_id}">
+      inner += `<button class="law" data-id="${l.law_id}">
         <div>${esc(l.title)}${upd}</div>
         <div class="tag">${l.type}・${l.law_num}・${l.article_count}条</div></button>`;
     }
+    html += `<div class="sgrp" data-grp="${esc(g)}">${inner}</div>`;
   }
   const el = $('#lawList'); el.innerHTML = html;
   el.querySelectorAll('.law').forEach(b => b.addEventListener('click', ()=> openLaw(b.dataset.id)));
+  setupSideGroupDrag();
+}
+// グループのドラッグ並び替え（⠿ハンドル）。home の並び替えと同じ要領。
+let _dragGrp = null;
+function setupSideGroupDrag(){
+  const cont=document.getElementById('lawList'); if(!cont) return;
+  cont.querySelectorAll('.sgrip').forEach(h=>{
+    h.addEventListener('dragstart', e=>{ _dragGrp=h.closest('.sgrp'); _dragGrp.classList.add('dragging'); document.body.classList.add('reordering'); e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain','');}catch(_){} });
+    h.addEventListener('dragend', ()=>{ if(_dragGrp)_dragGrp.classList.remove('dragging'); document.body.classList.remove('reordering'); _dragGrp=null; saveSideGroupOrder(); renderSidebar(); });
+  });
+  cont.addEventListener('dragover', e=>{ if(!_dragGrp) return; e.preventDefault();
+    const els=[...cont.querySelectorAll('.sgrp:not(.dragging)')];
+    let after=null, best=-Infinity;
+    for(const el of els){ const b=el.getBoundingClientRect(); const off=e.clientY-b.top-b.height/2; if(off<0 && off>best){ best=off; after=el; } }
+    if(after==null) cont.appendChild(_dragGrp); else cont.insertBefore(_dragGrp, after); });
 }
 
 async function loadLaw(id){
