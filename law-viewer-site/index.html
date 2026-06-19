@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>finoject 金融関連法令・規制ウォッチ｜条文を読む＋当局の規制動向</title>
+<!-- PWA: デスクトップ／スマホにインストール可能（manifest＋SW）。更新はネットワーク優先で即反映 -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e1a2e">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="finoject法令">
 <style>
   :root{ --bg:#0b1220; --panel:#111a2c; --line:#26334d; --fg:#e8eefb; --muted:#8da3c6; --accent:#2e6cf0; --hi:#fde68a; }
   *{ box-sizing:border-box; }
@@ -1423,6 +1431,13 @@ $('#pctl').addEventListener('click', e => {
 $('#burger').addEventListener('click', ()=> $('#side').classList.toggle('open'));
 
 boot().catch(e => { $('#doc').innerHTML = '<div class="wrap"><div class="hint">データの読み込みに失敗しました</div></div>'; });
+
+// PWA: Service Worker 登録（インストール可能化＋オフライン外殻＋更新の即時反映）。https/localhost のみ動作。
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});   // 失敗してもアプリは通常動作
+  });
+}
 </script>
 </body>
 </html>

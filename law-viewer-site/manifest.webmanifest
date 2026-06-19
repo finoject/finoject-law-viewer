@@ -1,0 +1,17 @@
+{
+  "name": "finoject 金融関連法令・規制ウォッチ",
+  "short_name": "finoject法令",
+  "description": "金融関連の法令・政省令・ガイドライン・監督指針の条文と、当局の規制動向・国会審議・市況を1画面で読める実務者向けツール。",
+  "lang": "ja",
+  "start_url": ".",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1626",
+  "theme_color": "#0e1a2e",
+  "categories": ["finance", "business", "productivity", "reference"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
