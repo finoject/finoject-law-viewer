@@ -1,0 +1,67 @@
+name: ai-review
+
+# main へのソース変更ごとに、Claude(Sonnet) が差分を自動レビューし、
+# 「🤖 AI自動レビュー（自動更新）」Issue にコメントを追記する（自己回帰的な品質向上の“批評役”）。
+# データ更新(crawl.ymlのdata/コミット)では走らない。Issueに書くだけ＝pushしないのでループしない。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'law-viewer-site/**'
+      - 'law-viewer/**'
+      - 'proxy/**'
+      - '.github/scripts/ai-review.js'
+      - '!law-viewer-site/data/**'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ai-review
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 親コミットとの差分を取るため全履歴
+
+      - name: 差分を抽出（ソースのみ・データ除外）
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || echo "$BEFORE" | grep -qE '^0+$'; then
+            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          fi
+          if [ -z "$BEFORE" ]; then BEFORE="$(git hash-object -t tree /dev/null)"; fi
+          git diff --unified=3 "$BEFORE" "${{ github.sha }}" -- \
+            'law-viewer-site/**' 'law-viewer/**' 'proxy/**' '.github/scripts/**' \
+            ':(exclude)law-viewer-site/data/**' > diff.patch || true
+          echo "diff bytes: $(wc -c < diff.patch)"
+
+      - name: Claude(Sonnet) でレビュー
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REVIEW_MODEL: claude-sonnet-4-6
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          DIFF_FILE: diff.patch
+        run: node .github/scripts/ai-review.js
+
+      - name: 結果を「🤖 AI自動レビュー」Issueへ追記
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -s review.md ]; then echo "レビュー本文なし（差分なし/キー未設定）→ 投稿スキップ"; exit 0; fi
+          TITLE="🤖 AI自動レビュー（自動更新）"
+          NUM=$(gh issue list --state open --limit 100 --json number,title \
+                  --jq ".[] | select(.title==\"$TITLE\") | .number" | head -n1)
+          if [ -z "$NUM" ]; then
+            URL=$(gh issue create --title "$TITLE" \
+                   --body "main への変更ごとに、Claude(Sonnet) による自動レビューをこのIssueへ追記します。指摘は自動生成であり、最終判断は人間が行ってください。不要になったらこのIssueをClose、または review.yml を無効化してください。")
+            NUM=$(echo "$URL" | tail -n1 | sed 's#.*/##')
+          fi
+          gh issue comment "$NUM" --body-file review.md
+          echo "Issue #$NUM へ投稿しました"
