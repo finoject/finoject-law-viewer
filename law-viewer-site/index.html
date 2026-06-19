@@ -622,12 +622,16 @@ function openRegViewItem(gi){
 // 未接続時は null を返し、呼び出し側が「キーワード抽出」などの非AI簡易表示にフォールバック（受け皿UIだけ先に成立させる）。
 // 接続するには localStorage に aiEndpoint を設定（例: localStorage.aiEndpoint='https://xxx.workers.dev/ai'）。差し替えはこの1点のみ。
 const AIX = {
-  get endpoint(){ try{ return localStorage.getItem('aiEndpoint')||''; }catch(e){ return ''; } },
+  // 既定は Cloudflare Worker の /ai（PROXY_BASE）。localStorage.aiEndpoint で上書き可。
+  // Worker未対応/未デプロイの間は呼び出しが非ok→nullとなり、UIは受け皿表示に自動フォールバック。
+  get endpoint(){ try{ return localStorage.getItem('aiEndpoint') || (PROXY_BASE ? PROXY_BASE+'/ai' : ''); }catch(e){ return PROXY_BASE ? PROXY_BASE+'/ai' : ''; } },
   get enabled(){ return !!this.endpoint; },
   async call(task, payload){                      // {task, payload} を渡しJSONで受け取る共通I/F。Worker側でClaude messages APIに整形する想定。
     if(!this.endpoint) return null;
-    try{ const r=await fetch(this.endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({task, payload})});
-      return r.ok ? await r.json() : null; }catch(e){ return null; }
+    const ctl = new AbortController(); const timer = setTimeout(()=>ctl.abort(), 20000);   // 20秒で打切り＝受け皿表示にフォールバック（生成中のまま固まらない）
+    try{ const r=await fetch(this.endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({task, payload}), signal:ctl.signal});
+      const j = r.ok ? await r.json() : null; return (j && !j.error) ? j : null; }catch(e){ return null; }
+    finally{ clearTimeout(timer); }
   },
   async explainUpdate(it){                         // 規制更新の3行要点（何が起きたか/誰に/どの論点）
     const r = await this.call('update', {title:it.title, agency:it.agency, date:it.date, lawrefs:(it.lawrefs||[]).map(x=>x.label)});

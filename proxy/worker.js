@@ -10,9 +10,51 @@
 const ALLOW = ['fsa.go.jp', 'boj.or.jp', 'jpx.co.jp', 'jsda.or.jp', 'jvcea.or.jp', 'jicpa.or.jp',
   'yahoo.co.jp', 'shugiin.go.jp', 'sangiin.go.jp', 'finance.yahoo.com'];   // yahoo=関連ニュース(news.yahoo.co.jp)、衆参=議案ページ、finance.yahoo.com=市況(ドル円/日経/ダウ)のJSON取得
 
+// ===== AI解説エンドポイント（/ai） =====
+// 法令ビューアの「理解パネル」「条文のやさしく解説」から POST される {task, payload} を受け、Claude messages API を呼んで
+// JSON（task=update→{lines:[]}／task=article→{text,points:[]}）を返す。APIキーはWorker secret(ANTHROPIC_API_KEY)に置き、
+// クライアントには絶対に出さない。モデルは既定 claude-opus-4-8（CLAUDE_MODEL secretで変更可。コスト重視なら claude-haiku-4-5 等）。
+const AI_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
+function aiJson(obj, status, extra) { return new Response(JSON.stringify(obj), { status: status || 200, headers: { 'content-type': 'application/json; charset=utf-8', ...AI_CORS, ...(extra || {}) } }); }
+async function handleAI(request, env) {
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...AI_CORS, 'access-control-max-age': '86400' } });
+  if (request.method !== 'POST') return aiJson({ error: 'method not allowed' }, 405);
+  if (!env || !env.ANTHROPIC_API_KEY) return aiJson({ error: 'ANTHROPIC_API_KEY not configured on the worker' }, 500);
+  let body; try { body = await request.json(); } catch { return aiJson({ error: 'bad json' }, 400); }
+  const task = body && body.task, p = (body && body.payload) || {};
+  const MODEL = env.CLAUDE_MODEL || 'claude-opus-4-8';
+  let system, user, schema, maxTokens;
+  if (task === 'update') {
+    system = 'あなたは日本の金融規制に精通したコンプライアンス実務の専門家です。与えられた当局の公表物について、実務担当者向けに日本語で簡潔な「3行の要点」を作ります。各行は ①何が起きたか ②誰に関係するか ③どの法令・論点に関係するか。各行40〜70字程度、事実ベースで、前置き・推測・誇張は避ける。与えられた情報の範囲で書く。';
+    user = `機関: ${p.agency || ''}\n日付: ${p.date || ''}\nタイトル: ${p.title || ''}\n関連法令(自動検出): ${(p.lawrefs || []).join('、') || 'なし'}`;
+    schema = { type: 'object', properties: { lines: { type: 'array', items: { type: 'string' } } }, required: ['lines'], additionalProperties: false };
+    maxTokens = 600;
+  } else if (task === 'article') {
+    system = 'あなたは日本の金融関連法令に精通した実務家です。与えられた条文を、コンプライアンス実務者向けに日本語でやさしく解説します。text には「この条文が何を言っているか」を2〜3文で平易に。points には「実務でどこで効くか」「確認すべき点」「よく一緒に見る条文や留意点」を簡潔に（各1文・最大4件）。条文に書かれていない断定は避け、事実ベースで。';
+    user = `法令: ${p.law || ''}\n条: ${p.num || ''}\n本文:\n${(p.body || '').slice(0, 4000)}`;
+    schema = { type: 'object', properties: { text: { type: 'string' }, points: { type: 'array', items: { type: 'string' } } }, required: ['text', 'points'], additionalProperties: false };
+    maxTokens = 800;
+  } else return aiJson({ error: 'unknown task' }, 400);
+
+  let r;
+  try {
+    r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }], output_config: { format: { type: 'json_schema', schema } } }),
+    });
+  } catch (e) { return aiJson({ error: 'upstream: ' + e }, 502); }
+  if (!r.ok) { const tx = await r.text(); return aiJson({ error: 'claude ' + r.status, detail: tx.slice(0, 300) }, 502); }
+  const data = await r.json();
+  const txt = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  let out; try { out = JSON.parse(txt); } catch { return aiJson({ error: 'parse', raw: txt.slice(0, 300) }, 502); }
+  return aiJson(out, 200, { 'cache-control': 'public, max-age=86400' });   // 同一入力は24h CDNキャッシュ（コスト削減）
+}
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const reqUrl = new URL(request.url);
+    if (reqUrl.pathname === '/ai') return handleAI(request, env);   // AI解説（Claude）
     const target = reqUrl.searchParams.get('url');
     if (!target) return new Response('missing ?url=', { status: 400 });
 
