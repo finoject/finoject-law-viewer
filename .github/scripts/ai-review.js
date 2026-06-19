@@ -33,14 +33,15 @@ const user = `コミット: ${sha}\nメッセージ: ${msg}\n\n=== 変更差分 
       method: 'POST',
       headers: { 'x-api-key': KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: MODEL, max_tokens: 4000, system,
+        model: MODEL, max_tokens: 8000, system,          // thinkingもmax_tokensを消費するため余裕を持たせる（空応答防止）
         messages: [{ role: 'user', content: user }],
-        thinking: { type: 'adaptive' }, output_config: { effort: 'high' },
+        thinking: { type: 'adaptive' }, output_config: { effort: 'medium' },
       }),
     });
     if (!r.ok) { const t = await r.text(); fs.writeFileSync('review.md', `### ⚠ AI自動レビュー失敗 — \`${sha}\`\nレビューAPIがHTTP ${r.status} を返しました（${MODEL}）。\n\n\`\`\`\n${t.slice(0,400)}\n\`\`\`\n`); process.exit(0); }
     const d = await r.json();
-    const text = (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim() || '(空の応答)';
+    let text = (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    if (!text) text = `(レビュー本文が空でした。stop_reason=${d.stop_reason||'?'} / 出力トークン=${(d.usage&&d.usage.output_tokens)||'?'}。max_tokens不足やrefusalの可能性。)`;
     const stamp = new Date(Date.now() + 9 * 3600000).toISOString().replace('T', ' ').slice(0, 16);
     fs.writeFileSync('review.md',
       `### 🤖 自動レビュー — \`${sha}\` （${stamp} JST）\n> ${msg}\n\n${text}\n\n<sub>レビュアー: ${MODEL}・自動生成。同系統モデルゆえ盲点は相関し得ます。最終判断は人間が行ってください。</sub>\n`);
