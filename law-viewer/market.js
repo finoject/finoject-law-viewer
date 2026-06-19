@@ -15,7 +15,7 @@ async function yahoo(symbol){
   if (!r.ok) throw new Error('HTTP ' + r.status);
   const j = await r.json();
   const m = j.chart.result[0].meta;
-  return { value: m.regularMarketPrice, prev: m.chartPreviousClose };
+  return { value: m.regularMarketPrice, prev: m.chartPreviousClose, time: m.regularMarketTime };
 }
 
 (async () => {
@@ -34,7 +34,7 @@ async function yahoo(symbol){
       out.items[key] = {
         label, value: d.value, prev: d.prev,
         change: (d.prev != null && d.value != null) ? (yield_ ? (d.value - d.prev) * 100 : (d.value - d.prev) / d.prev * 100) : null,
-        source: 'Yahoo Finance', note: '約15分遅れ・巡回時点',
+        source: 'Yahoo Finance', note: '約15分遅れ・巡回時点', t: (d.time ? d.time * 1000 : null),
       };
     } catch (e){ console.log(key + ' 取得失敗: ' + (e.message || e)); }
   }

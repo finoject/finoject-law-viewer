@@ -195,6 +195,8 @@
   .mkrow{ display:flex; flex-wrap:wrap; gap:8px; }
   .mkc{ flex:1 1 0; min-width:120px; background:linear-gradient(180deg,#11233e,#0e1a2e); border:1px solid #21406e; border-radius:9px; padding:7px 11px; display:flex; flex-direction:column; gap:1px; }
   .mkl{ font-size:11px; color:var(--muted); }
+  .mkstale{ margin-left:5px; font-size:9px; font-weight:700; color:#9fb3d4; background:#26334d; border-radius:4px; padding:0 4px; vertical-align:middle; }
+  .mkc-stale .mkv{ color:#b8c6dd; }
   .mkv{ font-size:17px; font-weight:800; color:#eaf2ff; font-variant-numeric:tabular-nums; }
   .mkch{ font-size:11px; font-weight:700; }
   .mkch.up{ color:#34d399; }
@@ -1403,8 +1405,12 @@ function mktCell(def, it){
   if(!it || it.value==null) return `<div class="mkc" id="mkc-${id}"><span class="mkl">${esc(def.label)}</span><span class="mkv">—</span></div>`;
   const ch=it.change, unit=def.chUnit||'%', cls=(ch==null)?'':(ch>=0?'up':'down'), arw=(ch==null)?'':(ch>=0?'▲':'▼');
   const chTxt=(ch==null)?'':` <span class="mkch ${cls}">${arw}${Math.abs(ch).toFixed(unit==='bp'?1:2)}${unit}</span>`;
-  return `<div class="mkc" id="mkc-${id}" title="出典: ${esc(it.source||'')}（${esc(it.note||'')}）">`
-    + `<span class="mkl">${esc(it.label||def.label)}</span>`
+  // 取引時間外の判定: Yahoo銘柄(def.sym有)で、最終約定が40分超前なら市場クローズ＝「時間外」（無料データの約15分遅れを考慮し誤判定を回避。値が動かないのは正常で故障ではない）
+  const stale = def.sym && it.t && (Date.now()-it.t > 40*60*1000);
+  const staleTag = stale ? `<span class="mkstale" title="市場の取引時間外のため値は固定（故障ではありません）">時間外</span>` : '';
+  const ttl = '出典: '+(it.source||'')+'（'+(it.note||'')+'）' + (it.t? '　最終約定 '+jpDateTime(new Date(it.t).toISOString()):'');
+  return `<div class="mkc${stale?' mkc-stale':''}" id="mkc-${id}" title="${esc(ttl)}">`
+    + `<span class="mkl">${esc(it.label||def.label)}${staleTag}</span>`
     + `<span class="mkv">${def.prefix||''}${mktFmt(it.value,def.dec)}${def.suffix||''}</span>${chTxt}</div>`;
 }
 function mktPaint(){
@@ -1419,7 +1425,7 @@ async function fetchYahoo(symbol){
   const yurl='https://query1.finance.yahoo.com/v8/finance/chart/'+symbol+'?interval=1d&range=5d&_='+Date.now();
   const r=await fetch(PROXY_BASE+'?url='+encodeURIComponent(yurl), {cache:'no-store'}); if(!r.ok) throw new Error('proxy '+r.status);
   const m=(await r.json()).chart.result[0].meta;
-  return { value:m.regularMarketPrice, prev:m.chartPreviousClose };
+  return { value:m.regularMarketPrice, prev:m.chartPreviousClose, time:m.regularMarketTime };
 }
 // ビットコイン: Coinbase Exchange の stats（last=現在値, open=24時間前）から価格と24h変化率を1回のCORS取得で算出。
 // ※CoinGeckoは15秒ポーリングでHTTP429頻発、Binanceはブラウザからのfetchがブロックされる(Failed to fetch)ため、いずれも不使用（2026-06-19・実機検証で確認）。
@@ -1445,7 +1451,7 @@ async function mktLive(){
     jobs.push(fetchYahoo(def.sym).then(d=>{
       const change = def.chUnit==='bp' ? (d.prev!=null?(d.value-d.prev)*100:null)   // 利回りは変化をbp(=値差×100)で
                                        : (d.prev?((d.value-d.prev)/d.prev*100):null); // 価格は変化率(%)で
-      MKT_CACHE[def.id]={label:def.label, value:d.value, prev:d.prev, change, source:'Yahoo Finance', note:'約15分遅れ'};
+      MKT_CACHE[def.id]={label:def.label, value:d.value, prev:d.prev, change, source:'Yahoo Finance', note:'約15分遅れ', t:(d.time?d.time*1000:null)};
     }).catch(()=>{}));
   }
   await Promise.all(jobs);
