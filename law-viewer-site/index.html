@@ -1299,21 +1299,30 @@ function setupSecDrag(){
 //  ・為替/株価指数: Cloudflare Worker プロキシ経由で Yahoo Finance のJSONを取得（静的サイトはCORS不可のためプロキシで回避）。無料データのため約15分遅れ。
 //  ・ビットコイン: CoinGecko から直接（CORS可・リアルタイム・USD建）。
 //  ・data/market.json（Actionsが1日3回取得）は初期表示の種＆プロキシ未到達時のフォールバック。
-const MKT_DEFS = [ ['usdjpy','JPY=X','ドル円',3,''], ['n225','^N225','日経平均',2,''], ['dji','^DJI','NYダウ',2,''], ['btc',null,'ビットコイン',0,'$'] ];
+// 市況の各項目。suffix=値の後ろ(例 '%')、chUnit='bp'=変化を基点(ベーシスポイント)で表示（国債利回り用）、seedOnly=ライブ更新せず market.json の種のみ。
+const MKT_DEFS = [
+  {id:'usdjpy', sym:'JPY=X', label:'ドル円',       dec:3},
+  {id:'n225',   sym:'^N225', label:'日経平均',     dec:2},
+  {id:'dji',    sym:'^DJI',  label:'NYダウ',       dec:2},
+  {id:'us10y',  sym:'^TNX',  label:'米国債10年',   dec:3, suffix:'%', chUnit:'bp'},
+  {id:'jp10y',  sym:null,    label:'日本国債10年', dec:3, suffix:'%', chUnit:'bp', seedOnly:true},
+  {id:'btc',    sym:null,    label:'ビットコイン', dec:0, prefix:'$'},
+];
 let _mktTimer = null, _mktStamp = '';
 function mktFmt(v, dec){ return (v==null)?'—':Number(v).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
-function mktCell(id, it, dec, prefix){
-  if(!it || it.value==null) return `<div class="mkc" id="mkc-${id}"><span class="mkl">${esc((MKT_DEFS.find(d=>d[0]===id)||[])[2]||id)}</span><span class="mkv">—</span></div>`;
-  const ch=it.change, cls=(ch==null)?'':(ch>=0?'up':'down'), arw=(ch==null)?'':(ch>=0?'▲':'▼');
-  const chTxt=(ch==null)?'':` <span class="mkch ${cls}">${arw}${Math.abs(ch).toFixed(2)}%</span>`;
+function mktCell(def, it){
+  const id=def.id;
+  if(!it || it.value==null) return `<div class="mkc" id="mkc-${id}"><span class="mkl">${esc(def.label)}</span><span class="mkv">—</span></div>`;
+  const ch=it.change, unit=def.chUnit||'%', cls=(ch==null)?'':(ch>=0?'up':'down'), arw=(ch==null)?'':(ch>=0?'▲':'▼');
+  const chTxt=(ch==null)?'':` <span class="mkch ${cls}">${arw}${Math.abs(ch).toFixed(unit==='bp'?1:2)}${unit}</span>`;
   return `<div class="mkc" id="mkc-${id}" title="出典: ${esc(it.source||'')}（${esc(it.note||'')}）">`
-    + `<span class="mkl">${esc(it.label||id)}</span>`
-    + `<span class="mkv">${prefix||''}${mktFmt(it.value,dec)}</span>${chTxt}</div>`;
+    + `<span class="mkl">${esc(it.label||def.label)}</span>`
+    + `<span class="mkv">${def.prefix||''}${mktFmt(it.value,def.dec)}${def.suffix||''}</span>${chTxt}</div>`;
 }
 function mktPaint(){
   const bar=document.getElementById('mktbar'); if(!bar) return;
-  bar.innerHTML='<div class="mkrow">'+MKT_DEFS.map(d=>mktCell(d[0],MKT_CACHE[d[0]],d[3],d[4])).join('')+'</div>'
-    + `<div class="mksrc">為替・株価指数: Yahoo Finance 提供（無料データのため約15分遅れ）／ビットコイン: Coinbase（USD建）　｜　自動更新（表示中・約15秒間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
+  bar.innerHTML='<div class="mkrow">'+MKT_DEFS.map(d=>mktCell(d, MKT_CACHE[d.id])).join('')+'</div>'
+    + `<div class="mksrc">為替・株価指数・米国債10年: Yahoo Finance（無料データのため約15分遅れ）／ビットコイン: Coinbase（USD建）／日本国債10年: 財務省（日次・新発10年）　｜　自動更新（表示中・約15秒間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
 }
 let MKT_CACHE = {};
 async function fetchYahoo(symbol){
@@ -1342,9 +1351,14 @@ async function fetchBTC(){
 }
 async function mktLive(){
   const jobs=[];
-  for(const [id,sym,label] of MKT_DEFS){
-    if(id==='btc') jobs.push(fetchBTC().then(it=>{ if(it) MKT_CACHE.btc=it; }).catch(()=>{}));
-    else jobs.push(fetchYahoo(sym).then(d=>{ MKT_CACHE[id]={label,value:d.value,prev:d.prev,change:d.prev?((d.value-d.prev)/d.prev*100):null,source:'Yahoo Finance',note:'約15分遅れ'}; }).catch(()=>{}));
+  for(const def of MKT_DEFS){
+    if(def.seedOnly) continue;                                  // 日本国債10年は market.json の種（日次）から。ライブ更新しない
+    if(def.id==='btc'){ jobs.push(fetchBTC().then(it=>{ if(it) MKT_CACHE.btc=it; }).catch(()=>{})); continue; }
+    jobs.push(fetchYahoo(def.sym).then(d=>{
+      const change = def.chUnit==='bp' ? (d.prev!=null?(d.value-d.prev)*100:null)   // 利回りは変化をbp(=値差×100)で
+                                       : (d.prev?((d.value-d.prev)/d.prev*100):null); // 価格は変化率(%)で
+      MKT_CACHE[def.id]={label:def.label, value:d.value, prev:d.prev, change, source:'Yahoo Finance', note:'約15分遅れ'};
+    }).catch(()=>{}));
   }
   await Promise.all(jobs);
   _mktStamp = jpDateTime(new Date().toISOString());

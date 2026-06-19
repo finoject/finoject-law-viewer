@@ -21,22 +21,37 @@ async function yahoo(symbol){
 (async () => {
   const out = { fetchedAt: new Date().toISOString(), items: {} };
 
-  // 為替・株価指数（Yahoo Finance）。symbolはURLエンコード済み（^=%5E）。
+  // 為替・株価指数・米国債利回り（Yahoo Finance）。symbolはURLエンコード済み（^=%5E）。yield=利回り(変化はbp)。
   const YF = [
     ['usdjpy', 'JPY%3DX',  'ドル円'],
     ['n225',   '%5EN225',  '日経平均'],
     ['dji',    '%5EDJI',   'NYダウ'],
+    ['us10y',  '%5ETNX',   '米国債10年', true],
   ];
-  for (const [key, sym, label] of YF){
+  for (const [key, sym, label, yield_] of YF){
     try {
       const d = await yahoo(sym);
       out.items[key] = {
         label, value: d.value, prev: d.prev,
-        change: (d.prev && d.value != null) ? (d.value - d.prev) / d.prev * 100 : null,
+        change: (d.prev != null && d.value != null) ? (yield_ ? (d.value - d.prev) * 100 : (d.value - d.prev) / d.prev * 100) : null,
         source: 'Yahoo Finance', note: '約15分遅れ・巡回時点',
       };
     } catch (e){ console.log(key + ' 取得失敗: ' + (e.message || e)); }
   }
+
+  // 日本国債10年（財務省 国債金利情報 CSV・Shift_JIS）。新発10年=データ行の列index10。日次（前営業日基準）。
+  try {
+    const reiwa = s => { const m=(s||'').match(/^R(\d+)\.(\d+)\.(\d+)/); return m ? ((2018 + +m[1])+'/'+(+m[2])+'/'+(+m[3])) : (s||''); };
+    const buf = Buffer.from(await (await fetch('https://www.mof.go.jp/jgbs/reference/interest_rate/data/jgbcm_all.csv')).arrayBuffer());
+    const txt = new TextDecoder('shift_jis').decode(buf);
+    const rows = txt.split(/\r?\n/).map(l => l.split(',')).filter(c => c.length >= 11 && /^[RSHM]?\d/.test((c[0]||'').trim()) && !isNaN(parseFloat(c[10])));
+    if (rows.length){
+      const last = rows[rows.length-1], prev = rows[rows.length-2];
+      const v = parseFloat(last[10]), pv = prev ? parseFloat(prev[10]) : NaN;
+      out.items.jp10y = { label: '日本国債10年', value: v,
+        change: isFinite(pv) ? (v - pv) * 100 : null, source: '財務省', note: '日次・新発10年 ' + reiwa(last[0]) };
+    }
+  } catch (e){ console.log('jp10y 取得失敗: ' + (e.message || e)); }
 
   // ビットコイン: Coinbase Exchange stats（last=現在値, open=24時間前）で価格＋24h変化率。CoinGecko(429)/Binance(ブラウザ不可)は不使用。
   // ※これは初期表示の種。フロントは表示中にクライアント側から同ソースで15秒ごとに最新化する。
