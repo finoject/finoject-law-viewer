@@ -38,12 +38,13 @@ async function yahoo(symbol){
     } catch (e){ console.log(key + ' 取得失敗: ' + (e.message || e)); }
   }
 
-  // ビットコイン（CoinGecko・リアルタイム）。フロントでもクライアント側から再取得して最新化する。
+  // ビットコイン: Coinbase Exchange stats（last=現在値, open=24時間前）で価格＋24h変化率。CoinGecko(429)/Binance(ブラウザ不可)は不使用。
+  // ※これは初期表示の種。フロントは表示中にクライアント側から同ソースで15秒ごとに最新化する。
   try {
-    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
-    const j = await r.json();
-    out.items.btc = { label: 'ビットコイン', value: j.bitcoin.usd, change: j.bitcoin.usd_24h_change,
-      source: 'CoinGecko', note: 'リアルタイム', unit: '$' };
+    const j = await (await fetch('https://api.exchange.coinbase.com/products/BTC-USD/stats')).json();
+    const last = +j.last, open = +j.open;
+    if (isFinite(last)) out.items.btc = { label: 'ビットコイン', value: last,
+      change: (isFinite(open) && open) ? ((last - open) / open * 100) : null, source: 'Coinbase', note: 'リアルタイム・USD建', unit: '$' };
   } catch (e){ console.log('btc 取得失敗: ' + (e.message || e)); }
 
   fs.writeFileSync('../law-viewer-site/data/market.json', JSON.stringify(out));
