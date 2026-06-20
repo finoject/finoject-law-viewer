@@ -326,7 +326,7 @@
   .it-reg{ background:rgba(147,51,234,.18); color:#c084fc; border-color:rgba(147,51,234,.5); }
   .it-gov{ background:rgba(190,24,93,.18); color:#f472b6; border-color:rgba(190,24,93,.5); }
   .it-sys{ background:rgba(13,148,136,.18); color:#2dd4bf; border-color:rgba(13,148,136,.5); }
-  /* 条文の「やさしく解説」 */
+  /* 条文の「解説」 */
   .aiart{ margin:4px 0 0; font-size:11px; cursor:pointer; background:var(--ctl); color:var(--lnk); border:1px solid var(--line); border-radius:7px; padding:3px 10px; }
   .aiart:hover{ border-color:var(--accent); color:var(--tx); }
   body.mode-learner .aiart{ display:none; }   /* 学習者モードは条文に集中＝AIボタンも隠す（既存方針に追従） */
@@ -726,7 +726,7 @@ const AIX = {
     if(out) AIXCACHE.set(sig, out);
     return out;
   },
-  async explainArticle(p){                         // 条文の平易な解説（何を言っているか/実務でどこで効くか/確認点）
+  async explainArticle(p){                         // 条文の解説（何を言っているか/実務でどこで効くか/確認点）
     const sig = 'a:'+(p.law||'')+':'+(p.num||'');
     const c = AIXCACHE.get(sig); if(c) return c;   // 同上＝同じ条文は再生成しない（初回のみ生成）
     const r = await this.call('article', {law:p.law, num:p.num, body:(p.body||'').slice(0,4000)});
@@ -769,7 +769,7 @@ function relatedLawsHtml(it){
     return `<a class="ai-law" href="?law=${g.id}${g.art?'&art='+encodeURIComponent(g.art):''}" onclick="openLaw('${g.id}',${a});return false;" title="法令ビューアで開く">§${esc(g.label)}${g.art?' '+esc(g.art):''}</a>`; }).join('');
 }
 
-// 条文の「やさしく解説」パネルを開閉。実務影響タグ(キーワード抽出・即時)＋AI平易解説(接続時)/受け皿(未接続)。
+// 条文の「解説」パネルを開閉。実務影響タグ(キーワード抽出・即時)＋AI平易解説(接続時)/受け皿(未接続)。
 async function toggleArticleAI(num){
   const panel = document.querySelector('.aiart-panel[data-aip="'+CSS.escape(num)+'"]'); if(!panel) return;
   if(!panel.classList.contains('hidden')){ panel.classList.add('hidden'); return; }   // 既に開いていれば閉じる
@@ -778,7 +778,7 @@ async function toggleArticleAI(num){
   const txt = b ? searchText(b) : '';
   const tags = impactTagsHtml(txt, 6);
   panel.innerHTML = `<div class="usec-h">実務影響</div><div class="usec-b">${tags||'<span class="ai-empty">主要タグは検出されませんでした</span>'}</div>`
-    + `<div class="usec-h">平易な解説</div><div class="usec-b" id="aiart-b"><span class="ai-load">生成中…</span></div>`;
+    + `<div class="usec-h">解説</div><div class="usec-b" id="aiart-b"><span class="ai-load">生成中…</span></div>`;
   const out = panel.querySelector('#aiart-b');
   const r = b ? await AIX.explainArticle({law:CUR.law_id, num, body:b.body}).catch(()=>null) : null;
   if(r && r.text){
@@ -786,7 +786,7 @@ async function toggleArticleAI(num){
       + (r.points&&r.points.length?'<ul class="ai-lines">'+r.points.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul>':'')
       + '<div class="ai-by">Claudeによる解説</div>';
   } else {
-    out.innerHTML = `<div class="ai-placeholder">この条文の平易な解説（<b>何を言っているか／実務でどこで効くか／確認すべき点／よく一緒に見る条文</b>）は、AI解説を接続すると自動生成されます。`
+    out.innerHTML = `<div class="ai-placeholder">この条文の解説（<b>何を言っているか／実務でどこで効くか／確認すべき点／よく一緒に見る条文</b>）は、AI解説を接続すると自動生成されます。`
       + `<span class="ai-note">現在はAI未接続。上の「実務影響」タグと、本文中の青い参照リンク・点線の定義語が手掛かりになります。</span></div>`;
   }
 }
@@ -1465,7 +1465,7 @@ function renderDoc(kw){
       let rbadge = '';
       if (CUR && b.num && !badgedNums.has(b.num)){ rbadge = regArtBadge(CUR.law_id, b.num); if (rbadge) badgedNums.add(b.num); }
       html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}${rbadge}<div class="body">${body}</div>`
-        + `<button class="aiart" data-ainum="${esc(b.num)}" title="この条文をやさしく解説（実務影響・確認ポイント）">やさしく解説</button>`
+        + `<button class="aiart" data-ainum="${esc(b.num)}" title="この条文を解説（実務影響・確認ポイント）">解説</button>`
         + `<div class="aiart-panel hidden" data-aip="${esc(b.num)}"></div></div>`;
     }
   }
