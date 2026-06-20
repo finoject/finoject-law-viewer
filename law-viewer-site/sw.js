@@ -4,7 +4,7 @@
 // キャッシュ対象は「同一オリジン・クエリ無し」のGETのみ（=アプリの外殻: index.html / manifest / アイコン）。
 //   - data/*.json は ?t=… 付きで都度取得＝常にライブ（キャッシュしない＝肥大化と陳腐化を防ぐ）。
 //   - CoinGecko / Cloudflare Workerプロキシ(Yahoo) 等の他オリジンは一切横取りしない（CORS・ライブ性を維持）。
-const VER = 'v1';
+const VER = 'v2';
 const SHELL = 'finoject-shell-' + VER;
 
 self.addEventListener('install', (e) => { self.skipWaiting(); });          // 新SWを即時待機解除
