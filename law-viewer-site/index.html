@@ -87,9 +87,10 @@
   .ghit .gsnip{ display:block; color:#cdd8ee; margin-top:3px; }
   #doc{ flex:1; overflow-y:auto; padding:8px 22px 80px; }
   #doc .wrap{ max-width:none; margin:0; }   /* 本文はウィンドウ幅いっぱい（行数を減らし実務での視認性を上げる。三根さん指示2026-06-17）*/
-  .h{ font-weight:700; color:#cdddf5; margin:26px 0 8px; letter-spacing:.01em; }
-  .h.lv1{ font-size:16.5px; color:#dce8fb; padding-bottom:5px; border-bottom:1px solid var(--hair); }
-  .h.lv2{ font-size:14.5px; color:#bcd0f0; } .h.lv3,.h.lv4,.h.lv5{ font-size:12.5px; color:#9fb4d6; font-weight:700; }
+  .h{ font-weight:700; color:#cdddf5; margin:24px 0 8px; letter-spacing:.01em; word-spacing:.26em; }
+  .h.lv1{ font-size:17px; color:#dce8fb; margin-top:40px; padding:0 0 6px; border-bottom:1px solid var(--hair); word-spacing:.42em; }  /* 章＝扉的な余白＋番号と見出しの字間 */
+  .h.lv1:first-child{ margin-top:6px; }
+  .h.lv2{ font-size:14.5px; color:#bcd0f0; margin-top:26px; word-spacing:.34em; } .h.lv3,.h.lv4,.h.lv5{ font-size:12.5px; color:#9fb4d6; font-weight:700; }
   .art{ border-bottom:1px solid var(--hair); padding:13px 4px; content-visibility:auto; contain-intrinsic-size:auto 240px; }  /* 画面外の条文は遅延描画（巨大法令を高速化） */
   .art .num{ font-weight:700; color:#e6eefc; letter-spacing:.01em; }
   .art .cap{ color:var(--muted); font-size:13px; margin-left:7px; font-weight:600; }
@@ -193,8 +194,8 @@
   body.reordering{ cursor:grabbing; }
   /* 最上部の市況バー（ドル円・日経・ダウ・BTC） */
   .mkt{ margin:2px 0 10px; }
-  .mkrow{ display:flex; flex-wrap:wrap; gap:8px; }
-  .mkc{ flex:1 1 0; min-width:120px; background:linear-gradient(180deg,#11233e,#0e1a2e); border:1px solid #21406e; border-radius:9px; padding:7px 11px; display:flex; flex-direction:column; gap:1px; }
+  .mkrow{ display:flex; flex-wrap:wrap; gap:6px; }
+  .mkc{ flex:1 1 0; min-width:108px; background:#0f1d33; border:1px solid var(--line); border-radius:5px; padding:6px 9px; display:flex; flex-direction:column; gap:0; }
   .mkl{ font-size:11px; color:var(--muted); }
   .mkstale{ margin-left:5px; font-size:9px; font-weight:700; color:#9fb3d4; background:#26334d; border-radius:4px; padding:0 4px; vertical-align:middle; }
   .mkc-stale .mkv{ color:#b8c6dd; }
@@ -205,8 +206,8 @@
   .mksrc{ font-size:10px; color:var(--muted); margin-top:4px; line-height:1.5; }
   @media (max-width:640px){ .mkc{ min-width:calc(50% - 6px); } .mkv{ font-size:15px; } }
   /* 最上部「本日の更新／直近7日の更新」ポータル */
-  .ptop{ background:linear-gradient(180deg,#13243f,#0e1a2e); border:1px solid #2b66c0; border-radius:12px; padding:13px 15px 8px; margin:2px 0 12px; }
-  .ptophd{ font-size:15px; font-weight:800; color:#dce9ff; margin-bottom:10px; }
+  .ptop{ background:#0f1d33; border:1px solid var(--line); border-radius:7px; padding:9px 12px 6px; margin:2px 0 10px; }
+  .ptophd{ font-size:12.5px; font-weight:700; letter-spacing:.04em; color:var(--muted); margin-bottom:8px; border-left:2px solid var(--accent2); padding-left:7px; }
   .ptophint{ display:block; font-size:11px; font-weight:400; color:var(--muted); margin-top:2px; }
   .pcols{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   .pblk{ background:#0e1a2e; border:1px solid var(--line); border-radius:9px; padding:9px 11px; min-width:0; }
@@ -410,8 +411,42 @@
   #side h1{ letter-spacing:.01em; font-weight:700; }
   /* 右上ロゴ（finoject・白・透過。背景は #top と同色＝シームレス） */
   #top{ position:relative; }
-  #brandLogo{ position:absolute; top:12px; right:18px; height:23px; width:auto; opacity:.95; pointer-events:none; user-select:none; }
-  @media(max-width:860px){ #brandLogo{ height:19px; top:11px; right:12px; } }
+  #brandLogo{ position:absolute; top:10px; right:18px; height:28px; width:auto; opacity:.96; pointer-events:none; user-select:none; }
+  @media(max-width:860px){ #brandLogo{ height:22px; top:11px; right:12px; } }
+
+  /* ===== ライトテーマ（LexisNexis 風・白基調。#themeBtn で切替） ===== */
+  body.light{ --bg:#eef1f6; --panel:#ffffff; --line:#d3dae6; --hair:#e7ebf2;
+    --fg:#1b2433; --muted:#5b6a82; --accent:#2257b8; --accent2:#9c7322; --fg2:#24324a;
+    background:var(--bg); color:var(--fg); }
+  body.light #top{ background:rgba(255,255,255,.96); }
+  body.light #brandLogo{ filter:invert(1) brightness(.16); }            /* 白ロゴ→濃色（白地で視認） */
+  body.light #side h1{ color:#16223a; }
+  body.light .law{ background:#fff; color:#1f2a3d; }
+  body.light .law.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  body.light .law .tag{ color:#5b6a82; } body.light .law.active .tag{ color:#dbe6fb; }
+  body.light .law .upd{ background:#b45309; color:#fff; }
+  body.light #home,body.light .gfchip,body.light .fchipbtn,body.light .qschip,body.light .qsadd,body.light .qsdel,
+  body.light .lreset,body.light .lshow,body.light .sgreset,body.light #pctl button,body.light #exportBox button,
+  body.light .topbtns button,body.light .lvback{ background:#fff; color:#1f2a3d; border-color:var(--line); }
+  body.light #home:hover{ background:#eef3fb; }
+  body.light .gfchip.on,body.light .fchipbtn.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  body.light #gsearch,body.light #search{ background:#fff; color:var(--fg); border-color:var(--line); }
+  body.light #gsearch:focus{ box-shadow:0 0 0 2px rgba(34,87,184,.25); }
+  body.light .mkc{ background:#fff; border-color:var(--line); }
+  body.light .mkv{ color:#16223a; }
+  body.light .ptop{ background:#fff; border-color:var(--line); }
+  body.light .prow:hover{ background:#eef3fb; }
+  body.light .fitem:hover,body.light .fitem.sel{ background:#eef3fb; }
+  body.light .art .num{ color:#16223a; }
+  body.light .h{ color:#16263f; } body.light .h.lv1{ color:#0f1f3a; }
+  body.light .h.lv3,body.light .h.lv4,body.light .h.lv5{ color:#5b6a82; }
+  body.light #doc,body.light #artbody,body.light .ptitle,body.light .fttl,body.light .rvtitle,body.light .pblkh{ color:#1b2433; }
+  body.light .understand .usec-b,body.light .ai-txt,body.light .ai-lines li{ color:#28374f; }
+  body.light #lawview,body.light #regview,body.light #refpop,body.light .layoutbar,body.light .aiart-panel,
+  body.light .understand,body.light .regpanel,body.light #lawview .lvframe{ background:#fff; }
+  body.light a.rf,body.light #lawMeta a,body.light .rmore a{ color:var(--accent); }
+  body.light .gloss{ border-bottom-color:#9c7322; }
+  body.light mark{ background:#fde68a; color:#1b2433; }
 </style>
 </head>
 <body>
@@ -424,11 +459,12 @@
 
   <div id="main">
     <div id="top">
-      <img id="brandLogo" src="logo.svg" alt="finoject" title="finoject">
+      <img id="brandLogo" src="logo.png" alt="finoject" title="finoject">
       <div class="topbtns">
         <button id="burger">☰ 法令</button>
         <button id="home">ホーム</button>
         <button id="modeBtn" class="modebtn" title="表示切替"></button>
+        <button id="themeBtn" class="modebtn" title="ライト/ダーク切替"></button>
       </div>
       <input id="gsearch" placeholder="全法令検索">
       <h2 id="lawTitle">金融規制ワークベンチ</h2>
@@ -1792,6 +1828,18 @@ function applyMode(){
 }
 $('#modeBtn').addEventListener('click', ()=>{ appMode = appMode==='learner' ? 'pro' : 'learner'; localStorage.setItem('appMode', appMode); applyMode(); });
 applyMode();
+
+// ===== ライト/ダーク テーマ切替（LexisNexis 風の明るい配色も選べる） =====
+let theme = localStorage.getItem('theme') || 'dark';
+function applyTheme(){
+  document.body.classList.toggle('light', theme==='light');
+  const b=document.getElementById('themeBtn');
+  if(b) b.textContent = theme==='light' ? 'ダーク' : 'ライト';   // 押すと切り替わる先を表示
+  const tc=document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute('content', theme==='light' ? '#ffffff' : '#0e1a2e');
+}
+{ const tb=document.getElementById('themeBtn');
+  if(tb) tb.addEventListener('click', ()=>{ theme = theme==='light' ? 'dark' : 'light'; localStorage.setItem('theme', theme); applyTheme(); }); }
+applyTheme();
 
 // ===== カッコの深さ別 折り畳み（クリックで深度を変化）=====
 let pDepth = 99;   // 深さが pDepth 以上の（）を「（…）」に折り畳む（99=全表示）
