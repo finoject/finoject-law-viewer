@@ -385,12 +385,34 @@
     #sideSplit{ display:none; }                  /* モバイルはサイドバーがオフキャンバス＝幅変更不要 */
     #burger{ display:inline-block; background:#16223a; color:#cfe0ff; border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:16px; cursor:pointer; margin-bottom:8px; }
   }
+  /* ===== プロ仕様リファイン（Bloomberg/LexisNexis 志向・2026-06-20 恒久方針） ===== */
+  :root{ --radius:5px; --hair:#1e2840; --accent2:#c9a24b; --fg2:#cdd9ef; }   /* スクエア寄り・hairline・抑えた暖色アクセント */
+  html,body{ font-family:"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  /* 角を締める：丸ピル→ややスクエア（端末・法務DBの規律感） */
+  .law,#home,#gsearch,#search,.gfchip,.fchipbtn,.qschip,.qsadd,.qsdel,.pref,.fbadge,.itag,.lawchip,
+  .topbtns button,#pctl button,#exportBox button,.lreset,.lshow,.sgreset,.mkstale,.fnew,.pimp,.law .upd{ border-radius:var(--radius)!important; }
+  /* 数値は等幅＝桁が揃う（端末的） */
+  .mkv,.mkc,.mksub,.pdate,.rvdate,.feedmeta,.gres-head,.pblkh b,.law .tag{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
+  /* 節見出し＝小さく抑えた色＋左アクセント罫。アイコン無しでも識別できる規律 */
+  .usec-h,.rvorigh{ font-size:10.5px!important; font-weight:700; letter-spacing:.04em; color:var(--muted)!important;
+    border-left:2px solid var(--accent2); padding-left:7px; margin:0 0 5px!important; }
+  .feedtitle{ letter-spacing:.03em; font-weight:700; }
+  .grp{ border-left-color:var(--accent2)!important; }
+  .qslabel,.gflabel,.exlabel{ font-size:10.5px!important; letter-spacing:.06em; color:var(--muted)!important; font-weight:700; }
+  /* hairline で罫を締める（冷たくしない範囲で） */
+  .prow{ border-top-color:var(--hair)!important; }
+  #top{ border-bottom-color:var(--hair)!important; }
+  #side{ border-right-color:var(--hair)!important; }
+  .err{ color:#f3a5a5; }
+  /* ブランドは小さめのウォードマーク */
+  #side h1{ letter-spacing:.01em; font-weight:700; }
 </style>
 </head>
 <body>
 <div id="app">
   <nav id="side">
-    <h1 id="brand" title="ホーム">⚖️ finoject 金融規制ウォッチ</h1>
+    <h1 id="brand" title="ホーム">finoject 金融規制ウォッチ</h1>
     <div id="lawList"></div>
   </nav>
   <div id="sideSplit" title="ドラッグで法令一覧の幅を調整"></div>
@@ -399,19 +421,19 @@
     <div id="top">
       <div class="topbtns">
         <button id="burger">☰ 法令</button>
-        <button id="home">🏠 ホーム</button>
+        <button id="home">ホーム</button>
         <button id="modeBtn" class="modebtn" title="表示切替"></button>
       </div>
-      <input id="gsearch" placeholder="🔍 全法令検索">
+      <input id="gsearch" placeholder="全法令検索">
       <h2 id="lawTitle">金融規制ワークベンチ</h2>
       <p id="lawMeta"></p>
       <div id="exportBox" class="hidden">
         <span class="exlabel">出力:</span>
-        <button id="expMd" title="Markdown出力">📥 Markdown</button>
-        <button id="expJson" title="JSON出力">📥 JSON</button>
-        <button id="expPrint" title="印刷・PDF">🖨 印刷</button>
+        <button id="expMd" title="Markdown出力">Markdown</button>
+        <button id="expJson" title="JSON出力">JSON</button>
+        <button id="expPrint" title="印刷・PDF">印刷</button>
       </div>
-      <input id="search" placeholder="📄 法令内検索" class="hidden">
+      <input id="search" placeholder="法令内検索" class="hidden">
       <div id="pctl" class="hidden">
         <span class="pctl-help" title="入れ子のカッコを段階的に畳む">（　）:</span>
         <button data-pa="all" title="全部表示">全部</button>
@@ -559,7 +581,7 @@ function homeRefsHtml(it){
     const k = (g.kind && g.kind!=='その他') ? `<span class="fk k-${g.kind}">${esc(g.kind)}</span>` : '';
     const a = g.art ? "'"+g.art.replace(/'/g,'')+"'" : 'null';
     const href = '?law='+g.id+(g.art?'&art='+encodeURIComponent(g.art):'');
-    return `<a class="fchip" href="${href}" onclick="event.stopPropagation();openLaw('${g.id}',${a});return false;" title="この法令ビューアで開く">📖 ${esc(g.label)}${k}</a>`;
+    return `<a class="fchip" href="${href}" onclick="event.stopPropagation();openLaw('${g.id}',${a});return false;" title="この法令ビューアで開く">§${esc(g.label)}${k}</a>`;
   }).join('')+'</div>';
 }
 function renderFeedChips(){
@@ -567,7 +589,7 @@ function renderFeedChips(){
   const chip=(ag,label,extra)=>`<span class="fchipbtn${extra||''}${homeFilterAg===ag?' on':''}" data-ag="${ag}">${esc(label)}</span>`;
   let h = chip('all','すべて');
   for(const ag of REG_AGENCIES) h += chip(ag, REG_SHORT[ag]||ag);
-  h += chip('__lawlinked__','📖 法令リンク',' fc-law');
+  h += chip('__lawlinked__','§法令リンク',' fc-law');
   box.innerHTML=h;
   box.querySelectorAll('.fchipbtn').forEach(c=>c.addEventListener('click',()=>{
     const ag=c.dataset.ag;
@@ -668,7 +690,7 @@ function relatedLawsHtml(it){
   if(!it.lawrefs || !it.lawrefs.length) return '<div class="ai-empty">関係法令は自動検出されていません</div>';
   const byId={}; for(const r of it.lawrefs){ if(!byId[r.id]) byId[r.id]={id:r.id, art:r.art, label:(r.label||'').replace(/\s*第.+$/,'')}; if(r.art&&!byId[r.id].art) byId[r.id].art=r.art; }
   return Object.values(byId).slice(0,6).map(g=>{ const a=g.art?"'"+g.art.replace(/'/g,'')+"'":'null';
-    return `<a class="ai-law" href="?law=${g.id}${g.art?'&art='+encodeURIComponent(g.art):''}" onclick="openLaw('${g.id}',${a});return false;" title="法令ビューアで開く">📎 ${esc(g.label)}${g.art?' '+esc(g.art):''}</a>`; }).join('');
+    return `<a class="ai-law" href="?law=${g.id}${g.art?'&art='+encodeURIComponent(g.art):''}" onclick="openLaw('${g.id}',${a});return false;" title="法令ビューアで開く">§${esc(g.label)}${g.art?' '+esc(g.art):''}</a>`; }).join('');
 }
 
 // 条文の「やさしく解説」パネルを開閉。実務影響タグ(キーワード抽出・即時)＋AI平易解説(接続時)/受け皿(未接続)。
@@ -679,8 +701,8 @@ async function toggleArticleAI(num){
   const b = (CUR && CUR.blocks || []).find(x=>x.num===num);
   const txt = b ? searchText(b) : '';
   const tags = impactTagsHtml(txt, 6);
-  panel.innerHTML = `<div class="usec-h">🏷 実務影響</div><div class="usec-b">${tags||'<span class="ai-empty">主要タグは検出されませんでした</span>'}</div>`
-    + `<div class="usec-h">🤖 平易な解説</div><div class="usec-b" id="aiart-b"><span class="ai-load">生成中…</span></div>`;
+  panel.innerHTML = `<div class="usec-h">実務影響</div><div class="usec-b">${tags||'<span class="ai-empty">主要タグは検出されませんでした</span>'}</div>`
+    + `<div class="usec-h">平易な解説</div><div class="usec-b" id="aiart-b"><span class="ai-load">生成中…</span></div>`;
   const out = panel.querySelector('#aiart-b');
   const r = b ? await AIX.explainArticle({law:CUR.law_id, num, body:b.body}).catch(()=>null) : null;
   if(r && r.text){
@@ -714,11 +736,11 @@ function renderRegView(it){
     + `<button class="rvclose" onclick="closeRegView()" title="閉じる">✕</button></div>`
     + `<div class="rvtitle">${esc(it.title)}</div>`
     + `<div class="understand">`
-    +   `<div class="usec"><div class="usec-h">🤖 要点</div><div class="usec-b" id="${aiId}">${aiInit}</div></div>`
-    +   `<div class="usec"><div class="usec-h">🏷 実務影響</div><div class="usec-b">${tags || '<span class="ai-empty">主要タグは検出されませんでした</span>'}</div></div>`
-    +   `<div class="usec"><div class="usec-h">📎 関係法令</div><div class="usec-b ai-laws">${relatedLawsHtml(it)}</div></div>`
+    +   `<div class="usec"><div class="usec-h">要点</div><div class="usec-b" id="${aiId}">${aiInit}</div></div>`
+    +   `<div class="usec"><div class="usec-h">実務影響</div><div class="usec-b">${tags || '<span class="ai-empty">主要タグは検出されませんでした</span>'}</div></div>`
+    +   `<div class="usec"><div class="usec-h">関係法令</div><div class="usec-b ai-laws">${relatedLawsHtml(it)}</div></div>`
     + `</div>`
-    + `<div class="rvorigh">📄 原文</div>${body}`;
+    + `<div class="rvorigh">原文</div>${body}`;
   box.classList.add('active');
   if(!hasSum) fillUpdateSummary(aiId, it);   // 事前生成が無い時だけオンデマンドで充填（接続時はClaude、未接続は受け皿表示）
 }
@@ -761,7 +783,7 @@ function portalRow(x){
   if(x.kind==='reg'){
     const c=REG_COLORS[x.agency]||'#64748b';
     const imp=(x.refs&&x.refs.length)?'<span class="pimp" title="条文に紐づく更新">重要</span>':'';   // 法令条文に紐づく更新＝実務影響が大きい目印
-    const refs=(x.refs&&x.refs.length)?'<span class="pref">📖 '+esc((x.refs[0].label||'').replace(/\s*第.+$/,''))+(x.refs.length>1?` ほか${x.refs.length-1}`:'')+'</span>':'';
+    const refs=(x.refs&&x.refs.length)?'<span class="pref">§'+esc((x.refs[0].label||'').replace(/\s*第.+$/,''))+(x.refs.length>1?` ほか${x.refs.length-1}`:'')+'</span>':'';
     const sum=(Array.isArray(x.aiSummary)&&x.aiSummary.length)   // 事前生成の3行要点を一覧に直接表示（クリック不要）
       ? '<div class="psum">'+x.aiSummary.map(l=>'<div class="psl">'+esc(l)+'</div>').join('')+'</div>' : '';
     return `<div class="prow${sum?' has-sum':''}" onclick="openRegViewItem(${x.gi})" title="クリックで右側に本文を表示">`
@@ -784,10 +806,10 @@ function renderPortalTop(){
     ? items.slice(0,LIM).map(portalRow).join('') + (items.length>LIM?`<div class="pmore">ほか ${items.length-LIM}件</div>`:'')
     : `<div class="pnone">${emptyMsg}</div>`;
   box.innerHTML=`<div class="ptop">
-    <div class="ptophd">🔔 最新動向</div>
+    <div class="ptophd">最新動向</div>
     <div class="pcols">
-      <div class="pblk"><div class="pblkh">📌 本日 <b>(${todayItems.length})</b><span class="pblksub">${jpDay(today)}</span></div>${list(todayItems,'なし')}</div>
-      <div class="pblk"><div class="pblkh">🗓 直近7日 <b>(${weekItems.length})</b></div>${list(weekItems,'なし')}</div>
+      <div class="pblk"><div class="pblkh">本日 <b>(${todayItems.length})</b><span class="pblksub">${jpDay(today)}</span></div>${list(todayItems,'なし')}</div>
+      <div class="pblk"><div class="pblkh">直近7日 <b>(${weekItems.length})</b></div>${list(weekItems,'なし')}</div>
     </div>
   </div>`;
 }
@@ -885,11 +907,11 @@ async function loadLaw(id){
 async function openLaw(id, artNum, para){
   // 大きな法令は読み込み/描画に時間がかかるためローディング表示（キャッシュ済みなら出さない）
   if (!cache[id]){ $('#lawTitle').textContent='読み込み中…';
-    $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">⏳ 法令データを読み込んでいます…<br><span style="font-size:12px">条数の多い法令（金融商品取引法など）は少し時間がかかります</span></div></div>'; }
+    $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">読み込み中…</div></div>'; }
   let d;
   try { d = await loadLaw(id); }
   catch(e){ $('#lawTitle').textContent='金融規制ワークベンチ';
-    $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">⚠ この法令データを読み込めませんでした。<br><span style="font-size:12px">時間をおいて再度お試しください（データは毎日自動更新されます）。</span></div></div>';
+    $('#doc').innerHTML='<div class="wrap"><div class="hint err" style="margin-top:64px">読み込めませんでした</div></div>';
     return; }
   CUR = d;
   pDepth = 99;                                                      // 別の法令に移ったらカッコ折り畳みは全表示に戻す（前の法令の設定を引き継がない。三根さん指示2026-06-19）
@@ -1325,11 +1347,11 @@ function regPanelHtml(lawId){
     const mode = FRAMABLE_AGENCIES.includes(g.it.agency) ? 'direct' : 'proxy';   // 埋め込み可agencyは直接/それ以外はプロキシ
     return `<div class="rrow"><span class="rdate">${jpd(g.it.date)}</span><span class="rag">${esc(g.it.agency||'')}</span>${kinds}`
       + `<a class="rttl lvlink" href="${escA(g.it.url)}" data-lv-url="${escA(g.it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(g.it.title)}">${esc(g.it.title)}</a>`
-      + (arts?`<span class="rarts">📍 この更新が触れる条文（関連の根拠）: ${arts}</span>`
-             :`<span class="rarts rarts-w">📍 この法令全体に関連（特定の条は示されていません）</span>`) + `</div>`;
+      + (arts?`<span class="rarts">この更新が触れる条文（関連の根拠）: ${arts}</span>`
+             :`<span class="rarts rarts-w">この法令全体に関連（特定の条は示されていません）</span>`) + `</div>`;
   }).join('');
   const officialSec = list.length
-    ? `<div class="rsub">⚖️ 当局の動向（${rows.length}件）</div>${officialRows}`
+    ? `<div class="rsub">当局の動向（${rows.length}件）</div>${officialRows}`
       + (rows.length>SHOWN ? `<div class="rmore">ほか ${rows.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`
                            : `<div class="rmore"><a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチ（新着監視）↗</a></div>`)
     : '';
@@ -1340,7 +1362,7 @@ function regPanelHtml(lawId){
         + `<a class="rttl lvlink" href="${escA(n.url)}" data-lv-url="${escA(n.url)}" data-lv-mode="proxy" data-lv-title="${escA(n.title)}">${esc(n.title)}</a></div>`).join('')
       + `<div class="rmore nnote">※ Yahoo!ニュース検索より。クリックで本文を表示（有料記事は一部のみ）。</div>`
     : '';
-  return `<details class="regpanel" open><summary>📡 関連動向（${rows.length}件）</summary>${diet}${officialSec}${newsSec}</details>`;
+  return `<details class="regpanel" open><summary>関連動向（${rows.length}件）</summary>${diet}${officialSec}${newsSec}</details>`;
 }
 function regArtBadge(lawId, num){
   const e = REGBYART[lawId+'|'+num]; if(!e||!e.length) return '';
@@ -1350,7 +1372,7 @@ function regArtBadge(lawId, num){
   const mode = FRAMABLE_AGENCIES.includes(it.agency) ? 'direct' : 'proxy';
   // クリックで別タブでなく条文エリアに差し込み表示（.lvlinkを#docの委譲ハンドラが拾う。←条文に戻る付き）
   const ttl = it.title || '規制動向';
-  return `<a class="artreg lvlink" href="${escA(it.url)}" data-lv-url="${escA(it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(ttl)}" title="${esc(ttl)}｜${esc(tip)}（クリックで条文欄に表示／再クリックで条文に戻る）">📡 規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
+  return `<a class="artreg lvlink" href="${escA(it.url)}" data-lv-url="${escA(it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(ttl)}" title="${esc(ttl)}｜${esc(tip)}（クリックで条文欄に表示／再クリックで条文に戻る）">規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
 }
 function renderDoc(kw){
   const k = (kw||'').trim();
@@ -1368,7 +1390,7 @@ function renderDoc(kw){
       let rbadge = '';
       if (CUR && b.num && !badgedNums.has(b.num)){ rbadge = regArtBadge(CUR.law_id, b.num); if (rbadge) badgedNums.add(b.num); }
       html += `<div class="art" data-num="${esc(b.num)}"><span class="num">${esc(b.num)}</span>${cap}${rbadge}<div class="body">${body}</div>`
-        + `<button class="aiart" data-ainum="${esc(b.num)}" title="この条文をやさしく解説（実務影響・確認ポイント）">🤖 やさしく解説</button>`
+        + `<button class="aiart" data-ainum="${esc(b.num)}" title="この条文をやさしく解説（実務影響・確認ポイント）">やさしく解説</button>`
         + `<div class="aiart-panel hidden" data-aip="${esc(b.num)}"></div></div>`;
     }
   }
@@ -1423,7 +1445,7 @@ function renderQsChips(){
   const box=document.getElementById('qsbar'); if(!box) return;
   const chips=getQsChips();
   box.innerHTML = `<span class="qslabel">テーマ:</span>`
-    + chips.map((q,i)=>`<span class="qschipw"><button class="qschip" onclick="quickQs(${i})" title="${esc(q)} で検索">🔍 ${esc(q)}</button><button class="qsdel" title="このチップを削除" onclick="delQsChip(${i})">✕</button></span>`).join('')
+    + chips.map((q,i)=>`<span class="qschipw"><button class="qschip" onclick="quickQs(${i})" title="${esc(q)} で検索">${esc(q)}</button><button class="qsdel" title="このチップを削除" onclick="delQsChip(${i})">✕</button></span>`).join('')
     + `<button class="qsadd" onclick="addQsChip()" title="検索語を追加">＋ 追加</button>`
     + (JSON.stringify(chips)!==JSON.stringify(QS_DEFAULT) ? `<button class="qsadd qsrst" onclick="resetQsChips()" title="初期状態に戻す">↺ 既定</button>` : '');
 }
@@ -1434,7 +1456,7 @@ function homeSections(){
     { k:'portal', title:'最新動向', html:`<div id="portalTop"></div>` },
     { k:'guide',  title:'テーマ', html:`<div class="qsbar" id="qsbar"></div>` },
     { k:'feed',   title:'動向', html:
-        `<div class="feedhead"><span class="feedtitle">📡 最新動向</span><span id="feedmeta" class="feedmeta"></span></div>`
+        `<div class="feedhead"><span class="feedtitle">最新動向</span><span id="feedmeta" class="feedmeta"></span></div>`
       + `<div id="feedchips" class="feedchips"></div>`
       + `<div class="homecols"><div id="feedcol"><div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div></div>`
       + `<div id="hsplit" title="ドラッグで左右の幅を調整"></div>`
@@ -1668,7 +1690,7 @@ function renderGlobalResults(){
   }
   const chip=(s,label,n)=>`<button class="gfchip${gScope===s?' on':''}" onclick="setGScope('${s}')">${label}（${n}）</button>`;
   const bar=`<div class="gfbar"><span class="gflabel">種別:</span>${chip('all','すべて',lawHits+guideHits)}${chip('law','法令',lawHits)}${chip('guide','ガイドライン',guideHits)}`
-    + `<button class="gfchip${gChangedOnly?' on':''}" onclick="toggleGChanged()">🆕 更新あり</button></div>`;
+    + `<button class="gfchip${gChangedOnly?' on':''}" onclick="toggleGChanged()">更新あり</button></div>`;
   $('#doc').innerHTML = `<div class="wrap"><div class="gres-head">「${esc(q)}」 ${total}件</div>${bar}`
     + (html || '<div class="hint">この絞り込み条件では該当がありません</div>') + '</div>';
 }
@@ -1760,7 +1782,7 @@ let appMode = localStorage.getItem('appMode') || 'pro';
 function applyMode(){
   document.body.classList.toggle('mode-learner', appMode==='learner');
   const b=document.getElementById('modeBtn');
-  if(b) b.textContent = appMode==='learner' ? '🎓 学習者' : '👔 実務者';
+  if(b) b.textContent = appMode==='learner' ? '学習者' : '実務者';
 }
 $('#modeBtn').addEventListener('click', ()=>{ appMode = appMode==='learner' ? 'pro' : 'learner'; localStorage.setItem('appMode', appMode); applyMode(); });
 applyMode();
