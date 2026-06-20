@@ -287,8 +287,8 @@
   #hsplit:hover::before, #hsplit.drag::before{ background:var(--accent); }
   #hsplit:hover::after, #hsplit.drag::after{ color:var(--tx); border-color:var(--accent); }
   .fitem{ cursor:pointer; border-radius:8px; }
-  .fitem:hover{ background:var(--card); }
-  .fitem.sel{ background:var(--ctlh); outline:1.5px solid var(--accent); }
+  .fitem:hover{ background:transparent; outline:1px solid var(--line); outline-offset:-1px; }   /* hoverは枠のみ＝地色を変えない */
+  .fitem.sel{ background:transparent; outline:2px solid var(--accent); outline-offset:-2px; }   /* 選択は枠線だけで示す＝地色は他フレームと統一 */
   #regview{ flex:1 1 0; min-width:0; height:100%; min-height:0;
     border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; display:flex; flex-direction:column; }
   .rvhint{ color:var(--muted); font-size:13px; padding:28px 18px; text-align:center; margin:auto; }
@@ -441,7 +441,7 @@
   body.light .mkv{ color:#16223a; }
   body.light .ptop{ background:#fff; border-color:var(--line); }
   body.light .prow:hover{ background:#eef3fb; }
-  body.light .fitem:hover,body.light .fitem.sel{ background:#eef3fb; }
+  body.light .prow:hover{ background:#f3f6fb; }
   body.light .art .num{ color:#16223a; }
   body.light .h{ color:#16263f; } body.light .h.lv1{ color:#0f1f3a; }
   body.light .h.lv3,body.light .h.lv4,body.light .h.lv5{ color:#5b6a82; }
