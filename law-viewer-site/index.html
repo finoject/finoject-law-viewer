@@ -74,6 +74,9 @@
   /* 横断検索の結果 */
   .gres-head{ font-size:13px; color:var(--muted); margin:4px 0 8px; }
   .gres-sub{ font-weight:400; opacity:.8; }
+  .gbackbar{ margin:2px 0 8px; }
+  .gback{ font-size:12.5px; font-weight:700; padding:5px 12px; border-radius:var(--radius,5px); cursor:pointer; background:var(--ctl); color:var(--lnk); border:1px solid var(--line); }
+  .gback:hover{ border-color:var(--accent); }
   .gfbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 14px; }
   .gflabel{ font-size:12px; color:var(--muted); font-weight:700; }
   .gfchip{ font-size:12.5px; padding:5px 11px; border-radius:16px; cursor:pointer; background:var(--ctl); color:var(--tx); border:1px solid var(--line); }
@@ -1772,8 +1775,16 @@ function renderGlobalResults(){
     + (html || '<div class="hint">この絞り込み条件では該当がありません</div>') + '</div>';
 }
 // 実務影響タグの逆引き：そのテーマ（タグの正規表現）に該当する条文を全法令から横断抽出して一覧表示。
+let _revReturn = null;   // 逆引き前に見ていた法令・条（「戻る」で復帰）
+function restoreReverse(){ if(_revReturn) openLaw(_revReturn.lawId, _revReturn.art); else (CUR ? renderDoc('') : showHome()); }
 async function reverseLookup(label){
   const tag = IMPACT_TAGS.find(x=>x.t===label); if(!tag) return;
+  // 置き換え前に「戻り先」を記録（現在の法令＋画面上部に見えている条）
+  if(CUR){
+    let art=null;
+    for(const el of document.querySelectorAll('#doc .art')){ const r=el.getBoundingClientRect(); if(r.bottom>90){ art=el.getAttribute('data-num'); break; } }
+    _revReturn = { lawId:CUR.law_id, art };
+  } else _revReturn = null;
   const my = ++gseq; gLastQ=''; const gs=$('#gsearch'); if(gs) gs.value='';   // 横断検索状態をクリア（結果の取り違え防止）
   $('#doc').innerHTML = '<div class="wrap"><div class="hint">「'+esc(label)+'」に該当する条文を全法令から抽出中…</div></div>';
   await loadAll();
@@ -1792,7 +1803,8 @@ async function reverseLookup(label){
         + `<span class="gsnip">${m?gSnippet(b.body,[m[0]]):''}</span></a>`;
     }
   }
-  $('#doc').innerHTML = `<div class="wrap"><div class="gres-head">実務影響「<b>${esc(label)}</b>」の逆引き：${total}件 / ${lawN}法令<span class="gres-sub">　このテーマに関わる規定を全法令から横断抽出（クリックで条文へ）</span></div>`
+  const back = `<button class="gback" onclick="restoreReverse()">← ${_revReturn ? '元の条文に戻る' : 'ホーム'}</button>`;
+  $('#doc').innerHTML = `<div class="wrap"><div class="gbackbar">${back}</div><div class="gres-head">実務影響「<b>${esc(label)}</b>」の逆引き：${total}件 / ${lawN}法令<span class="gres-sub">　このテーマに関わる規定を全法令から横断抽出（クリックで条文へ）</span></div>`
     + (html||'<div class="hint">該当する条文はありません</div>') + '</div>';
 }
 let gtimer = null;
