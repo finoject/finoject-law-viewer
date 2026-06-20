@@ -14,7 +14,8 @@
 <meta name="apple-mobile-web-app-title" content="finoject法令">
 <style>
   :root{ --bg:#0b1220; --panel:#111a2c; --line:#26334d; --fg:#e8eefb; --muted:#8da3c6; --accent:#2e6cf0; --hi:#fde68a;
-    --tx:#cfe0ff; --txh:#bcd0f0; --lnk:#7fb0ff; }   /* テキスト=本文/見出し/リンク（テーマで切替。dark既定は従来色＝見た目不変）*/
+    --tx:#cfe0ff; --txh:#bcd0f0; --lnk:#7fb0ff;   /* テキスト=本文/見出し/リンク（テーマで切替。dark既定は従来色＝見た目不変）*/
+    --ctl:#16223a; --ctlh:#1c3a63; }              /* コントロール面(チップ/ボタン/閉じる等)＝テーマで切替 */
   *{ box-sizing:border-box; }
   html,body{ margin:0; height:100%; background:var(--bg); color:var(--fg);
     font-family:"Segoe UI","Hiragino Sans","Meiryo",sans-serif; -webkit-text-size-adjust:100%; }
@@ -27,20 +28,20 @@
   #sideSplit{ flex:none; width:7px; cursor:col-resize; position:relative; background:transparent; z-index:6; }
   #sideSplit::before{ content:""; position:absolute; left:2px; top:0; bottom:0; width:3px; background:transparent; }
   #sideSplit::after{ content:"⋮"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:13px; color:#5f7196;
-    background:#16223a; border:1px solid #2b66c0; border-radius:5px; padding:6px 1px; line-height:1; opacity:.55; transition:opacity .15s; }
+    background:var(--ctl); border:1px solid #2b66c0; border-radius:5px; padding:6px 1px; line-height:1; opacity:.55; transition:opacity .15s; }
   #sideSplit:hover::before, #sideSplit.drag::before{ background:var(--accent); }
   #sideSplit:hover::after, #sideSplit.drag::after{ opacity:1; color:var(--tx); border-color:var(--accent); }
   #side h1{ font-size:15px; margin:2px 4px 2px; cursor:pointer; }
   #side h1:hover{ color:var(--lnk); }
   #side .sub{ font-size:11px; color:var(--muted); margin:0 4px 8px; }
   #toReg{ display:inline-block; font-size:12px; color:var(--lnk); text-decoration:none; margin:0 4px 10px;
-    padding:5px 10px; border:1px solid #2b66c0; border-radius:8px; background:#13243f; }
-  #toReg:hover{ background:#1c3a63; }
+    padding:5px 10px; border:1px solid #2b66c0; border-radius:8px; background:var(--ctl); }
+  #toReg:hover{ background:var(--ctlh); }
   .grp{ font-size:11px; color:var(--muted); margin:13px 6px 2px; letter-spacing:.04em; border-left:2px solid var(--accent2); padding-left:8px; display:flex; align-items:center; gap:6px; }
   .grpdesc{ font-size:10px; color:var(--muted); margin:0 6px 5px; padding-left:10px; line-height:1.4; opacity:.8; }
   /* グループ並び替え */
   .sgrphint{ font-size:10px; color:var(--muted); margin:2px 6px 4px; display:flex; align-items:center; gap:6px; }
-  .sgreset{ font-size:10px; padding:2px 7px; border-radius:5px; cursor:pointer; background:#16223a; color:var(--tx); border:1px solid var(--line); }
+  .sgreset{ font-size:10px; padding:2px 7px; border-radius:5px; cursor:pointer; background:var(--ctl); color:var(--tx); border:1px solid var(--line); }
   .sgreset:hover{ border-color:var(--accent); }
   .sgrp{ border-radius:8px; }
   .sgrp.dragging{ opacity:.5; outline:2px dashed var(--accent); }
@@ -48,7 +49,7 @@
   .grp:hover .sgrip{ color:var(--lnk); }
   .sgrip:active{ cursor:grabbing; }
   .law{ display:block; width:100%; text-align:left; cursor:pointer; border:1px solid var(--line);
-    background:#16223a; color:var(--tx); border-radius:8px; padding:6px 9px; margin:3px 0; font-size:12.5px; line-height:1.35; }
+    background:var(--ctl); color:var(--tx); border-radius:8px; padding:6px 9px; margin:3px 0; font-size:12.5px; line-height:1.35; }
   .law:hover{ border-color:var(--accent); }
   .law.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
   .law .tag{ font-size:10px; color:var(--muted); }
@@ -60,8 +61,8 @@
   #top{ flex:none; background:rgba(11,18,32,.96); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); padding:12px 18px; }
   #burger{ display:none; }
   .topbtns{ display:flex; gap:8px; margin-bottom:8px; }
-  #home{ background:#16223a; color:var(--tx); border:1px solid #2b66c0; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; }
-  #home:hover{ background:#1c3a63; }
+  #home{ background:var(--ctl); color:var(--tx); border:1px solid #2b66c0; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; }
+  #home:hover{ background:var(--ctlh); }
   #lawTitle{ font-size:17px; font-weight:700; margin:0; }
   #lawMeta{ font-size:11px; color:var(--muted); margin:3px 0 0; }
   #lawMeta a{ color:var(--lnk); }
@@ -74,7 +75,7 @@
   .gres-head{ font-size:13px; color:var(--muted); margin:4px 0 8px; }
   .gfbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 14px; }
   .gflabel{ font-size:12px; color:var(--muted); font-weight:700; }
-  .gfchip{ font-size:12.5px; padding:5px 11px; border-radius:16px; cursor:pointer; background:#16223a; color:var(--tx); border:1px solid var(--line); }
+  .gfchip{ font-size:12.5px; padding:5px 11px; border-radius:16px; cursor:pointer; background:var(--ctl); color:var(--tx); border:1px solid var(--line); }
   .gfchip:hover{ border-color:var(--accent); }
   .gfchip.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
   .gupd{ margin-left:6px; font-size:10px; font-weight:700; color:#0b1220; background:#fbbf24; border-radius:4px; padding:1px 5px; }
@@ -82,7 +83,7 @@
   .gsec span{ font-weight:400; color:var(--muted); font-size:12px; }
   .ghit{ display:block; text-decoration:none; color:var(--fg); border:1px solid var(--line); border-radius:8px;
     padding:8px 11px; margin:6px 0; background:var(--card); font-size:13px; line-height:1.7; }
-  .ghit:hover{ border-color:var(--accent); background:#13243f; }
+  .ghit:hover{ border-color:var(--accent); background:var(--ctl); }
   .ghit .gnum{ font-weight:700; color:var(--lnk); }
   .ghit .gcap{ color:var(--muted); margin-left:6px; }
   .ghit .gsnip{ display:block; color:var(--txh); margin-top:3px; }
@@ -107,7 +108,7 @@
   .rrow{ display:flex; flex-wrap:wrap; align-items:baseline; gap:7px; padding:7px 2px; border-top:1px solid var(--line); font-size:13px; }
   .rrow:first-of-type{ margin-top:6px; }
   .rdate{ color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
-  .rag{ color:var(--txh); font-size:11px; background:#16223a; border-radius:5px; padding:1px 6px; flex:none; }
+  .rag{ color:var(--txh); font-size:11px; background:var(--ctl); border-radius:5px; padding:1px 6px; flex:none; }
   .rttl{ color:var(--fg); text-decoration:none; flex:1; min-width:200px; }
   .rttl:hover{ color:var(--lnk); text-decoration:underline; }
   .rarts{ font-size:12px; color:var(--lnk); flex-basis:100%; margin-top:2px; }
@@ -115,9 +116,9 @@
   #exportBox{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:2px 0 2px; }
   #exportBox.hidden{ display:none; }
   .exlabel{ font-size:12px; color:var(--muted); }
-  #exportBox button{ background:#13243f; color:var(--lnk); border:1px solid #2b66c0; border-radius:7px; padding:5px 11px; font-size:12.5px; cursor:pointer; }
-  #exportBox button:hover{ background:#1c3a63; color:var(--tx); }
-  .modebtn{ background:#16223a; color:var(--tx); border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:13px; cursor:pointer; }
+  #exportBox button{ background:var(--ctl); color:var(--lnk); border:1px solid #2b66c0; border-radius:7px; padding:5px 11px; font-size:12.5px; cursor:pointer; }
+  #exportBox button:hover{ background:var(--ctlh); color:var(--tx); }
+  .modebtn{ background:var(--ctl); color:var(--tx); border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:13px; cursor:pointer; }
   .modebtn:hover{ border-color:var(--accent); }
   /* 学習者モード：条文に集中（規制動向の付帯情報を隠し、行間を広げる） */
   body.mode-learner .regpanel,
@@ -180,7 +181,7 @@
   .home{ padding-bottom:40px; }
   /* ブロック並び替え（ドラッグ） */
   .layoutbar{ font-size:11.5px; color:var(--muted); background:var(--card); border:1px dashed #2b66c0; border-radius:8px; padding:6px 10px; margin:2px 0 10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .lreset,.lshow{ font-size:11px; padding:3px 9px; border-radius:6px; cursor:pointer; background:#16223a; color:var(--tx); border:1px solid var(--line); }
+  .lreset,.lshow{ font-size:11px; padding:3px 9px; border-radius:6px; cursor:pointer; background:var(--ctl); color:var(--tx); border:1px solid var(--line); }
   .lreset:hover,.lshow:hover{ border-color:var(--accent); }
   .lshow{ margin-left:5px; border-color:#2b66c0; color:var(--lnk); }
   .hsec{ position:relative; }
@@ -218,7 +219,7 @@
   .pnone{ font-size:12.5px; color:var(--muted); padding:8px 2px; }
   .prow{ display:flex; align-items:center; gap:7px; padding:5px 4px; border-top:1px solid #18233a; cursor:pointer; font-size:12.5px; line-height:1.4; }
   .prow:first-of-type{ border-top:none; }
-  .prow:hover{ background:#16223a; border-radius:6px; }
+  .prow:hover{ background:var(--ctl); border-radius:6px; }
   .pdate{ font-size:11px; color:var(--muted); white-space:nowrap; flex:none; }
   .prow .fbadge{ flex:none; }
   .pbk-law{ background:#1f6f43; }
@@ -238,19 +239,19 @@
   .qsbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 14px; }
   .qslabel{ font-size:12px; color:var(--muted); font-weight:700; }
   .qschipw{ display:inline-flex; align-items:stretch; }
-  .qschip{ font-size:12.5px; padding:5px 11px; border-radius:16px 0 0 16px; cursor:pointer; background:#16223a; color:var(--tx); border:1px solid #2b66c0; border-right:0; }
-  .qschip:hover{ background:#1c3a63; color:#fff; }
-  .qsdel{ font-size:10px; cursor:pointer; background:#16223a; color:#7f93b5; border:1px solid #2b66c0; border-left:0; border-radius:0 16px 16px 0; padding:0 8px; }
+  .qschip{ font-size:12.5px; padding:5px 11px; border-radius:16px 0 0 16px; cursor:pointer; background:var(--ctl); color:var(--tx); border:1px solid #2b66c0; border-right:0; }
+  .qschip:hover{ background:var(--ctlh); color:#fff; }
+  .qsdel{ font-size:10px; cursor:pointer; background:var(--ctl); color:#7f93b5; border:1px solid #2b66c0; border-left:0; border-radius:0 16px 16px 0; padding:0 8px; }
   .qsdel:hover{ background:#3a1620; color:#f87171; border-color:#f87171; }
-  .qsadd{ font-size:12px; padding:5px 11px; border-radius:16px; cursor:pointer; background:#13243f; color:var(--lnk); border:1px dashed #2b66c0; }
-  .qsadd:hover{ background:#1c3a63; color:#fff; }
+  .qsadd{ font-size:12px; padding:5px 11px; border-radius:16px; cursor:pointer; background:var(--ctl); color:var(--lnk); border:1px dashed #2b66c0; }
+  .qsadd:hover{ background:var(--ctlh); color:#fff; }
   .qsrst{ border-style:solid; color:var(--muted); }
   .homeintro{ color:var(--muted); font-size:13px; line-height:1.8; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:11px 14px; margin:2px 0 16px; }
   .feedhead{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; border-left:3px solid var(--accent); padding-left:10px; }
   .feedtitle{ font-size:16px; font-weight:700; color:var(--txh); }
   .feedmeta{ font-size:12px; color:var(--muted); }
   .feedchips{ display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 4px; }
-  .fchipbtn{ font-size:12px; padding:5px 11px; border-radius:16px; cursor:pointer; user-select:none; background:#16223a; color:var(--tx); border:1px solid var(--line); }
+  .fchipbtn{ font-size:12px; padding:5px 11px; border-radius:16px; cursor:pointer; user-select:none; background:var(--ctl); color:var(--tx); border:1px solid var(--line); }
   .fchipbtn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
   .fc-law{ border-color:#2b66c0; color:var(--lnk); }
   .fc-law.on{ background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
@@ -262,8 +263,8 @@
   .fttl:hover{ color:var(--lnk); text-decoration:underline; }
   .fnew{ margin-left:7px; font-size:10px; font-weight:700; color:#0b1220; background:#fbbf24; border-radius:4px; padding:1px 5px; }
   .fchips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-  .fchip{ font-size:11px; padding:2px 8px; border-radius:6px; background:#13243f; color:var(--lnk); border:1px solid #2b66c0; text-decoration:none; white-space:nowrap; }
-  .fchip:hover{ background:#1c3a63; color:var(--tx); }
+  .fchip{ font-size:11px; padding:2px 8px; border-radius:6px; background:var(--ctl); color:var(--lnk); border:1px solid #2b66c0; text-decoration:none; white-space:nowrap; }
+  .fchip:hover{ background:var(--ctlh); color:var(--tx); }
   .fk{ margin-left:6px; font-size:10px; font-weight:700; padding:0 5px; border-radius:4px; background:#475569; color:#fff; }
   .fk.k-パブコメ{ background:#b45309; } .fk.k-改正{ background:#1d4ed8; } .fk.k-公布{ background:#15803d; }
   .fk.k-ガイドライン{ background:#7c3aed; } .fk.k-告示,.fk.k-通達等{ background:#475569; }
@@ -275,14 +276,14 @@
   /* 上下リサイズ用バー（高さを掴んで変更） */
   #vsplit{ height:14px; cursor:row-resize; position:relative; margin:0 2px; }
   #vsplit::before{ content:""; position:absolute; left:0; right:0; top:6px; height:2px; background:var(--line); border-radius:2px; }
-  #vsplit::after{ content:"⋯"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:16px; letter-spacing:2px; color:#5f7196; background:#16223a; border:1px solid #2b66c0; border-radius:6px; padding:0 8px; line-height:1.2; }
+  #vsplit::after{ content:"⋯"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:16px; letter-spacing:2px; color:#5f7196; background:var(--ctl); border:1px solid #2b66c0; border-radius:6px; padding:0 8px; line-height:1.2; }
   #vsplit:hover::before, #vsplit.drag::before{ background:var(--accent); }
   #vsplit:hover::after, #vsplit.drag::after{ color:var(--tx); border-color:var(--accent); }
   #hsplit{ flex:0 0 16px; align-self:stretch; cursor:col-resize; position:relative; }
   #hsplit::before{ content:""; position:absolute; left:7px; top:0; bottom:0; width:2px; background:var(--line); border-radius:2px; }
   /* ドラッグ可能と分かるグリップ（⋮）を中央に表示 */
   #hsplit::after{ content:"⋮⋮"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); writing-mode:vertical-rl;
-    letter-spacing:-3px; font-size:14px; color:#5f7196; background:#16223a; border:1px solid #2b66c0; border-radius:6px; padding:8px 1px; line-height:1; }
+    letter-spacing:-3px; font-size:14px; color:#5f7196; background:var(--ctl); border:1px solid #2b66c0; border-radius:6px; padding:8px 1px; line-height:1; }
   #hsplit:hover::before, #hsplit.drag::before{ background:var(--accent); }
   #hsplit:hover::after, #hsplit.drag::after{ color:var(--tx); border-color:var(--accent); }
   .fitem{ cursor:pointer; border-radius:8px; }
@@ -295,7 +296,7 @@
   .rvdate{ color:var(--muted); font-size:12px; }
   .rvext{ margin-left:auto; font-size:12px; color:var(--lnk); text-decoration:none; }
   .rvext:hover{ text-decoration:underline; }
-  .rvclose{ background:#16223a; color:var(--tx); border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:13px; padding:2px 9px; }
+  .rvclose{ background:var(--ctl); color:var(--tx); border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:13px; padding:2px 9px; }
   .rvtitle{ font-size:13.5px; font-weight:700; padding:10px 12px 4px; line-height:1.5; flex:none; }
   #regview .fchips{ padding:0 12px 8px; flex:none; }
   .rvframe{ flex:1; width:100%; border:0; background:#fff; }
@@ -315,8 +316,8 @@
   .ai-txt{ white-space:pre-wrap; }
   .ai-by{ margin-top:5px; font-size:10px; color:#7f93b5; }
   .ai-laws{ display:flex; flex-wrap:wrap; gap:6px; }
-  .ai-law{ font-size:11.5px; padding:3px 9px; border-radius:7px; background:#13243f; color:var(--lnk); border:1px solid #2b66c0; text-decoration:none; }
-  .ai-law:hover{ background:#1c3a63; color:#fff; }
+  .ai-law{ font-size:11.5px; padding:3px 9px; border-radius:7px; background:var(--ctl); color:var(--lnk); border:1px solid #2b66c0; text-decoration:none; }
+  .ai-law:hover{ background:var(--ctlh); color:#fff; }
   /* 実務影響タグ（種別ごとに色を固定＝意味の一貫性）。aml=橙系/cust=青/fin=緑/reg=紫/gov=赤系/sys=シアン */
   .itag{ display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin:0 5px 5px 0; border:1px solid transparent; }
   .it-aml{ background:rgba(194,65,12,.18); color:#fb923c; border-color:rgba(194,65,12,.5); }
@@ -326,7 +327,7 @@
   .it-gov{ background:rgba(190,24,93,.18); color:#f472b6; border-color:rgba(190,24,93,.5); }
   .it-sys{ background:rgba(13,148,136,.18); color:#2dd4bf; border-color:rgba(13,148,136,.5); }
   /* 条文の「やさしく解説」 */
-  .aiart{ margin:4px 0 0; font-size:11px; cursor:pointer; background:#13202f; color:var(--lnk); border:1px solid var(--line); border-radius:7px; padding:3px 10px; }
+  .aiart{ margin:4px 0 0; font-size:11px; cursor:pointer; background:var(--ctl); color:var(--lnk); border:1px solid var(--line); border-radius:7px; padding:3px 10px; }
   .aiart:hover{ border-color:var(--accent); color:var(--tx); }
   body.mode-learner .aiart{ display:none; }   /* 学習者モードは条文に集中＝AIボタンも隠す（既存方針に追従） */
   .aiart-panel{ margin:7px 0 2px; padding:9px 11px; background:var(--card); border:1px solid #21406e; border-radius:9px; display:flex; flex-direction:column; gap:7px; }
@@ -366,7 +367,7 @@
   #doc[data-pd]:not(.foldall) .p.pk{ outline:1px dotted rgba(159,208,255,.45); outline-offset:1px; border-radius:3px; }
   /* カッコ深さ操作バー */
   #pctl{ margin-top:9px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
-  #pctl button{ background:#16223a; color:var(--tx); border:1px solid var(--line); border-radius:7px; padding:4px 9px; font-size:12px; cursor:pointer; }
+  #pctl button{ background:var(--ctl); color:var(--tx); border:1px solid var(--line); border-radius:7px; padding:4px 9px; font-size:12px; cursor:pointer; }
   #pctl button:hover{ border-color:var(--accent); }
   #pctl-state{ color:var(--lnk); font-weight:700; }
   /* 本文中の法令参照リンク（法第N条…） */
@@ -375,7 +376,7 @@
   /* 法令中の表（読替表等） */
   .body .lawtbl{ border-collapse:collapse; margin:10px 0; width:100%; white-space:normal; }
   .body .lawtbl th, .body .lawtbl td{ border:1px solid #3a4a66; padding:6px 9px; vertical-align:top; text-align:left; font-size:13px; line-height:1.7; white-space:pre-wrap; }
-  .body .lawtbl th{ background:#16223a; color:var(--tx); font-weight:700; white-space:nowrap; }
+  .body .lawtbl th{ background:var(--ctl); color:var(--tx); font-weight:700; white-space:nowrap; }
   .body .lawtbl tr:nth-child(even) td{ background:rgba(255,255,255,.03); }
   .body .pa{ scroll-margin-top:70px; }                                  /* 項アンカー（行頭の項番号） */
   .body .pa.hit{ background:rgba(255,210,80,.9); color:#1a1a1a; border-radius:3px; padding:0 3px; }  /* ジャンプ先の項を強調 */
@@ -386,7 +387,7 @@
     #side{ position:fixed; z-index:20; height:100%; left:0; top:0; transform:translateX(-105%); transition:transform .25s; box-shadow:0 0 40px rgba(0,0,0,.6); width:300px !important; }
     #side.open{ transform:translateX(0); }
     #sideSplit{ display:none; }                  /* モバイルはサイドバーがオフキャンバス＝幅変更不要 */
-    #burger{ display:inline-block; background:#16223a; color:var(--tx); border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:16px; cursor:pointer; margin-bottom:8px; }
+    #burger{ display:inline-block; background:var(--ctl); color:var(--tx); border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:16px; cursor:pointer; margin-bottom:8px; }
   }
   /* ===== プロ仕様リファイン（Bloomberg/LexisNexis 志向・2026-06-20 恒久方針） ===== */
   :root{ --radius:5px; --hair:#1e2840; --accent2:#c9a24b; --fg2:#cdd9ef; --card:#0f1d33; }   /* スクエア寄り・hairline・抑えた暖色アクセント・全フレーム共通色 */
@@ -420,7 +421,7 @@
   /* ===== ライトテーマ（LexisNexis 風・白基調。#themeBtn で切替） ===== */
   body.light{ --bg:#eef1f6; --panel:#ffffff; --line:#d3dae6; --hair:#e7ebf2; --card:#ffffff;
     --fg:#1b2433; --muted:#5b6a82; --accent:#2257b8; --accent2:#9c7322; --fg2:#24324a;
-    --tx:#1f2a3d; --txh:#16263f; --lnk:#2257b8;
+    --tx:#1f2a3d; --txh:#16263f; --lnk:#2257b8; --ctl:#ffffff; --ctlh:#eef3fb;
     background:var(--bg); color:var(--fg); }
   body.light #top{ background:rgba(255,255,255,.96); }
   body.light #brandLogo{ filter:invert(1) brightness(.16); }            /* 白ロゴ→濃色（白地で視認） */
