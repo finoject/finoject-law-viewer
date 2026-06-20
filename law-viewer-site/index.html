@@ -495,7 +495,7 @@
       <input id="search" placeholder="法令内検索" class="hidden">
       <div id="pctl" class="hidden">
         <span class="pctl-help" title="入れ子のカッコを段階的に畳む">（　）:</span>
-        <button data-pa="all" title="全部表示">全部</button>
+        <button data-pa="all" title="全文（カッコを全て表示）">全文</button>
         <button data-pa="less" title="深い所から畳む">－ 畳む</button>
         <button data-pa="more" title="一段戻す">＋ 戻す</button>
         <button data-pa="skel" title="骨組みのみ">骨組み</button>
@@ -1891,11 +1891,12 @@ function applyParen(){
   if (pDepth > mx) doc.removeAttribute('data-pd'); else doc.setAttribute('data-pd', pDepth);   // クラス1発（全走査なし）
   doc.classList.toggle('foldall', pDepth<=mx && pDepth<=1);   // 「基本構造のみ」は定義カッコも含め全て畳む（完全な骨組み）
   const st = $('#pctl-state');
-  if (st) st.textContent = '［状態: ' + ((pDepth > mx) ? '全部表示' : (pDepth <= 1 ? '基本構造（カッコ省略）' : ('深さ '+(pDepth-1)+' まで'))) + '］';
+  if (st) st.textContent = '［状態: ' + ((pDepth > mx) ? '全文' : (pDepth <= 1 ? '骨組み（カッコ省略）' : ('深さ '+(pDepth-1)+' まで'))) + '］';
 }
 $('#pctl').addEventListener('click', e => {
   const a = e.target.getAttribute('data-pa'); if (!a) return;
-  const mx = curMaxDepth;
+  let mx = 0; document.querySelectorAll('#doc .p[data-d]').forEach(el=>{ const d=+el.getAttribute('data-d'); if(d>mx) mx=d; });  // 実DOMから最大カッコ深さを都度算出＝curMaxDepth未設定/陳腐化でも確実に動く
+  curMaxDepth = mx;
   if (a==='all') pDepth = mx + 1;
   else if (a==='skel') pDepth = 1;
   else if (a==='less') pDepth = Math.max(1, (pDepth > mx ? mx + 1 : pDepth) - 1);
