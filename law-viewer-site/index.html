@@ -480,7 +480,6 @@
       <div class="topbtns">
         <button id="burger">☰ 法令</button>
         <button id="home">ホーム</button>
-        <button id="modeBtn" class="modebtn" title="表示切替"></button>
         <button id="themeBtn" class="modebtn" title="ライト/ダーク切替"></button>
       </div>
       <input id="gsearch" placeholder="全法令検索">
@@ -498,7 +497,7 @@
         <button data-pa="all" title="全文（カッコを全て表示）">全文</button>
         <button data-pa="less" title="深い所から畳む">－ 畳む</button>
         <button data-pa="more" title="一段戻す">＋ 戻す</button>
-        <button data-pa="skel" title="骨組みのみ">骨組み</button>
+        <button data-pa="skel" title="基本構造（カッコ省略）">基本構造</button>
         <span id="pctl-state"></span>
       </div>
     </div>
@@ -675,9 +674,8 @@ function renderRegFeed(){
     // 行クリックで右の本文ビューアに表示（画面遷移しない）。📖チップはstopPropagationで法令ビューへ。
     // 📖法令リンク（種別バッジ含む）は「法令リンクあり」フィルタを押したときだけ表示＝既定の一覧は全項目同じ見た目に統一（三根さん指摘：押していないのに一部だけ法令情報が出るのは不整合）。
     const refsHtml = (homeFilterAg==='__lawlinked__') ? homeRefsHtml(it) : '';
-    const sum1 = (Array.isArray(it.aiSummary)&&it.aiSummary[0]) ? `<div class="fsum1">${esc(it.aiSummary[0])}</div>` : '';   // 事前生成要点の1行プレビュー
     html += `<div class="fitem" data-idx="${idx}" onclick="openRegView(${idx})"><span class="fbadge" style="background:${c}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
-      + `<div class="fbody"><span class="fttl">${esc(it.title)}</span>${isNew?'<span class="fnew">NEW</span>':''}${refsHtml}${sum1}</div></div>`;
+      + `<div class="fbody"><span class="fttl">${esc(it.title)}</span>${isNew?'<span class="fnew">NEW</span>':''}${refsHtml}</div></div>`;
   });
   if(items.length>SHOWN) html += `<div class="rmore">ほか ${items.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`;
   box.innerHTML=html;
@@ -859,10 +857,9 @@ function portalRow(x){
     const c=REG_COLORS[x.agency]||'#64748b';
     const imp=(x.refs&&x.refs.length)?'<span class="pimp" title="条文に紐づく更新">重要</span>':'';   // 法令条文に紐づく更新＝実務影響が大きい目印
     const refs=(x.refs&&x.refs.length)?'<span class="pref">§'+esc((x.refs[0].label||'').replace(/\s*第.+$/,''))+(x.refs.length>1?` ほか${x.refs.length-1}`:'')+'</span>':'';
-    const sum=(Array.isArray(x.aiSummary)&&x.aiSummary.length)   // 事前生成の3行要点を一覧に直接表示（クリック不要）
-      ? '<div class="psum">'+x.aiSummary.map(l=>'<div class="psl">'+esc(l)+'</div>').join('')+'</div>' : '';
-    return `<div class="prow${sum?' has-sum':''}" onclick="openRegViewItem(${x.gi})" title="クリックで右側に本文を表示">`
-      + `<div class="prow-h"><span class="pdate">${d}</span><span class="fbadge" style="background:${c}">${esc(REG_SHORT[x.agency]||x.agency)}</span><span class="ptitle">${esc(x.title)}</span>${imp}${refs}</div>${sum}</div>`;
+    // 一覧(本日/直近7日)ではAI要約を出さない＝表示の有無のバラつきを排除。要約は項目クリック時の右ペイン理解パネルで表示。
+    return `<div class="prow" onclick="openRegViewItem(${x.gi})" title="クリックで右側に本文を表示">`
+      + `<div class="prow-h"><span class="pdate">${d}</span><span class="fbadge" style="background:${c}">${esc(REG_SHORT[x.agency]||x.agency)}</span><span class="ptitle">${esc(x.title)}</span>${imp}${refs}</div></div>`;
   }
   const ch=x.changed?'<span class="pimp" title="直近の自動巡回でデータが変化">改正反映</span>':'';
   return `<div class="prow" onclick="openLaw('${x.lawId}')" title="クリックで条文を開く"><span class="pdate">${d}</span><span class="fbadge pbk-law">法令</span><span class="ptitle">${esc(x.title)}</span>${ch}</div>`;
@@ -1851,16 +1848,8 @@ $('#expMd').addEventListener('click', ()=>exportLaw('md'));
 $('#expJson').addEventListener('click', ()=>exportLaw('json'));
 $('#expPrint').addEventListener('click', ()=>{ closeLawView && closeLawView(); window.print(); });
 
-// ===== 実務者/学習者モード（表示粒度の切替）=====
-// 学習者: 条文に集中（規制動向パネル・条文の📡バッジを隠し、行間を広げる）。実務者: 全部表示（既定）。
-let appMode = localStorage.getItem('appMode') || 'pro';
-function applyMode(){
-  document.body.classList.toggle('mode-learner', appMode==='learner');
-  const b=document.getElementById('modeBtn');
-  if(b) b.textContent = appMode==='learner' ? '学習者' : '実務者';
-}
-$('#modeBtn').addEventListener('click', ()=>{ appMode = appMode==='learner' ? 'pro' : 'learner'; localStorage.setItem('appMode', appMode); applyMode(); });
-applyMode();
+// 表示は「実務者（全部表示）」固定。学習者モード切替ボタンは廃止（Bloomberg的に不要・三根さん指示2026-06-20）。
+document.body.classList.remove('mode-learner');
 
 // ===== ライト/ダーク テーマ切替（LexisNexis 風の明るい配色も選べる） =====
 let theme = localStorage.getItem('theme') || 'dark';
@@ -1891,7 +1880,7 @@ function applyParen(){
   if (pDepth > mx) doc.removeAttribute('data-pd'); else doc.setAttribute('data-pd', pDepth);   // クラス1発（全走査なし）
   doc.classList.toggle('foldall', pDepth<=mx && pDepth<=1);   // 「基本構造のみ」は定義カッコも含め全て畳む（完全な骨組み）
   const st = $('#pctl-state');
-  if (st) st.textContent = '［状態: ' + ((pDepth > mx) ? '全文' : (pDepth <= 1 ? '骨組み（カッコ省略）' : ('深さ '+(pDepth-1)+' まで'))) + '］';
+  if (st) st.textContent = '［状態: ' + ((pDepth > mx) ? '全文' : (pDepth <= 1 ? '基本構造（カッコ省略）' : ('深さ '+(pDepth-1)+' まで'))) + '］';
 }
 $('#pctl').addEventListener('click', e => {
   const a = e.target.getAttribute('data-pa'); if (!a) return;
