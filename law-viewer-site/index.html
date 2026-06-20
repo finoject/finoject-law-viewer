@@ -80,7 +80,7 @@
   .gsec{ font-size:14px; font-weight:700; color:#bcd0f0; margin:18px 0 4px; border-left:3px solid var(--accent); padding-left:8px; }
   .gsec span{ font-weight:400; color:var(--muted); font-size:12px; }
   .ghit{ display:block; text-decoration:none; color:var(--fg); border:1px solid var(--line); border-radius:8px;
-    padding:8px 11px; margin:6px 0; background:#0f1a2e; font-size:13px; line-height:1.7; }
+    padding:8px 11px; margin:6px 0; background:var(--card); font-size:13px; line-height:1.7; }
   .ghit:hover{ border-color:var(--accent); background:#13243f; }
   .ghit .gnum{ font-weight:700; color:#7fb0ff; }
   .ghit .gcap{ color:var(--muted); margin-left:6px; }
@@ -98,7 +98,7 @@
   .art.target{ background:rgba(46,108,240,.12); border-radius:8px; }
   mark{ background:var(--hi); color:#0b1220; border-radius:2px; padding:0 1px; }
   /* 規制動向パネル（逆引き）＋条文バッジ */
-  .regpanel{ border:1px solid #2b66c0; background:#0e1a2e; border-radius:10px; padding:8px 12px; margin:4px 0 16px; }
+  .regpanel{ border:1px solid #2b66c0; background:var(--card); border-radius:10px; padding:8px 12px; margin:4px 0 16px; }
   .regpanel>summary{ cursor:pointer; font-weight:700; color:#8fd0ff; font-size:14px; list-style:none; }
   .regpanel>summary::-webkit-details-marker{ display:none; }
   .regpanel>summary::before{ content:'▾ '; }
@@ -133,7 +133,7 @@
   .dstatus.d-dead{ background:#6b7280; }     /* 廃案・否決・撤回・審査未了 */
   /* 条文エリアに差し込む本文ビューア（パネル項目クリック時） */
   #lawview{ display:flex; flex-direction:column; height:calc(100vh - 150px); min-height:560px; margin-top:4px;
-    border:1px solid #2b66c0; border-radius:10px; overflow:hidden; background:#0e1a2e; }
+    border:1px solid #2b66c0; border-radius:10px; overflow:hidden; background:var(--card); }
   #lawview.hidden{ display:none; }
   .lvbar{ display:flex; align-items:center; gap:10px; padding:8px 11px; border-bottom:1px solid var(--line); flex:none; }
   .lvback{ background:#1d4ed8; color:#fff; border:0; border-radius:7px; cursor:pointer; font-size:13px; font-weight:700; padding:6px 13px; }
@@ -143,7 +143,7 @@
   .lvlink{ cursor:pointer; }
   /* 参照条文のホバー・プレビュー */
   #refpop{ position:fixed; z-index:50; max-width:520px; max-height:46vh; overflow:auto;
-    background:#0e1a2e; border:1px solid #2b66c0; border-radius:10px; padding:11px 14px;
+    background:var(--card); border:1px solid #2b66c0; border-radius:10px; padding:11px 14px;
     box-shadow:0 10px 34px rgba(0,0,0,.55); font-size:13px; line-height:1.85; }
   #refpop.hidden{ display:none; }
   #refpop .rphead{ border-bottom:1px solid var(--line); padding-bottom:5px; margin-bottom:6px; }
@@ -178,7 +178,7 @@
   /* トップ画面の規制ウォッチ・フィード */
   .home{ padding-bottom:40px; }
   /* ブロック並び替え（ドラッグ） */
-  .layoutbar{ font-size:11.5px; color:var(--muted); background:#0e1a2e; border:1px dashed #2b66c0; border-radius:8px; padding:6px 10px; margin:2px 0 10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .layoutbar{ font-size:11.5px; color:var(--muted); background:var(--card); border:1px dashed #2b66c0; border-radius:8px; padding:6px 10px; margin:2px 0 10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .lreset,.lshow{ font-size:11px; padding:3px 9px; border-radius:6px; cursor:pointer; background:#16223a; color:#cfe0ff; border:1px solid var(--line); }
   .lreset:hover,.lshow:hover{ border-color:var(--accent); }
   .lshow{ margin-left:5px; border-color:#2b66c0; color:#8fd0ff; }
@@ -195,7 +195,7 @@
   /* 最上部の市況バー（ドル円・日経・ダウ・BTC） */
   .mkt{ margin:2px 0 10px; }
   .mkrow{ display:flex; flex-wrap:wrap; gap:6px; }
-  .mkc{ flex:1 1 0; min-width:108px; background:#0f1d33; border:1px solid var(--line); border-radius:5px; padding:6px 9px; display:flex; flex-direction:column; gap:0; }
+  .mkc{ flex:1 1 0; min-width:108px; background:var(--card); border:1px solid var(--line); border-radius:5px; padding:6px 9px; display:flex; flex-direction:column; gap:0; }
   .mkl{ font-size:11px; color:var(--muted); }
   .mkstale{ margin-left:5px; font-size:9px; font-weight:700; color:#9fb3d4; background:#26334d; border-radius:4px; padding:0 4px; vertical-align:middle; }
   .mkc-stale .mkv{ color:#b8c6dd; }
@@ -206,11 +206,11 @@
   .mksrc{ font-size:10px; color:var(--muted); margin-top:4px; line-height:1.5; }
   @media (max-width:640px){ .mkc{ min-width:calc(50% - 6px); } .mkv{ font-size:15px; } }
   /* 最上部「本日の更新／直近7日の更新」ポータル */
-  .ptop{ background:#0f1d33; border:1px solid var(--line); border-radius:7px; padding:9px 12px 6px; margin:2px 0 10px; }
+  .ptop{ background:var(--card); border:1px solid var(--line); border-radius:7px; padding:9px 12px 6px; margin:2px 0 10px; }
   .ptophd{ font-size:12.5px; font-weight:700; letter-spacing:.04em; color:var(--muted); margin-bottom:8px; border-left:2px solid var(--accent2); padding-left:7px; }
   .ptophint{ display:block; font-size:11px; font-weight:400; color:var(--muted); margin-top:2px; }
   .pcols{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .pblk{ background:#0e1a2e; border:1px solid var(--line); border-radius:9px; padding:9px 11px; min-width:0; }
+  .pblk{ background:var(--card); border:1px solid var(--line); border-radius:9px; padding:9px 11px; min-width:0; }
   .pblkh{ font-size:13px; font-weight:700; color:#bcd0f0; margin-bottom:6px; display:flex; align-items:baseline; gap:7px; }
   .pblkh b{ color:#9fd0ff; }
   .pblksub{ font-size:11px; font-weight:400; color:var(--muted); margin-left:auto; }
@@ -232,7 +232,7 @@
   .fsum1{ color:#90a4c6; font-size:11.5px; line-height:1.45; margin-top:2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .pmore{ font-size:11.5px; color:var(--muted); padding:6px 2px 2px; }
   @media (max-width:760px){ .pcols{ grid-template-columns:1fr; } }
-  .homepurpose{ font-size:14px; line-height:1.7; color:var(--fg); background:linear-gradient(180deg,#10243f,#0e1a2e); border:1px solid #2b66c0; border-radius:10px; padding:12px 15px; margin:2px 0 10px; }
+  .homepurpose{ font-size:14px; line-height:1.7; color:var(--fg); background:var(--card); border:1px solid #2b66c0; border-radius:10px; padding:12px 15px; margin:2px 0 10px; }
   .homepurpose .hp-aud{ color:var(--muted); font-size:12px; }
   .qsbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 14px; }
   .qslabel{ font-size:12px; color:var(--muted); font-weight:700; }
@@ -244,7 +244,7 @@
   .qsadd{ font-size:12px; padding:5px 11px; border-radius:16px; cursor:pointer; background:#13243f; color:#8fd0ff; border:1px dashed #2b66c0; }
   .qsadd:hover{ background:#1c3a63; color:#fff; }
   .qsrst{ border-style:solid; color:#9fb3d4; }
-  .homeintro{ color:var(--muted); font-size:13px; line-height:1.8; background:#0e1a2e; border:1px solid var(--line); border-radius:10px; padding:11px 14px; margin:2px 0 16px; }
+  .homeintro{ color:var(--muted); font-size:13px; line-height:1.8; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:11px 14px; margin:2px 0 16px; }
   .feedhead{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; border-left:3px solid var(--accent); padding-left:10px; }
   .feedtitle{ font-size:16px; font-weight:700; color:#bcd0f0; }
   .feedmeta{ font-size:12px; color:var(--muted); }
@@ -285,10 +285,10 @@
   #hsplit:hover::before, #hsplit.drag::before{ background:var(--accent); }
   #hsplit:hover::after, #hsplit.drag::after{ color:#cfe0ff; border-color:var(--accent); }
   .fitem{ cursor:pointer; border-radius:8px; }
-  .fitem:hover{ background:#0e1a2e; }
+  .fitem:hover{ background:var(--card); }
   .fitem.sel{ background:rgba(46,108,240,.16); outline:1px solid #2b66c0; }
   #regview{ flex:1 1 0; min-width:0; height:100%; min-height:0;
-    border:1px solid var(--line); border-radius:10px; background:#0e1a2e; overflow:hidden; display:flex; flex-direction:column; }
+    border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; display:flex; flex-direction:column; }
   .rvhint{ color:var(--muted); font-size:13px; padding:28px 18px; text-align:center; margin:auto; }
   .rvhead{ display:flex; align-items:center; gap:9px; padding:9px 11px; border-bottom:1px solid var(--line); flex:none; }
   .rvdate{ color:var(--muted); font-size:12px; }
@@ -308,7 +308,7 @@
   .rvorigh{ font-size:11px; font-weight:700; color:var(--muted); padding:6px 12px 0; flex:none; }
   .ai-load{ font-size:12px; color:var(--muted); } .ai-load::after{ content:'…'; }
   .ai-empty{ font-size:12px; color:var(--muted); }
-  .ai-placeholder{ font-size:12px; color:var(--muted); line-height:1.7; background:#10243f; border:1px dashed #2b66c0; border-radius:8px; padding:8px 10px; }
+  .ai-placeholder{ font-size:12px; color:var(--muted); line-height:1.7; background:var(--card); border:1px dashed #2b66c0; border-radius:8px; padding:8px 10px; }
   .ai-placeholder b{ color:#cfe0ff; } .ai-note{ display:block; margin-top:4px; color:#7f93b5; font-size:11px; }
   .ai-lines{ margin:0; padding-left:18px; } .ai-lines li{ margin:2px 0; }
   .ai-txt{ white-space:pre-wrap; }
@@ -328,7 +328,7 @@
   .aiart{ margin:4px 0 0; font-size:11px; cursor:pointer; background:#13202f; color:#8fb6e8; border:1px solid var(--line); border-radius:7px; padding:3px 10px; }
   .aiart:hover{ border-color:var(--accent); color:#cfe0ff; }
   body.mode-learner .aiart{ display:none; }   /* 学習者モードは条文に集中＝AIボタンも隠す（既存方針に追従） */
-  .aiart-panel{ margin:7px 0 2px; padding:9px 11px; background:#0e1a2e; border:1px solid #21406e; border-radius:9px; display:flex; flex-direction:column; gap:7px; }
+  .aiart-panel{ margin:7px 0 2px; padding:9px 11px; background:var(--card); border:1px solid #21406e; border-radius:9px; display:flex; flex-direction:column; gap:7px; }
   .aiart-panel.hidden{ display:none; }
   @media(max-width:860px){
     .homecols{ flex-direction:column; height:auto !important; }
@@ -388,7 +388,9 @@
     #burger{ display:inline-block; background:#16223a; color:#cfe0ff; border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:16px; cursor:pointer; margin-bottom:8px; }
   }
   /* ===== プロ仕様リファイン（Bloomberg/LexisNexis 志向・2026-06-20 恒久方針） ===== */
-  :root{ --radius:5px; --hair:#1e2840; --accent2:#c9a24b; --fg2:#cdd9ef; }   /* スクエア寄り・hairline・抑えた暖色アクセント */
+  :root{ --radius:5px; --hair:#1e2840; --accent2:#c9a24b; --fg2:#cdd9ef; --card:#0f1d33; }   /* スクエア寄り・hairline・抑えた暖色アクセント・全フレーム共通色 */
+  /* フレーム枠線も統一（青のバラつきを排し hairline に） */
+  .regpanel,#lawview,#refpop,.aiart-panel,.pblk,.homeintro,.ai-placeholder,.layoutbar{ border-color:var(--line)!important; }
   html,body{ font-family:"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;
     -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   /* 角を締める：丸ピル→ややスクエア（端末・法務DBの規律感） */
@@ -411,11 +413,11 @@
   #side h1{ letter-spacing:.01em; font-weight:700; }
   /* 右上ロゴ（finoject・白・透過。背景は #top と同色＝シームレス） */
   #top{ position:relative; }
-  #brandLogo{ position:absolute; top:10px; right:18px; height:28px; width:auto; opacity:.96; pointer-events:none; user-select:none; }
-  @media(max-width:860px){ #brandLogo{ height:22px; top:11px; right:12px; } }
+  #brandLogo{ position:absolute; top:8px; right:18px; height:56px; width:auto; opacity:.96; pointer-events:none; user-select:none; }
+  @media(max-width:860px){ #brandLogo{ height:40px; top:9px; right:12px; } }
 
   /* ===== ライトテーマ（LexisNexis 風・白基調。#themeBtn で切替） ===== */
-  body.light{ --bg:#eef1f6; --panel:#ffffff; --line:#d3dae6; --hair:#e7ebf2;
+  body.light{ --bg:#eef1f6; --panel:#ffffff; --line:#d3dae6; --hair:#e7ebf2; --card:#ffffff;
     --fg:#1b2433; --muted:#5b6a82; --accent:#2257b8; --accent2:#9c7322; --fg2:#24324a;
     background:var(--bg); color:var(--fg); }
   body.light #top{ background:rgba(255,255,255,.96); }
@@ -700,13 +702,28 @@ const AIX = {
     finally{ clearTimeout(timer); }
   },
   async explainUpdate(it){                         // 規制更新の3行要点（何が起きたか/誰に/どの論点）
+    const sig = 'u:'+(it.url||it.title||'')+'|'+(it.date||'');
+    const c = AIXCACHE.get(sig); if(c) return c;   // 一度生成したら端末にキャッシュ＝開くたびに再生成しない
     const r = await this.call('update', {title:it.title, agency:it.agency, date:it.date, lawrefs:(it.lawrefs||[]).map(x=>x.label)});
-    return (r && Array.isArray(r.lines)) ? {lines:r.lines, source:'ai'} : null;
+    const out = (r && Array.isArray(r.lines)) ? {lines:r.lines, source:'ai'} : null;
+    if(out) AIXCACHE.set(sig, out);
+    return out;
   },
   async explainArticle(p){                         // 条文の平易な解説（何を言っているか/実務でどこで効くか/確認点）
+    const sig = 'a:'+(p.law||'')+':'+(p.num||'');
+    const c = AIXCACHE.get(sig); if(c) return c;   // 同上＝同じ条文は再生成しない（初回のみ生成）
     const r = await this.call('article', {law:p.law, num:p.num, body:(p.body||'').slice(0,4000)});
-    return (r && r.text) ? {text:r.text, points:r.points||[], source:'ai'} : null;
+    const out = (r && r.text) ? {text:r.text, points:r.points||[], source:'ai'} : null;
+    if(out) AIXCACHE.set(sig, out);
+    return out;
   },
+};
+// AI結果の端末内キャッシュ（localStorage）。事前生成(夜間バッチ)が無い項目も「初回のみ生成→以後は即時・再生成なし」にする。
+const AIXCACHE = {
+  _k(s){ let h=5381; for(let i=0;i<s.length;i++) h=((h*33)^s.charCodeAt(i))>>>0; return 'aix_'+h.toString(36); },
+  get(sig){ try{ const v=localStorage.getItem(this._k(sig)); return v?JSON.parse(v):null; }catch(e){ return null; } },
+  set(sig,val){ try{ localStorage.setItem(this._k(sig), JSON.stringify(val)); }
+    catch(e){ try{ Object.keys(localStorage).filter(k=>k.indexOf('aix_')===0).forEach(k=>localStorage.removeItem(k)); localStorage.setItem(this._k(sig), JSON.stringify(val)); }catch(_){} } }
 };
 // 実務影響タグ（キーワード抽出・非AIでも即時に有用。種別ごとに色を固定＝意味の一貫性）
 const IMPACT_TAGS = [
