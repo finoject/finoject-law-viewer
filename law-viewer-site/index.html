@@ -415,8 +415,11 @@
   #side h1{ letter-spacing:.01em; font-weight:700; }
   /* 右上ロゴ（finoject・白・透過。背景は #top と同色＝シームレス） */
   #top{ position:relative; }
-  #brandLogo{ position:absolute; top:18px; right:18px; height:56px; width:auto; opacity:.96; pointer-events:none; user-select:none; }
-  @media(max-width:860px){ #brandLogo{ height:40px; top:12px; right:12px; } }
+  /* 白PNGロゴをマスクにして任意色で着色（dark=白／light=YInMnブルー #2e5090）。ブランドガイドライン準拠 */
+  #brandLogo{ position:absolute; top:18px; right:18px; width:121px; height:56px; opacity:.96; pointer-events:none; user-select:none;
+    background-color:var(--logo,#fff);
+    -webkit-mask:url(logo.png) no-repeat center / contain; mask:url(logo.png) no-repeat center / contain; }
+  @media(max-width:860px){ #brandLogo{ width:86px; height:40px; top:12px; right:12px; } }
 
   /* ===== ライトテーマ（LexisNexis 風・白基調。#themeBtn で切替） ===== */
   body.light{ --bg:#ffffff; --panel:#ffffff; --line:#d8dee8; --hair:#e7ebf2; --card:#ffffff;
@@ -424,7 +427,7 @@
     --tx:#1f2a3d; --txh:#16263f; --lnk:#2257b8; --ctl:#ffffff; --ctlh:#eef3fb;
     background:var(--bg); color:var(--fg); }
   body.light #top{ background:rgba(255,255,255,.96); }
-  body.light #brandLogo{ filter:invert(1) brightness(.16); }            /* 白ロゴ→濃色（白地で視認） */
+  body.light #brandLogo{ --logo:#2e5090; }            /* ライトはコーポレートカラー YInMnブルー */
   body.light #side h1{ color:#16223a; }
   body.light .law{ background:#fff; color:#1f2a3d; }
   body.light .law.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -476,7 +479,7 @@
 
   <div id="main">
     <div id="top">
-      <img id="brandLogo" src="logo.png" alt="finoject" title="finoject">
+      <span id="brandLogo" role="img" aria-label="finoject" title="finoject"></span>
       <div class="topbtns">
         <button id="burger">☰ 法令</button>
         <button id="home">ホーム</button>
