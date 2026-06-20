@@ -288,7 +288,7 @@
   #hsplit:hover::after, #hsplit.drag::after{ color:var(--tx); border-color:var(--accent); }
   .fitem{ cursor:pointer; border-radius:8px; }
   .fitem:hover{ background:var(--card); }
-  .fitem.sel{ background:rgba(46,108,240,.16); outline:1px solid #2b66c0; }
+  .fitem.sel{ background:var(--ctlh); outline:1.5px solid var(--accent); }
   #regview{ flex:1 1 0; min-width:0; height:100%; min-height:0;
     border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; display:flex; flex-direction:column; }
   .rvhint{ color:var(--muted); font-size:13px; padding:28px 18px; text-align:center; margin:auto; }
@@ -419,7 +419,7 @@
   @media(max-width:860px){ #brandLogo{ height:40px; top:12px; right:12px; } }
 
   /* ===== ライトテーマ（LexisNexis 風・白基調。#themeBtn で切替） ===== */
-  body.light{ --bg:#eef1f6; --panel:#ffffff; --line:#d3dae6; --hair:#e7ebf2; --card:#ffffff;
+  body.light{ --bg:#ffffff; --panel:#ffffff; --line:#d8dee8; --hair:#e7ebf2; --card:#ffffff;
     --fg:#1b2433; --muted:#5b6a82; --accent:#2257b8; --accent2:#9c7322; --fg2:#24324a;
     --tx:#1f2a3d; --txh:#16263f; --lnk:#2257b8; --ctl:#ffffff; --ctlh:#eef3fb;
     background:var(--bg); color:var(--fg); }
