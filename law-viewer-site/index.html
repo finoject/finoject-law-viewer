@@ -73,6 +73,7 @@
   #gsearch:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(46,108,240,.3); }
   /* 横断検索の結果 */
   .gres-head{ font-size:13px; color:var(--muted); margin:4px 0 8px; }
+  .gres-sub{ font-weight:400; opacity:.8; }
   .gfbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 14px; }
   .gflabel{ font-size:12px; color:var(--muted); font-weight:700; }
   .gfchip{ font-size:12.5px; padding:5px 11px; border-radius:16px; cursor:pointer; background:var(--ctl); color:var(--tx); border:1px solid var(--line); }
@@ -319,7 +320,8 @@
   .ai-law{ font-size:11.5px; padding:3px 9px; border-radius:7px; background:var(--ctl); color:var(--lnk); border:1px solid #2b66c0; text-decoration:none; }
   .ai-law:hover{ background:var(--ctlh); color:#fff; }
   /* 実務影響タグ（種別ごとに色を固定＝意味の一貫性）。aml=橙系/cust=青/fin=緑/reg=紫/gov=赤系/sys=シアン */
-  .itag{ display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin:0 5px 5px 0; border:1px solid transparent; }
+  .itag{ display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin:0 5px 5px 0; border:1px solid transparent; cursor:pointer; }
+  .itag:hover{ box-shadow:0 0 0 1px currentColor inset; }   /* クリックで逆引き（該当条文を全法令から一括表示） */
   .it-aml{ background:rgba(194,65,12,.18); color:#fb923c; border-color:rgba(194,65,12,.5); }
   .it-cust{ background:rgba(37,99,235,.18); color:var(--lnk); border-color:rgba(37,99,235,.5); }
   .it-fin{ background:rgba(21,128,61,.18); color:#4ade80; border-color:rgba(21,128,61,.5); }
@@ -760,7 +762,7 @@ const IMPACT_TAGS = [
   {t:'規程改定',     c:'gov',  re:/規程|社内規則|内部規則|業務方法書/},
 ];
 function impactTags(text, max){ text=text||''; const out=[]; for(const x of IMPACT_TAGS){ if(x.re.test(text)) out.push(x); if(out.length>=(max||6)) break; } return out; }
-function impactTagsHtml(text, max){ const ts=impactTags(text,max); return ts.length ? ts.map(x=>`<span class="itag it-${x.c}">${x.t}</span>`).join('') : ''; }
+function impactTagsHtml(text, max){ const ts=impactTags(text,max); return ts.length ? ts.map(x=>`<span class="itag it-${x.c}" role="button" tabindex="0" onclick="reverseLookup('${x.t}')" title="「${x.t}」に該当する条文を全法令から一括表示（逆引き）">${x.t}</span>`).join('') : ''; }
 // 関係法令チップ（lawrefsから。クリックで法令ビューアの該当条へ）
 function relatedLawsHtml(it){
   if(!it.lawrefs || !it.lawrefs.length) return '<div class="ai-empty">関係法令は自動検出されていません</div>';
@@ -1768,6 +1770,30 @@ function renderGlobalResults(){
     + `<button class="gfchip${gChangedOnly?' on':''}" onclick="toggleGChanged()">更新あり</button></div>`;
   $('#doc').innerHTML = `<div class="wrap"><div class="gres-head">「${esc(q)}」 ${total}件</div>${bar}`
     + (html || '<div class="hint">この絞り込み条件では該当がありません</div>') + '</div>';
+}
+// 実務影響タグの逆引き：そのテーマ（タグの正規表現）に該当する条文を全法令から横断抽出して一覧表示。
+async function reverseLookup(label){
+  const tag = IMPACT_TAGS.find(x=>x.t===label); if(!tag) return;
+  const my = ++gseq; gLastQ=''; const gs=$('#gsearch'); if(gs) gs.value='';   // 横断検索状態をクリア（結果の取り違え防止）
+  $('#doc').innerHTML = '<div class="wrap"><div class="hint">「'+esc(label)+'」に該当する条文を全法令から抽出中…</div></div>';
+  await loadAll();
+  if(my!==gseq) return;
+  const re=tag.re; let html='', total=0, lawN=0;
+  for (const l of orderedLaws()){
+    const d=cache[l.law_id]; if(!d) continue;
+    const hits=d.blocks.filter(b=> b.t!=='h' && b.num && re.test(searchText(b)));
+    if(!hits.length) continue;
+    lawN++;
+    html += `<div class="gsec">${esc(l.title)} <span>(${hits.length}件)</span></div>`;
+    for (const b of hits){ total++;
+      const m=(b.body||'').match(re);
+      html += `<a class="ghit" href="?law=${l.law_id}&art=${encodeURIComponent(b.num)}" target="_blank" rel="noopener">`
+        + `<span class="gnum">${esc(b.num)}</span><span class="gcap">${esc(b.cap||'')}</span>`
+        + `<span class="gsnip">${m?gSnippet(b.body,[m[0]]):''}</span></a>`;
+    }
+  }
+  $('#doc').innerHTML = `<div class="wrap"><div class="gres-head">実務影響「<b>${esc(label)}</b>」の逆引き：${total}件 / ${lawN}法令<span class="gres-sub">　このテーマに関わる規定を全法令から横断抽出（クリックで条文へ）</span></div>`
+    + (html||'<div class="hint">該当する条文はありません</div>') + '</div>';
 }
 let gtimer = null;
 $('#gsearch').addEventListener('input', e => { const v = e.target.value; clearTimeout(gtimer); gtimer = setTimeout(()=>globalSearch(v), 220); });
