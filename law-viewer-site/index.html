@@ -1897,7 +1897,7 @@ let theme = localStorage.getItem('theme') || 'dark';
 function applyTheme(){
   document.body.classList.toggle('light', theme==='light');
   const b=document.getElementById('themeBtn');
-  if(b){ b.textContent = theme==='light' ? 'ライト' : 'ダーク'; b.title = '表示テーマ（クリックで'+(theme==='light'?'ダーク':'ライト')+'へ）'; }   // ボタンは現在のモードを表示（モード切替ボタンと統一）
+  if(b){ b.textContent = theme==='light' ? 'ダーク' : 'ライト'; b.title = (theme==='light'?'ダーク':'ライト')+'モードに切り替え'; }   // ボタンは「切り替え先」を表示（押す＝そのモードへ。三根さん指示2026-06-20）
   const tc=document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute('content', theme==='light' ? '#ffffff' : '#0e1a2e');
 }
 { const tb=document.getElementById('themeBtn');
