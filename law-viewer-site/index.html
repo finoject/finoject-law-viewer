@@ -65,6 +65,21 @@
   #home:hover{ background:var(--ctlh); }
   #lawTitle{ font-size:17px; font-weight:700; margin:0; }
   #lawMeta{ font-size:11px; color:var(--muted); margin:3px 0 0; }
+  .fresh{ color:var(--muted); }
+  .fresh.stale{ color:#d98a2b; font-weight:700; }
+  /* About/方法論リンク（サイドバー下部）＋モーダル */
+  #aboutLink{ display:block; width:calc(100% - 8px); margin:12px 4px 4px; padding:7px 9px; font-size:11.5px; text-align:left; cursor:pointer;
+    background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:6px; }
+  #aboutLink:hover{ border-color:var(--accent); color:var(--lnk); }
+  .modal{ position:fixed; inset:0; z-index:120; background:rgba(2,6,16,.62); display:flex; align-items:center; justify-content:center; padding:20px; }
+  .modalbox{ position:relative; max-width:560px; width:100%; max-height:84vh; overflow:auto; background:var(--card); color:var(--fg);
+    border:1px solid var(--line); border-radius:10px; padding:20px 22px; box-shadow:0 18px 50px rgba(0,0,0,.5); }
+  .modalbox h3{ margin:0 0 12px; font-size:15px; }
+  .modalx{ position:absolute; top:10px; right:10px; background:var(--ctl); color:var(--tx); border:1px solid var(--line); border-radius:6px; cursor:pointer; padding:2px 9px; }
+  .methlist{ margin:0; font-size:12.5px; line-height:1.65; }
+  .methlist dt{ font-weight:700; color:var(--txh); margin-top:9px; }
+  .methlist dd{ margin:1px 0 0; color:var(--fg); }
+  .methcr{ margin-top:14px; font-size:11px; color:var(--muted); border-top:1px solid var(--hair); padding-top:8px; }
   #lawMeta a{ color:var(--lnk); }
   #search{ margin-top:9px; width:100%; max-width:520px; padding:8px 11px; border-radius:8px; border:1px solid var(--line);
     background:#0e1626; color:var(--fg); font-size:13px; }
@@ -479,6 +494,7 @@
   <nav id="side">
     <h1 id="brand" title="ホーム">finoject Financial Regulation Deck</h1>
     <div id="lawList"></div>
+    <button id="aboutLink" onclick="showAbout()" title="出典・更新頻度・AI要約・免責">About / 方法論</button>
   </nav>
   <div id="sideSplit" title="ドラッグで法令一覧の幅を調整"></div>
 
@@ -789,7 +805,7 @@ async function toggleArticleAI(num){
   if(r && r.text){
     out.innerHTML = '<div class="ai-txt">'+esc(r.text)+'</div>'
       + (r.points&&r.points.length?'<ul class="ai-lines">'+r.points.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul>':'')
-      + '<div class="ai-by">Claudeによる解説</div>';
+      + '<div class="ai-by">AIによる便宜的な解説です。正文はe-Govの原文をご確認ください。</div>';
   } else {
     out.innerHTML = `<div class="ai-placeholder">この条文の解説（<b>何を言っているか／実務でどこで効くか／確認すべき点／よく一緒に見る条文</b>）は、AI解説を接続すると自動生成されます。`
       + `<span class="ai-note">現在はAI未接続。上の「実務影響」タグと、本文中の青い参照リンク・点線の定義語が手掛かりになります。</span></div>`;
@@ -827,7 +843,7 @@ function renderRegView(it){
 }
 // 3行要点のHTML（事前生成・オンデマンド共用）
 function aiLinesHtml(lines){
-  return '<ul class="ai-lines">'+lines.slice(0,4).map(l=>'<li>'+esc(l)+'</li>').join('')+'</ul><div class="ai-by">Claudeによる自動要約</div>';
+  return '<ul class="ai-lines">'+lines.slice(0,4).map(l=>'<li>'+esc(l)+'</li>').join('')+'</ul><div class="ai-by">AIによる便宜的な要約です。正文は原文をご確認ください。</div>';
 }
 // AI要点の充填: ①事前生成(it.aiSummary)があれば即表示 ②なければAIX.explainUpdate ③未接続/失敗時は受け皿
 async function fillUpdateSummary(elId, it){
@@ -984,6 +1000,15 @@ async function loadLaw(id){
   const d = await r.json(); cache[id] = d; return d;
 }
 
+// データ鮮度スタンプ。INDEX.generatedAt（自動巡回の最終取得時刻）を表示し、48h超なら「更新確認中」警告（沈黙の陳腐化を可視化）。
+function jstStamp(iso){ try{ const d=new Date(iso), j=new Date(d.getTime()+9*3600000), p=n=>String(n).padStart(2,'0'); return `${j.getUTCFullYear()}/${p(j.getUTCMonth()+1)}/${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`; }catch(e){ return ''; } }
+function freshnessHtml(){
+  const g = INDEX && INDEX.generatedAt; if(!g) return '';
+  const stale = (Date.now() - new Date(g).getTime()) > 48*3600000;
+  return stale
+    ? `<span class="fresh stale" title="自動取得が滞っている可能性があります。最新は e-Gov 原文でご確認ください。">⚠ 更新確認中（最終取得 ${jstStamp(g)} JST）</span>`
+    : `<span class="fresh" title="この時刻に自動取得・反映しました">最終確認 ${jstStamp(g)} JST</span>`;
+}
 async function openLaw(id, artNum, para){
   // 大きな法令は読み込み/描画に時間がかかるためローディング表示（キャッシュ済みなら出さない）
   if (!cache[id]){ $('#lawTitle').textContent='読み込み中…';
@@ -1006,8 +1031,8 @@ async function openLaw(id, artNum, para){
   document.querySelectorAll('.law').forEach(b => b.classList.toggle('active', b.dataset.id===id));
   $('#lawTitle').textContent = d.title;
   const updated = (d.updated||'').slice(0,10);
-  $('#lawMeta').innerHTML = `${d.type}・${esc(d.law_num)}　|　施行/更新: ${updated||'—'}　|　`
-    + `<a href="${d.egov_url}" target="_blank" rel="noopener">e-Govで原文を見る ↗</a>`;
+  $('#lawMeta').innerHTML = `${d.type}・${esc(d.law_num)}　|　e-Gov反映: ${updated||'—'}　|　`
+    + `<a href="${d.egov_url}" target="_blank" rel="noopener">e-Govで原文を見る ↗</a>　|　${freshnessHtml()}`;
   const s = $('#search'); s.classList.remove('hidden'); s.value='';
   $('#pctl').classList.remove('hidden');
   $('#exportBox').classList.remove('hidden');
@@ -1811,6 +1836,21 @@ let gtimer = null;
 $('#gsearch').addEventListener('input', e => { const v = e.target.value; clearTimeout(gtimer); gtimer = setTimeout(()=>globalSearch(v), 220); });
 
 // トップ（法令選択／全文検索）へ戻る
+// 方法論/About モーダル（出典・更新頻度・AI要約・免責＝規制ツールの透明性＝信用）
+function showAbout(){
+  let m=document.getElementById('aboutModal');
+  if(!m){ m=document.createElement('div'); m.id='aboutModal'; m.className='modal'; document.body.appendChild(m); m.addEventListener('click', e=>{ if(e.target===m) m.remove(); }); }
+  m.innerHTML = `<div class="modalbox"><button class="modalx" onclick="document.getElementById('aboutModal').remove()" title="閉じる">✕</button>`
+    + `<h3>About / 方法論</h3>`
+    + `<dl class="methlist">`
+    + `<dt>提供</dt><dd>finoject Financial Regulation Deck（株式会社finoject）。実務支援を目的とした<b>非公式</b>ツールです。</dd>`
+    + `<dt>条文の出典</dt><dd>e-Gov 法令API v2（デジタル庁）。法律・政省令・府令の条文と施行/更新日を取得。</dd>`
+    + `<dt>規制動向の出典</dt><dd>金融庁・日本銀行・JPX・日本証券業協会・JVCEA・日本公認会計士協会の新着公表、衆議院 議案情報。</dd>`
+    + `<dt>更新頻度</dt><dd>1日3回の自動巡回。各条文画面に「最終確認」時刻を表示し、取得が滞った場合は「更新確認中」を表示します。</dd>`
+    + `<dt>AI要約・解説</dt><dd>Claude（Anthropic）による<b>便宜的な</b>要約・解説です。誤りを含む可能性があり、<b>正文は必ず e-Gov 原文・専門家でご確認ください</b>。</dd>`
+    + `<dt>免責</dt><dd>本ツールは情報提供を目的とし、法的助言ではありません。内容の正確性・完全性・最新性を保証しません。</dd>`
+    + `</dl><div class="methcr">ⓒ finoject, Inc.</div></div>`;
+}
 function goHome(){
   CUR = null;
   history.pushState(null, '', location.pathname);
