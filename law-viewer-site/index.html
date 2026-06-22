@@ -1763,10 +1763,12 @@ function setupSecDrag(){
 const MKT_DEFS = [
   {id:'usdjpy', sym:'JPY=X', label:'ドル円',       dec:3},
   {id:'n225',   sym:'^N225', label:'日経平均',     dec:2},
+  // ★TOPIX は日経の次に入れる予定。Yahoo無料枠に正確な現物指数が無く、データ源(連動ETF 1306.T / 先物 TPY=F)を三根さん確認中のため保留。
   {id:'dji',    sym:'^DJI',  label:'NYダウ',       dec:2},
+  {id:'ndx',    sym:'^NDX',  label:'NASDAQ100',    dec:2},
   {id:'jp10y',  sym:null,    label:'日本国債10年', dec:3, suffix:'%', chUnit:'bp', seedOnly:true},
   {id:'us10y',  sym:'^TNX',  label:'米国債10年',   dec:3, suffix:'%', chUnit:'bp'},
-  {id:'btc',    sym:null,    label:'ビットコイン', dec:0, prefix:'$'},
+  {id:'btc',    sym:null,    label:'Bitcoin',      dec:0, prefix:'$'},
 ];
 let _mktTimer = null, _mktStamp = '';
 function mktFmt(v, dec){ return (v==null)?'—':Number(v).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
@@ -1794,7 +1796,7 @@ function mktCell(def, it){
 function mktPaint(){
   const bar=document.getElementById('mktbar'); if(!bar) return;
   bar.innerHTML='<div class="mkrow">'+MKT_DEFS.map(d=>mktCell(d, MKT_CACHE[d.id])).join('')+'</div>'
-    + `<div class="mksrc">為替・株価指数・米国債10年: Yahoo Finance（無料データのため約15分遅れ）／ビットコイン: Coinbase（USD建）／日本国債10年: 財務省（日次・新発10年）　｜　自動更新（表示中・約15秒間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
+    + `<div class="mksrc">為替・株価指数・米国債10年: Yahoo Finance（無料データのため約15分遅れ）／Bitcoin: Coinbase（USD建）／日本国債10年: 財務省（日次・新発10年）　｜　自動更新（表示中・約15秒間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
 }
 let MKT_CACHE = {};
 async function fetchYahoo(symbol){
@@ -1813,11 +1815,11 @@ async function fetchBTC(){
     if(!r.ok) throw new Error('coinbase '+r.status);
     const j=await r.json(); const last=+j.last, open=+j.open;
     if(!isFinite(last)) throw new Error('no last');
-    return { label:'ビットコイン', value:last, change:(isFinite(open)&&open)?((last-open)/open*100):null, source:'Coinbase', note:'リアルタイム・USD建' };
+    return { label:'Bitcoin', value:last, change:(isFinite(open)&&open)?((last-open)/open*100):null, source:'Coinbase', note:'リアルタイム・USD建' };
   }catch(e){
     // フォールバック: spot価格（24h変化率なし）
     try{ const r=await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot?_='+Date.now(),{cache:'no-store'});
-      const v=+(await r.json()).data.amount; if(isFinite(v)) return { label:'ビットコイン', value:v, change:null, source:'Coinbase', note:'リアルタイム・USD建' }; }catch(e2){}
+      const v=+(await r.json()).data.amount; if(isFinite(v)) return { label:'Bitcoin', value:v, change:null, source:'Coinbase', note:'リアルタイム・USD建' }; }catch(e2){}
     return null;
   }
 }

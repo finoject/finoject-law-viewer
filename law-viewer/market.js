@@ -26,7 +26,9 @@ async function yahoo(symbol){
     ['usdjpy', 'JPY%3DX',  'ドル円'],
     ['n225',   '%5EN225',  '日経平均'],
     ['dji',    '%5EDJI',   'NYダウ'],
+    ['ndx',    '%5ENDX',   'NASDAQ100'],
     ['us10y',  '%5ETNX',   '米国債10年', true],
+    // ★TOPIX: Yahoo無料枠に正確な現物指数が無く、データ源を三根さん確認中のため保留（決まり次第ここに追加）。
   ];
   for (const [key, sym, label, yield_] of YF){
     try {
@@ -58,7 +60,7 @@ async function yahoo(symbol){
   try {
     const j = await (await fetch('https://api.exchange.coinbase.com/products/BTC-USD/stats')).json();
     const last = +j.last, open = +j.open;
-    if (isFinite(last)) out.items.btc = { label: 'ビットコイン', value: last,
+    if (isFinite(last)) out.items.btc = { label: 'Bitcoin', value: last,
       change: (isFinite(open) && open) ? ((last - open) / open * 100) : null, source: 'Coinbase', note: 'リアルタイム・USD建', unit: '$' };
   } catch (e){ console.log('btc 取得失敗: ' + (e.message || e)); }
 
