@@ -1,0 +1,23 @@
+name: slack-fail-test
+# 使い捨て: 失敗通知（crawl.ymlのif:failure()ステップ）が鳴るかのテスト。確認後に削除する。
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: わざと失敗させる（通知テスト用）
+        run: exit 1
+      - name: 失敗時にSlack通知（本番crawl.ymlと同一ロジック）
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then echo "SLACK_WEBHOOK_URL 未設定のため通知スキップ"; exit 0; fi
+          text=":test_tube: *[テスト] finoject Financial Regulation Deck｜失敗通知のテスト* — これはテスト送信です。本番の法令巡回は正常です。"$'\n'"$RUN_URL"
+          payload=$(jq -n --arg t "$text" '{text:$t}')
+          code=$(curl -sS -o /tmp/resp -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL")
+          echo "Slack応答: HTTP $code / body=$(cat /tmp/resp 2>/dev/null)"
