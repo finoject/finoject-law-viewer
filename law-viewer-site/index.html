@@ -1765,6 +1765,7 @@ const MKT_DEFS = [
   {id:'n225',   sym:'^N225', label:'日経平均',     dec:2},
   {id:'topix',  sym:null,    label:'TOPIX',       dec:2},   // JPXの指数値JSON(約20分遅れ)をプロキシ経由で取得＝fetchJPXTopix（Yahoo無料枠に正確な現物指数が無いため）
   {id:'dji',    sym:'^DJI',  label:'NY DOW',      dec:2},
+  {id:'sp500',  sym:'^GSPC', label:'S&P500',      dec:2},
   {id:'ndx',    sym:'^NDX',  label:'NASDAQ100',    dec:2},
   {id:'jp10y',  sym:null,    label:'日本国債10年', dec:3, suffix:'%', chUnit:'bp', seedOnly:true},
   {id:'us10y',  sym:'^TNX',  label:'米国債10年',   dec:3, suffix:'%', chUnit:'bp'},
@@ -1796,7 +1797,7 @@ function mktCell(def, it){
 function mktPaint(){
   const bar=document.getElementById('mktbar'); if(!bar) return;
   bar.innerHTML='<div class="mkrow">'+MKT_DEFS.map(d=>mktCell(d, MKT_CACHE[d.id])).join('')+'</div>'
-    + `<div class="mksrc">為替・株価指数(日経/NY DOW/NASDAQ100)・米国債10年: Yahoo Finance（約15分遅れ）／TOPIX: JPX（約20分遅れ）／Bitcoin: Coinbase（USD建）／日本国債10年: 財務省（日次・新発10年）　｜　自動更新（表示中・約15秒間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
+    + `<div class="mksrc">為替・株価指数(日経/NY DOW/S&P500/NASDAQ100)・米国債10年: Yahoo Finance（約15分遅れ）／TOPIX: JPX（約20分遅れ）／Bitcoin: Coinbase（USD建）／日本国債10年: 財務省（日次・新発10年）　｜　自動更新（表示中・約15秒間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
 }
 let MKT_CACHE = {};
 async function fetchYahoo(symbol){

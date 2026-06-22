@@ -26,6 +26,7 @@ async function yahoo(symbol){
     ['usdjpy', 'JPY%3DX',  'ドル円'],
     ['n225',   '%5EN225',  '日経平均'],
     ['dji',    '%5EDJI',   'NY DOW'],
+    ['sp500',  '%5EGSPC',  'S&P500'],
     ['ndx',    '%5ENDX',   'NASDAQ100'],
     ['us10y',  '%5ETNX',   '米国債10年', true],
   ];
