@@ -93,6 +93,11 @@
   #gsearch:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(46,108,240,.3); }
   /* 横断検索の結果 */
   .gres-head{ font-size:13px; color:var(--muted); margin:4px 0 8px; }
+  .srchstat{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:2px 0 12px; padding:6px 11px; background:var(--ctl); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:6px; font-size:12.5px; color:var(--tx); }
+  .srchstat b{ color:var(--txh); }
+  .srchstat .ss-c{ color:var(--muted); font-variant-numeric:tabular-nums; }
+  .srchstat .ss-clear{ margin-left:auto; background:transparent; color:var(--lnk); border:1px solid var(--line); border-radius:5px; padding:2px 9px; font-size:12px; cursor:pointer; }
+  .srchstat .ss-clear:hover{ border-color:var(--accent); }
   .gres-sub{ font-weight:400; opacity:.8; }
   .gbackbar{ margin:2px 0 8px; }
   .gback{ font-size:12.5px; font-weight:700; padding:5px 12px; border-radius:var(--radius,5px); cursor:pointer; background:var(--ctl); color:var(--lnk); border:1px solid var(--line); }
@@ -106,6 +111,7 @@
   .gsec{ font-size:14px; font-weight:700; color:var(--txh); margin:18px 0 4px; border-left:3px solid var(--accent); padding-left:8px; }
   .gsec span{ font-weight:400; color:var(--muted); font-size:12px; }
   .gsec .gtype{ font-weight:700; font-size:10px; color:var(--muted); background:var(--ctl); border:1px solid var(--line); border-radius:3px; padding:1px 5px; margin-right:7px; vertical-align:middle; }
+  .gsec .gdate{ font-weight:400; font-size:11px; color:var(--muted); margin-left:7px; font-variant-numeric:tabular-nums; }
   .ghit{ display:block; text-decoration:none; color:var(--fg); border:1px solid var(--line); border-radius:8px;
     padding:8px 11px; margin:6px 0; background:var(--card); font-size:13px; line-height:1.7; }
   .ghit:hover{ border-color:var(--accent); background:var(--ctl); }
@@ -360,6 +366,8 @@
   .fitem{ cursor:pointer; border-radius:8px; }
   .fitem:hover{ background:transparent; outline:1px solid var(--line); outline-offset:-1px; }   /* hoverは枠のみ＝地色を変えない */
   .fitem.sel{ background:transparent; outline:2px solid var(--accent); outline-offset:-2px; }   /* 選択は枠線だけで示す＝地色は他フレームと統一 */
+  .fitem.unread{ box-shadow:inset 3px 0 0 var(--accent2); }   /* 前回訪問以降の新着＝左に控えめなアクセント帯 */
+  .fitem.unread .fttl{ font-weight:600; }
   #regview{ flex:1 1 0; min-width:0; height:100%; min-height:0;
     border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; display:flex; flex-direction:column; }
   .rvhint{ color:var(--muted); font-size:13px; padding:28px 18px; text-align:center; margin:auto; }
@@ -660,6 +668,7 @@ const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
 let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGDIET={}, REGLOADED=false, REG_GEN=null;
 let REGITEMS=[], REGLATEST=null, homeFilterAg='all', homeFilterKw='', FEED_SHOWN=[];   // トップ画面の規制ウォッチ・フィード用（homeFilterKw=簡易キーワード絞り込み）
+let LAST_VISIT=null;   // 前回この端末で開いた時刻（localStorage）。これ以降に検知された動向＝「未読」
 let portalSort='date';   // 最新動向の並び順: date=最新順(既定) / sec=§優先 / changed=改正反映優先
 function setPortalSort(s){ portalSort=s; renderPortalTop(); }
 // 外部ページ埋め込み用プロキシ(Cloudflare Worker)。設定すると金融庁/日銀等(X-Frame-Options拒否)も画面内表示できる。
@@ -742,7 +751,9 @@ function renderFeedChips(){
 function renderRegFeed(){
   const box=document.getElementById('regfeed'); if(!box) return;
   const meta=document.getElementById('feedmeta');
-  if(meta) meta.textContent = REG_GEN ? ('最終更新 '+ (function(g){const d=new Date(g),j=new Date(d.getTime()+9*3600000),p=n=>String(n).padStart(2,'0');return `${j.getUTCFullYear()}/${p(j.getUTCMonth()+1)}/${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;})(REG_GEN) +' JST') : '';
+  const unreadN = LAST_VISIT ? REGITEMS.filter(it=>it.detectedAt && it.detectedAt>LAST_VISIT).length : 0;   // 前回訪問以降の新着件数
+  if(meta){ meta.textContent = REG_GEN ? ('最終更新 '+ (function(g){const d=new Date(g),j=new Date(d.getTime()+9*3600000),p=n=>String(n).padStart(2,'0');return `${j.getUTCFullYear()}/${p(j.getUTCMonth()+1)}/${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;})(REG_GEN) +' JST') : '';
+    if(unreadN) meta.textContent += `　／　前回以降 ${unreadN}件`; }
   if(!REGITEMS.length){ box.innerHTML='<div class="hint" style="margin-top:24px">読み込み中…</div>'; return; }
   let items = REGITEMS;
   if(homeFilterAg==='__lawlinked__') items = items.filter(it=>it.lawrefs&&it.lawrefs.length);
@@ -756,10 +767,11 @@ function renderRegFeed(){
     if(it.date!==cur){ cur=it.date; html+=`<div class="fday">${jpDay(it.date)}</div>`; }
     const c=REG_COLORS[it.agency]||'#64748b';
     const isNew = it.detectedAt && REGLATEST && it.detectedAt===REGLATEST;
+    const unread = it.detectedAt && LAST_VISIT && it.detectedAt > LAST_VISIT;   // 前回訪問以降に検知＝未読
     // 行クリックで右の本文ビューアに表示（画面遷移しない）。📖チップはstopPropagationで法令ビューへ。
     // 📖法令リンク（種別バッジ含む）は「法令リンクあり」フィルタを押したときだけ表示＝既定の一覧は全項目同じ見た目に統一（三根さん指摘：押していないのに一部だけ法令情報が出るのは不整合）。
     const refsHtml = (homeFilterAg==='__lawlinked__') ? homeRefsHtml(it) : '';
-    html += `<div class="fitem" data-idx="${idx}" onclick="openRegView(${idx})"><span class="fbadge" style="background:${c}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
+    html += `<div class="fitem${unread?' unread':''}" data-idx="${idx}" onclick="openRegView(${idx})"><span class="fbadge" style="background:${c}">${esc(REG_SHORT[it.agency]||it.agency)}</span>`
       + `<div class="fbody"><span class="fttl">${esc(it.title)}</span>${isNew?'<span class="fnew">NEW</span>':''}${refsHtml}</div></div>`;
   });
   if(items.length>SHOWN) html += `<div class="rmore">ほか ${items.length-SHOWN} 件 — <a href="${REG_SITE}" target="_blank" rel="noopener">金融規制ウォッチで全件見る ↗</a></div>`;
@@ -997,6 +1009,7 @@ const $ = s => document.querySelector(s);
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
 async function boot(){
+  try{ LAST_VISIT = localStorage.getItem('lastVisitTs'); localStorage.setItem('lastVisitTs', new Date().toISOString()); }catch(e){}   // 前回訪問時刻を控え、今回の訪問時刻を記録（以降の差分＝「未読」判定に使う）
   INDEX = await (await fetch('./data/index.json?t='+Date.now())).json();
   fetch('./data/diff/index.json?t='+Date.now()).then(r=>r.ok?r.json():null).then(j=>{   // 改正差分インデックス（失敗時は無効化）
     if(j&&j.diffs){ DIFF_INDEX={}; j.diffs.forEach(d=>DIFF_INDEX[d.law_id]=d); if(CUR)refreshDiffBtn(); renderPortalTop&&renderPortalTop(); }
@@ -1566,16 +1579,19 @@ function regArtBadge(lawId, num){
   const ttl = it.title || '規制動向';
   return `<a class="artreg lvlink" href="${escA(it.url)}" data-lv-url="${escA(it.url)}" data-lv-mode="${mode}" data-lv-title="${escA(ttl)}" title="${esc(ttl)}｜${esc(tip)}（クリックで条文欄に表示／再クリックで条文に戻る）">規制動向${kinds.length?'（'+esc(kinds.join('・'))+'）':''}</a>`;
 }
+function clearLawSearch(){ const s=$('#search'); if(s) s.value=''; renderDoc(''); }   // 法令内検索の絞り込み解除
 function renderDoc(kw){
   const k = (kw||'').trim();
   const sq = parseSearch(k);                                  // 柔軟検索（スペース=AND / or / and）
   const kt = sq ? sq.terms : null;                            // ハイライト用の語配列
   let html=''; RPC=[];
+  let artHits=0, curChap=''; const chapHit=new Set();   // 法令内検索の状態表示用（該当条数・該当章数）
   const badgedNums = new Set();   // 条番号は法令内で一意でない（附則等で重複）→規制動向バッジは本則（最初の出現）のみ
   for (const b of CUR.blocks){
-    if (b.t==='h'){ html += `<div class="h lv${b.lv}">${esc(b.x)}</div>`; }
+    if (b.t==='h'){ html += `<div class="h lv${b.lv}">${esc(b.x)}</div>`; if(b.lv===1) curChap=b.x; }
     else {
       if (sq && !matchSearch(searchText(b), sq)) continue;    // 検索ヒットのみ表示（表セルも対象）
+      if (sq){ artHits++; chapHit.add(curChap||'—'); }
       let body = render(b.body, kt, b.num);
       if (b.tables) body = body.replace(/⟦TBL:(\d+)⟧/g, (m,i) => b.tables[+i] ? tableHtml(b.tables[+i], kt) : '');
       const cap  = b.cap ? `<span class="cap">${esc(b.cap)}</span>` : '';
@@ -1587,9 +1603,11 @@ function renderDoc(kw){
     }
   }
   if (k && !/class="art"/.test(html)) html = `<div class="hint">「${esc(k)}」に一致する条文はありません</div>`;
+  // 法令内検索の状態を常時明示＝「今、何で絞られているか」＋ワンクリック解除（深い絞り込みから全文へ戻る心理コストを下げる）
+  const statusBar = k ? `<div class="srchstat">フィルタ <b>「${esc(k)}」</b><span class="ss-c">該当条 ${artHits}${chapHit.size?' ／ 章 '+chapHit.size:''}</span><button class="ss-clear" onclick="clearLawSearch()" title="絞り込みを解除して全文に戻る">解除 ✕</button></div>` : '';
   const panel = (CUR && !k) ? regPanelHtml(CUR.law_id) : '';   // 検索中以外は冒頭に規制動向パネル
   // #artbody=条文本体／#lawview=パネル項目クリック時に条文の場所へ差し込む本文ビューア（既定は非表示）
-  $('#doc').innerHTML = `<div class="wrap">${panel}<div id="lawview" class="hidden"></div><div id="artbody">${html}</div></div>`;
+  $('#doc').innerHTML = `<div class="wrap">${panel}${statusBar}<div id="lawview" class="hidden"></div><div id="artbody">${html}</div></div>`;
   curMaxDepth = effMaxDepth(RPC);   // この描画での実効最大カッコ深さ（applyParenが使用）
   applyParen();          // カッコ折り畳み状態を再適用（CSSクラス1発）
   observeGloss();        // 定義語の遅延マーキング（表示中の条文だけ処理＝高速）
@@ -1851,7 +1869,7 @@ function setupHSplit(){
     const b=parseFloat(col.style.flexBasis); if(b) localStorage.setItem('feedRatio', b.toFixed(1)); });
 }
 let gseq = 0;
-let gLastQ='', gScope='all', gChangedOnly=false;
+let gLastQ='', gScope='all', gChangedOnly=false, gSort='rel';   // gSort: rel=関連度(既定) / updated=更新日順
 // ===== 改正差分（新旧対照）ビュー =====
 function nl2br(s){ return (s||'').replace(/\n/g,'<br>'); }
 function diffBtnHtml(id){
@@ -1926,6 +1944,8 @@ async function globalSearch(q){
 }
 function setGScope(s){ gScope=s; renderGlobalResults(); }
 function toggleGChanged(){ gChangedOnly=!gChangedOnly; renderGlobalResults(); }
+function setGSort(s){ gSort=s; renderGlobalResults(); }
+function lawUpdated(l){ return ((cache[l.law_id]&&cache[l.law_id].updated)||l.updated||''); }   // e-Gov反映日（並べ替え/表示用）
 // 横断検索の結果を、種別（法令/ガイドライン）・更新ありで絞り込んで描画（“多すぎる”を選別支援）
 function renderGlobalResults(){
   const q=gLastQ; if(!q) return;
@@ -1940,12 +1960,14 @@ function renderGlobalResults(){
     isGuide ? guideHits+=hits.length : lawHits+=hits.length;
     rows.push({ l, hits, isGuide, changed:changedSet.has(l.title) });
   }
+  if(gSort==='updated') rows.sort((a,b)=> lawUpdated(b.l).localeCompare(lawUpdated(a.l)));   // e-Gov反映日の新しい順
   let html='', total=0;
   for (const r of rows){
     if(gScope==='law' && r.isGuide) continue;
     if(gScope==='guide' && !r.isGuide) continue;
     if(gChangedOnly && !r.changed) continue;
-    html += `<div class="gsec"><span class="gtype">${esc(r.l.type||r.l.group||'')}</span>${esc(r.l.title)} <span>(${r.hits.length}件)</span>${r.changed?'<span class="gupd">更新</span>':''}</div>`;
+    const upd=lawUpdated(r.l).slice(0,10);
+    html += `<div class="gsec"><span class="gtype">${esc(r.l.type||r.l.group||'')}</span>${esc(r.l.title)} <span>(${r.hits.length}件)</span>${upd?`<span class="gdate">${esc(upd)}</span>`:''}${r.changed?'<span class="gupd">更新</span>':''}</div>`;
     for (const b of r.hits){ total++;
       html += `<a class="ghit" href="?law=${r.l.law_id}&art=${encodeURIComponent(b.num)}" target="_blank" rel="noopener">`
         + `<span class="gnum">${esc(b.num)}</span><span class="gcap">${esc(b.cap||'')}</span>`
@@ -1953,8 +1975,10 @@ function renderGlobalResults(){
     }
   }
   const chip=(s,label,n)=>`<button class="gfchip${gScope===s?' on':''}" onclick="setGScope('${s}')">${label}（${n}）</button>`;
+  const sbtn=(s,label)=>`<button class="gfchip${gSort===s?' on':''}" onclick="setGSort('${s}')">${label}</button>`;
   const bar=`<div class="gfbar"><span class="gflabel">種別:</span>${chip('all','すべて',lawHits+guideHits)}${chip('law','法令',lawHits)}${chip('guide','ガイドライン',guideHits)}`
-    + `<button class="gfchip${gChangedOnly?' on':''}" onclick="toggleGChanged()">更新あり</button></div>`;
+    + `<button class="gfchip${gChangedOnly?' on':''}" onclick="toggleGChanged()">更新あり</button>`
+    + `<span class="gflabel" style="margin-left:6px">並び:</span>${sbtn('rel','関連度')}${sbtn('updated','更新日')}</div>`;
   $('#doc').innerHTML = `<div class="wrap"><div class="gres-head">「${esc(q)}」 ${total}件</div>${bar}`
     + (html || '<div class="hint">この絞り込み条件では該当がありません</div>') + '</div>';
 }

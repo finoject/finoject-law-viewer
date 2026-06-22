@@ -54,3 +54,16 @@ jobs:
           path: law-viewer-site
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      # いずれかのステップが失敗したらSlackへ通知（沈黙の取得失敗を検知）。
+      # SLACK_WEBHOOK_URL secret が未設定なら何もしない（エラーにしない）。設定は repo Settings → Secrets → Actions。
+      - name: 失敗時にSlack通知（SLACK_WEBHOOK_URL 設定時のみ）
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then echo "SLACK_WEBHOOK_URL 未設定のため通知スキップ"; exit 0; fi
+          text=":rotating_light: *finoject Financial Regulation Deck｜法令巡回が失敗* — 取得/公開が止まっている可能性があります。"$'\n'"$RUN_URL"
+          payload=$(jq -n --arg t "$text" '{text:$t}')
+          curl -sS -X POST -H 'Content-Type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL" || true
