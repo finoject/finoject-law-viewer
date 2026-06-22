@@ -17,7 +17,13 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "$SLACK_WEBHOOK_URL" ]; then echo "SLACK_WEBHOOK_URL 未設定のため通知スキップ"; exit 0; fi
+          URL=$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')   # 改行・空白を除去（貼り付け事故対策）
+          host=$(printf '%s' "$URL" | sed -E 's#^https?://([^/]+)/.*#\1#')
+          path1=$(printf '%s' "$URL" | sed -E 's#^https?://[^/]+/([^/]+)/.*#\1#')
+          echo "診断: host=$host / path先頭=$path1 / 長さ=${#URL} / 空白除去あり=$([ "$URL" != "$SLACK_WEBHOOK_URL" ] && echo YES || echo no)"
           text=":test_tube: *[テスト] finoject Financial Regulation Deck｜失敗通知のテスト* — これはテスト送信です。本番の法令巡回は正常です。"$'\n'"$RUN_URL"
           payload=$(jq -n --arg t "$text" '{text:$t}')
-          code=$(curl -sS -o /tmp/resp -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL")
-          echo "Slack応答: HTTP $code / body=$(cat /tmp/resp 2>/dev/null)"
+          code=$(curl -sS -o /tmp/resp -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data "$payload" "$URL")
+          echo "Slack応答(リダイレクト追わず): HTTP $code / body=$(cat /tmp/resp 2>/dev/null)"
+          codeL=$(curl -sSL -o /tmp/respL -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data "$payload" "$URL")
+          echo "Slack応答(リダイレクト追う): HTTP $codeL / body=$(cat /tmp/respL 2>/dev/null)"
