@@ -1,6 +1,6 @@
 {
-  "name": "finoject 金融関連法令・規制ウォッチ",
-  "short_name": "finoject法令",
+  "name": "finoject Financial Regulation Deck",
+  "short_name": "finoject",
   "description": "金融関連の法令・政省令・ガイドライン・監督指針の条文と、当局の規制動向・国会審議・市況を1画面で読める実務者向けツール。",
   "lang": "ja",
   "start_url": ".",
