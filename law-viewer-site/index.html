@@ -477,7 +477,7 @@
 <body>
 <div id="app">
   <nav id="side">
-    <h1 id="brand" title="ホーム">finoject 金融規制ウォッチ</h1>
+    <h1 id="brand" title="ホーム">finoject Financial Regulation Deck</h1>
     <div id="lawList"></div>
   </nav>
   <div id="sideSplit" title="ドラッグで法令一覧の幅を調整"></div>
@@ -491,7 +491,7 @@
         <button id="themeBtn" class="modebtn" title="ライト/ダーク切替"></button>
       </div>
       <input id="gsearch" placeholder="全法令検索">
-      <h2 id="lawTitle">金融規制ワークベンチ</h2>
+      <h2 id="lawTitle"></h2>
       <p id="lawMeta"></p>
       <div id="exportBox" class="hidden">
         <span class="exlabel">出力:</span>
@@ -990,7 +990,7 @@ async function openLaw(id, artNum, para){
     $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">読み込み中…</div></div>'; }
   let d;
   try { d = await loadLaw(id); }
-  catch(e){ $('#lawTitle').textContent='金融規制ワークベンチ';
+  catch(e){ $('#lawTitle').textContent='';
     $('#doc').innerHTML='<div class="wrap"><div class="hint err" style="margin-top:64px">読み込めませんでした</div></div>';
     return; }
   CUR = d;
@@ -1815,7 +1815,7 @@ function goHome(){
   CUR = null;
   history.pushState(null, '', location.pathname);
   document.querySelectorAll('.law.active').forEach(b => b.classList.remove('active'));
-  $('#lawTitle').textContent = '金融規制ワークベンチ';
+  $('#lawTitle').textContent = '';
   $('#lawMeta').innerHTML = '';
   const s = $('#search'); s.classList.add('hidden'); s.value = '';
   $('#pctl').classList.add('hidden');
