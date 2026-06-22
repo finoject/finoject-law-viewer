@@ -281,6 +281,9 @@
   .feedhead{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; border-left:3px solid var(--accent); padding-left:10px; }
   .feedtitle{ font-size:16px; font-weight:700; color:var(--txh); }
   .feedmeta{ font-size:12px; color:var(--muted); }
+  .feedsearch{ margin-left:auto; min-width:150px; max-width:240px; background:var(--ctl); color:var(--tx); border:1px solid var(--line); border-radius:6px; padding:4px 9px; font-size:12.5px; }
+  .feedsearch:focus{ outline:none; border-color:var(--accent); }
+  .feedsearch::placeholder{ color:var(--muted); }
   .feedchips{ display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 4px; }
   .fchipbtn{ font-size:12px; padding:5px 11px; border-radius:16px; cursor:pointer; user-select:none; background:var(--ctl); color:var(--tx); border:1px solid var(--line); }
   .fchipbtn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -317,6 +320,8 @@
     letter-spacing:-3px; font-size:14px; color:#5f7196; background:var(--ctl); border:1px solid #2b66c0; border-radius:6px; padding:8px 1px; line-height:1; }
   #hsplit:hover::before, #hsplit.drag::before{ background:var(--accent); }
   #hsplit:hover::after, #hsplit.drag::after{ color:var(--tx); border-color:var(--accent); }
+  .spin{ display:inline-block; width:15px; height:15px; margin-right:8px; vertical-align:-2px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
   .fitem{ cursor:pointer; border-radius:8px; }
   .fitem:hover{ background:transparent; outline:1px solid var(--line); outline-offset:-1px; }   /* hoverは枠のみ＝地色を変えない */
   .fitem.sel{ background:transparent; outline:2px solid var(--accent); outline-offset:-2px; }   /* 選択は枠線だけで示す＝地色は他フレームと統一 */
@@ -366,6 +371,7 @@
   .aiart-panel.hidden{ display:none; }
   @media(max-width:860px){
     .homecols{ flex-direction:column; height:auto !important; }
+    .body .lawtbl{ width:auto; min-width:100%; }   /* モバイルは自然幅＋.tblwrapで横スクロール（圧縮で潰さない） */
     #feedcol, #regview{ flex:none !important; width:100%; }
     #feedcol{ height:auto; overflow:visible; }
     #hsplit, #vsplit{ display:none; }            /* モバイルは縦積み＝スプリッタ不要 */
@@ -407,7 +413,8 @@
   .body a.rf{ color:inherit; text-decoration:none; cursor:pointer; border-bottom:1px dotted var(--lnk); }
   .body a.rf:hover{ color:var(--lnk); border-bottom-style:solid; background:rgba(127,176,255,.18); border-radius:2px; }
   /* 法令中の表（読替表等） */
-  .body .lawtbl{ border-collapse:collapse; margin:10px 0; width:100%; white-space:normal; }
+  .tblwrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin:10px 0; }
+  .body .lawtbl{ border-collapse:collapse; margin:0; width:100%; white-space:normal; }
   .body .lawtbl th, .body .lawtbl td{ border:1px solid #3a4a66; padding:6px 9px; vertical-align:top; text-align:left; font-size:13px; line-height:1.7; white-space:pre-wrap; }
   .body .lawtbl th{ background:var(--ctl); color:var(--tx); font-weight:700; white-space:nowrap; }
   .body .lawtbl tr:nth-child(even) td{ background:rgba(255,255,255,.03); }
@@ -616,7 +623,7 @@ function resolveRel(tok, ctx){
 const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
 let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGDIET={}, REGLOADED=false, REG_GEN=null;
-let REGITEMS=[], REGLATEST=null, homeFilterAg='all', FEED_SHOWN=[];   // トップ画面の規制ウォッチ・フィード用
+let REGITEMS=[], REGLATEST=null, homeFilterAg='all', homeFilterKw='', FEED_SHOWN=[];   // トップ画面の規制ウォッチ・フィード用（homeFilterKw=簡易キーワード絞り込み）
 // 外部ページ埋め込み用プロキシ(Cloudflare Worker)。設定すると金融庁/日銀等(X-Frame-Options拒否)も画面内表示できる。
 // デプロイ後にここへ workers.dev のURLを入れる（末尾スラッシュ無し）。空のままでも埋め込み可サイト(JSDA/JVCEA)は表示する。
 const PROXY_BASE = 'https://finoject-proxy.kimihiro-mine.workers.dev';
@@ -702,6 +709,8 @@ function renderRegFeed(){
   let items = REGITEMS;
   if(homeFilterAg==='__lawlinked__') items = items.filter(it=>it.lawrefs&&it.lawrefs.length);
   else if(homeFilterAg!=='all') items = items.filter(it=>it.agency===homeFilterAg);
+  if(homeFilterKw){ const kw=homeFilterKw.toLowerCase();   // 簡易キーワード絞り込み（タイトル・機関・関係法令名）
+    items = items.filter(it => ((it.title||'')+' '+(REG_SHORT[it.agency]||it.agency||'')+' '+((it.lawrefs||[]).map(r=>r.label||'').join(' '))).toLowerCase().includes(kw)); }
   if(!items.length){ box.innerHTML='<div class="hint" style="margin-top:24px">該当する更新はありません</div>'; return; }
   const SHOWN=60; let html='', cur=null;
   FEED_SHOWN = items.slice(0,SHOWN);
@@ -1036,7 +1045,7 @@ function freshnessHtml(){
 async function openLaw(id, artNum, para){
   // 大きな法令は読み込み/描画に時間がかかるためローディング表示（キャッシュ済みなら出さない）
   if (!cache[id]){ $('#lawTitle').textContent='読み込み中…';
-    $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px">読み込み中…</div></div>'; }
+    $('#doc').innerHTML='<div class="wrap"><div class="hint" style="margin-top:64px"><span class="spin"></span>読み込み中…</div></div>'; }
   let d;
   try { d = await loadLaw(id); }
   catch(e){ $('#lawTitle').textContent='';
@@ -1213,7 +1222,7 @@ function tableHtml(table, k){
     return '<'+tg+rs+cs+'>' + render((c && c.t) || '', k) + '</'+tg+'>';
   };
   const hasAttrSpan = rows.some(r => (r.cells||[]).some(c => (c.rs>1) || (c.cs>1)));
-  let h = '<table class="lawtbl">';
+  let h = '<div class="tblwrap"><table class="lawtbl">';
   if (hasAttrSpan){
     // ①rowspan/colspan属性方式：各行のセルを属性付きでそのまま描画（被覆列は元から省略されている）
     for (const r of rows){
@@ -1246,7 +1255,7 @@ function tableHtml(table, k){
       h += '</tr>';
     }
   }
-  return h + '</table>';
+  return h + '</table></div>';
 }
 // 検索対象テキスト（本文＋表セルも含める。本文の占位子は除く）
 function searchText(b){
@@ -1456,7 +1465,7 @@ function dietSecHtml(lawId){
       + `<a class="rttl lvlink" href="${escA(b.url)}" data-lv-url="${escA(b.url)}" data-lv-mode="direct" data-lv-title="${escA(b.name)}">${esc(b.name)}</a>`
       + (b.session?`<span class="rag">第${esc(b.session)}回国会</span>`:'') + `</div>`;
   }).join('');
-  return `<div class="rsub">📜 国会での審議状況（法律案）</div>${rows}`
+  return `<div class="rsub">国会での審議状況（法律案）</div>${rows}`
     + `<div class="rmore dnote">出典: 衆議院 議案情報</div>`;
 }
 function regPanelHtml(lawId){
@@ -1585,7 +1594,8 @@ function homeSections(){
     { k:'mkt',    title:'市況', html:`<div id="mktbar" class="mkt"></div>` },
     { k:'guide',  title:'テーマ', html:`<div class="qsbar" id="qsbar"></div>` },
     { k:'feed',   title:'動向', html:
-        `<div class="feedhead"><span class="feedtitle">最新動向</span><span id="feedmeta" class="feedmeta"></span></div>`
+        `<div class="feedhead"><span class="feedtitle">最新動向</span><span id="feedmeta" class="feedmeta"></span>`
+      + `<input id="feedSearch" class="feedsearch" type="search" placeholder="動向を検索" aria-label="規制動向をキーワードで絞り込む" value="${esc(homeFilterKw)}" oninput="homeFilterKw=this.value.trim(); clearTimeout(window._fkw); window._fkw=setTimeout(renderRegFeed,180);"></div>`
       + `<div id="feedchips" class="feedchips"></div>`
       + `<div class="homecols"><div id="feedcol"><div id="regfeed"><div class="hint" style="margin-top:24px">読み込み中…</div></div></div>`
       + `<div id="hsplit" title="ドラッグで左右の幅を調整"></div>`
@@ -1784,7 +1794,7 @@ async function globalSearch(q){
   q = (q||'').trim(); gLastQ=q;
   if (!q){ CUR ? renderDoc('') : showHome(); return; }
   const my = ++gseq;
-  $('#doc').innerHTML = '<div class="wrap"><div class="hint">全法令・ガイドラインを検索中…</div></div>';
+  $('#doc').innerHTML = '<div class="wrap"><div class="hint"><span class="spin"></span>全法令・ガイドラインを検索中…</div></div>';
   await loadAll();
   if (my !== gseq) return;                         // 後続の入力があれば破棄
   renderGlobalResults();
