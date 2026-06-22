@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const DIFF = require('./diff.js');   // 改正差分（新旧対照）の生成
 
 const API = 'https://laws.e-gov.go.jp/api/2';
 const SITE = path.join(__dirname, '..', 'law-viewer-site');
@@ -349,6 +350,8 @@ function fetchKantoku(prevRec, nowIso, laws, changed, report){
       const rec = { law_id:g.key, title:g.title, group:'ガイドライン', type:'監督指針',
         law_num:'', revision_id:hash, updated, article_count:blocks.length, egov_url:g.base+'index.html' };
       laws.push(rec);
+      DIFF.maybeWriteDiff(DATA, path.join(DATA, `${g.key}.json`), blocks,
+        { law_id:g.key, title:g.title, group:'ガイドライン', type:'監督指針', from_revision:(prev&&prev.revision_id)||'', to_revision:hash, to_updated:updated });
       fs.writeFileSync(path.join(DATA, `${g.key}.json`), JSON.stringify({ ...rec, blocks }), 'utf8');
       if (!prev || prev.revision_id !== hash) changed.push(g.title);
       report.push(`${g.title}: ${blocks.length}節 (章${chs.length})`);
@@ -371,6 +374,8 @@ function fetchGuidelines(prevRec, nowIso, laws, changed, report){
       const rec = { law_id:g.key, title:g.title, group:'ガイドライン', type:'事務ガイドライン',
         law_num:'', revision_id:hash, updated, article_count:blocks.length, egov_url:GBASE+g.file };
       laws.push(rec);
+      DIFF.maybeWriteDiff(DATA, path.join(DATA, `${g.key}.json`), blocks,
+        { law_id:g.key, title:g.title, group:'ガイドライン', type:'事務ガイドライン', from_revision:(prev&&prev.revision_id)||'', to_revision:hash, to_updated:updated });
       fs.writeFileSync(path.join(DATA, `${g.key}.json`), JSON.stringify({ ...rec, blocks }), 'utf8');
       if (!prev || prev.revision_id !== hash) changed.push(g.title);
       report.push(`${g.title}: ${blocks.length}節 ${prev&&prev.revision_id!==hash?'(更新)':''}`);
@@ -404,6 +409,9 @@ function main(){
         egov_url: `https://laws.e-gov.go.jp/law/${id}`,
       };
       laws.push(rec);
+      // 改正差分: 旧ファイル(上書き前)とrevisionが変わっていれば、変化した条のみを差分出力（前進生成）
+      DIFF.maybeWriteDiff(DATA, path.join(DATA, `${id}.json`), blocks,
+        { law_id:id, title, group:tgt.group, type:tgt.type, from_revision:prevRev[id]||'', to_revision:rec.revision_id, to_updated:rec.updated });
       fs.writeFileSync(path.join(DATA, `${id}.json`), JSON.stringify({ ...rec, blocks }), 'utf8');
       if (prevRev[id] !== rec.revision_id) changed.push(title);
       report.push(`${title}: ${id} / ${articleCount}条 ${prevRev[id]&&prevRev[id]!==rec.revision_id?'(更新)':''}`);
@@ -430,6 +438,8 @@ function main(){
   };
   laws.sort((a,b)=> (gi(a)-gi(b)) || (tr(a)-tr(b)) || a.title.localeCompare(b.title,'ja'));
   fs.writeFileSync(idxPath, JSON.stringify({ generatedAt: nowIso, laws, changed, isFirst }, null, 2), 'utf8');
+  const diffs = DIFF.writeDiffIndex(DATA);   // 蓄積した改正差分の一覧を再構築
+  console.log(`改正差分: ${diffs.length}件の法令に差分あり`);
 
   console.log('=== 取得結果 ==='); report.forEach(r => console.log(' - ' + r));
   console.log(`法令数: ${laws.length} / 更新: ${isFirst?'(初回baseline)':changed.length+'件'} -> ${DATA}`);
