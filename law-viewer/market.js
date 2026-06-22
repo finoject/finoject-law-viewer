@@ -1,4 +1,4 @@
-// 金融ポータル用 市況データ取得（ドル円・日経平均・NYダウ・ビットコイン）。
+// 金融ポータル用 市況データ取得（為替・株価指数・国債利回り・暗号資産。銘柄はYF配列＋個別取得で定義）。
 // サーバ側(GitHub Actions)で取得して law-viewer-site/data/market.json に保存する。
 //   理由: 静的サイト(GitHub Pages)からブラウザ直叩きでは、為替・株価指数の無料CORS対応ソースが乏しく、
 //         Yahoo Finance等はCORS不可＋UA必須のため、Actions側で取得して同一オリジンのJSONに落とすのが堅実。
@@ -25,7 +25,7 @@ async function yahoo(symbol){
   const YF = [
     ['usdjpy', 'JPY%3DX',  'ドル円'],
     ['n225',   '%5EN225',  '日経平均'],
-    ['dji',    '%5EDJI',   'NYダウ'],
+    ['dji',    '%5EDJI',   'NY Dow'],
     ['ndx',    '%5ENDX',   'NASDAQ100'],
     ['us10y',  '%5ETNX',   '米国債10年', true],
   ];
