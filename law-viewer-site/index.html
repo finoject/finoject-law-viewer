@@ -1763,7 +1763,7 @@ function setupSecDrag(){
 const MKT_DEFS = [
   {id:'usdjpy', sym:'JPY=X', label:'ドル円',       dec:3},
   {id:'n225',   sym:'^N225', label:'日経平均',     dec:2},
-  // ★TOPIX は日経の次に入れる予定。Yahoo無料枠に正確な現物指数が無く、データ源(連動ETF 1306.T / 先物 TPY=F)を三根さん確認中のため保留。
+  {id:'topix',  sym:null,    label:'TOPIX',       dec:2},   // JPXの指数値JSON(約20分遅れ)をプロキシ経由で取得＝fetchJPXTopix（Yahoo無料枠に正確な現物指数が無いため）
   {id:'dji',    sym:'^DJI',  label:'NYダウ',       dec:2},
   {id:'ndx',    sym:'^NDX',  label:'NASDAQ100',    dec:2},
   {id:'jp10y',  sym:null,    label:'日本国債10年', dec:3, suffix:'%', chUnit:'bp', seedOnly:true},
@@ -1786,7 +1786,7 @@ function mktCell(def, it){
     }
   }
   // 取引時間外の判定: Yahoo銘柄(def.sym有)で、最終約定が40分超前なら市場クローズ＝「時間外」（無料データの約15分遅れを考慮し誤判定を回避。値が動かないのは正常で故障ではない）
-  const stale = def.sym && it.t && (Date.now()-it.t > 40*60*1000);
+  const stale = it.t && (Date.now()-it.t > 40*60*1000);   // 最終約定/更新が40分超前＝市場の取引時間外（Yahoo銘柄もTOPIX(JPX)も it.t で判定）
   const staleTag = stale ? `<span class="mkstale" title="市場の取引時間外のため値は固定（故障ではありません）">時間外</span>` : '';
   const ttl = '出典: '+(it.source||'')+'（'+(it.note||'')+'）' + (it.t? '　最終約定 '+jpDateTime(new Date(it.t).toISOString()):'');
   return `<div class="mkc${stale?' mkc-stale':''}" id="mkc-${id}" title="${esc(ttl)}">`
@@ -1796,7 +1796,7 @@ function mktCell(def, it){
 function mktPaint(){
   const bar=document.getElementById('mktbar'); if(!bar) return;
   bar.innerHTML='<div class="mkrow">'+MKT_DEFS.map(d=>mktCell(d, MKT_CACHE[d.id])).join('')+'</div>'
-    + `<div class="mksrc">為替・株価指数・米国債10年: Yahoo Finance（無料データのため約15分遅れ）／Bitcoin: Coinbase（USD建）／日本国債10年: 財務省（日次・新発10年）　｜　自動更新（表示中・約15秒間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
+    + `<div class="mksrc">為替・株価指数(日経/NYダウ/NASDAQ100)・米国債10年: Yahoo Finance（約15分遅れ）／TOPIX: JPX（約20分遅れ）／Bitcoin: Coinbase（USD建）／日本国債10年: 財務省（日次・新発10年）　｜　自動更新（表示中・約15秒間隔）${_mktStamp?'　最終取得 '+_mktStamp:''}</div>`;
 }
 let MKT_CACHE = {};
 async function fetchYahoo(symbol){
@@ -1823,11 +1823,27 @@ async function fetchBTC(){
     return null;
   }
 }
+// TOPIX: JPXの「リアルタイム株価指数値」JSON（約20分遅れ）。CORS不可だが、許可済みドメインのためWorkerプロキシ経由で取得。
+// MainStockIndex.Topix = { currentPrice, previousDayComparison(前日比), previousDayRatio(%) }。前日比%をそのまま change に使う（日経等と同じ表示）。
+async function fetchJPXTopix(){
+  const num=s=>{ const v=parseFloat(String(s).replace(/,/g,'')); return isFinite(v)?v:null; };
+  const base='https://www.jpx.co.jp/market/indices/indices_stock_price3.1';
+  const px=PROXY_BASE+'?url='+encodeURIComponent(base+'.txt?_='+Date.now());
+  const tx=PROXY_BASE+'?url='+encodeURIComponent(base+'.time.txt?_='+Date.now());
+  const [jr,tr]=await Promise.all([fetch(px,{cache:'no-store'}), fetch(tx,{cache:'no-store'}).catch(()=>null)]);
+  if(!jr.ok) throw new Error('proxy '+jr.status);
+  const data=await jr.json();
+  const top=data.MainStockIndex && data.MainStockIndex.Topix; if(!top) throw new Error('no topix');
+  const value=num(top.currentPrice), chg=num(top.previousDayComparison), pct=num(top.previousDayRatio);
+  let tm=null; try{ if(tr&&tr.ok){ const m=(await tr.text()).trim().match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/); if(m) tm=Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00+09:00`); } }catch(e){}
+  return { label:'TOPIX', value, prev:(value!=null&&chg!=null)?value-chg:null, change:pct, source:'JPX', note:'約20分遅れ', t:tm };
+}
 async function mktLive(){
   const jobs=[];
   for(const def of MKT_DEFS){
     if(def.seedOnly) continue;                                  // 日本国債10年は market.json の種（日次）から。ライブ更新しない
     if(def.id==='btc'){ jobs.push(fetchBTC().then(it=>{ if(it) MKT_CACHE.btc=it; }).catch(()=>{})); continue; }
+    if(def.id==='topix'){ jobs.push(fetchJPXTopix().then(it=>{ if(it&&it.value!=null) MKT_CACHE.topix=it; }).catch(()=>{})); continue; }
     jobs.push(fetchYahoo(def.sym).then(d=>{
       const change = def.chUnit==='bp' ? (d.prev!=null?(d.value-d.prev)*100:null)   // 利回りは変化をbp(=値差×100)で
                                        : (d.prev?((d.value-d.prev)/d.prev*100):null); // 価格は変化率(%)で

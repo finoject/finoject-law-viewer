@@ -28,7 +28,6 @@ async function yahoo(symbol){
     ['dji',    '%5EDJI',   'NYダウ'],
     ['ndx',    '%5ENDX',   'NASDAQ100'],
     ['us10y',  '%5ETNX',   '米国債10年', true],
-    // ★TOPIX: Yahoo無料枠に正確な現物指数が無く、データ源を三根さん確認中のため保留（決まり次第ここに追加）。
   ];
   for (const [key, sym, label, yield_] of YF){
     try {
@@ -54,6 +53,21 @@ async function yahoo(symbol){
         change: isFinite(pv) ? (v - pv) * 100 : null, source: '財務省', note: '日次・新発10年 ' + reiwa(last[0]) };
     }
   } catch (e){ console.log('jp10y 取得失敗: ' + (e.message || e)); }
+
+  // TOPIX（JPX「リアルタイム株価指数値」JSON・約20分遅れ）。Yahoo無料枠に正確な現物TOPIX指数が無いためJPX公式から取得。
+  // MainStockIndex.Topix = { currentPrice, previousDayComparison(前日比), previousDayRatio(%) }。フロントは表示中にプロキシ経由で同ソースを15秒ごと最新化。
+  try {
+    const num = s => { const v = parseFloat(String(s).replace(/,/g, '')); return isFinite(v) ? v : null; };
+    const jj = await (await fetch('https://www.jpx.co.jp/market/indices/indices_stock_price3.1.txt')).json();
+    const top = jj.MainStockIndex && jj.MainStockIndex.Topix;
+    if (top){
+      const value = num(top.currentPrice), chg = num(top.previousDayComparison), pct = num(top.previousDayRatio);
+      let tm = null;
+      try { const m = (await (await fetch('https://www.jpx.co.jp/market/indices/indices_stock_price3.1.time.txt')).text()).trim().match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/);
+            if (m) tm = Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00+09:00`); } catch (e2){}
+      out.items.topix = { label: 'TOPIX', value, prev: (value!=null && chg!=null) ? value - chg : null, change: pct, source: 'JPX', note: '約20分遅れ', t: tm };
+    }
+  } catch (e){ console.log('topix 取得失敗: ' + (e.message || e)); }
 
   // ビットコイン: Coinbase Exchange stats（last=現在値, open=24時間前）で価格＋24h変化率。CoinGecko(429)/Binance(ブラウザ不可)は不使用。
   // ※これは初期表示の種。フロントは表示中にクライアント側から同ソースで15秒ごとに最新化する。
