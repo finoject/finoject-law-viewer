@@ -76,6 +76,10 @@
     border:1px solid var(--line); border-radius:10px; padding:20px 22px; box-shadow:0 18px 50px rgba(0,0,0,.5); }
   .modalbox h3{ margin:0 0 12px; font-size:15px; }
   .modalx{ position:absolute; top:10px; right:10px; background:var(--ctl); color:var(--tx); border:1px solid var(--line); border-radius:6px; cursor:pointer; padding:2px 9px; }
+  .manifesto{ margin:0 0 16px; padding:0 0 14px; border-bottom:1px solid var(--hair); }
+  .mani-lead{ margin:0 0 12px; font-size:16px; font-weight:700; letter-spacing:.02em; color:var(--txh); }
+  .mani-pt{ margin:0 0 9px; font-size:12.8px; line-height:1.75; color:var(--fg); }
+  .mani-pt b{ color:var(--accent); }
   .methlist{ margin:0; font-size:12.5px; line-height:1.65; }
   .methlist dt{ font-weight:700; color:var(--txh); margin-top:9px; }
   .methlist dd{ margin:1px 0 0; color:var(--fg); }
@@ -389,6 +393,7 @@
   #pctl{ margin-top:9px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
   #pctl button{ background:var(--ctl); color:var(--tx); border:1px solid var(--line); border-radius:7px; padding:4px 9px; font-size:12px; cursor:pointer; }
   #pctl button:hover{ border-color:var(--accent); }
+  #pctl button.active{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
   #pctl-state{ color:var(--lnk); font-weight:700; }
   /* 本文中の法令参照リンク（法第N条…） */
   .body a.rf{ color:inherit; text-decoration:none; cursor:pointer; border-bottom:1px dashed rgba(127,176,255,.55); }
@@ -1841,15 +1846,21 @@ function showAbout(){
   let m=document.getElementById('aboutModal');
   if(!m){ m=document.createElement('div'); m.id='aboutModal'; m.className='modal'; document.body.appendChild(m); m.addEventListener('click', e=>{ if(e.target===m) m.remove(); }); }
   m.innerHTML = `<div class="modalbox"><button class="modalx" onclick="document.getElementById('aboutModal').remove()" title="閉じる">✕</button>`
-    + `<h3>About / 方法論</h3>`
+    + `<h3>finoject Financial Regulation Deck</h3>`
+    + `<div class="manifesto">`
+    + `<p class="mani-lead">規制は、読めなければ守れない。</p>`
+    + `<div class="mani-pt"><b>判断は、人がする。</b>AIが答えを出す時代だからこそ、条文そのものに立ち返る。要約は下ごしらえに過ぎず、最終判断は実務家の手に残す。生成された結論を鵜呑みにしない——それが金融実務の規律である。</div>`
+    + `<div class="mani-pt"><b>読める形に、整える。</b>カッコの入れ子、漢数字、読替表。実務家が印刷とマーカーで解いてきた条文を、構造のまま読める形にする。言葉は削るが、情報は落とさない。</div>`
+    + `<div class="mani-pt"><b>必要な人に、無料で。</b>規制情報へのアクセスは、健全な金融の土台（インフラ）である。だから完全無料で開く。Bloomberg や LexisNexis の品位を、誰の机にも。</div>`
+    + `</div>`
     + `<dl class="methlist">`
-    + `<dt>提供</dt><dd>finoject Financial Regulation Deck（株式会社finoject）。実務支援を目的とした<b>非公式</b>ツールです。</dd>`
-    + `<dt>条文の出典</dt><dd>e-Gov 法令API v2（デジタル庁）。法律・政省令・府令の条文と施行/更新日を取得。</dd>`
+    + `<dt>条文の出典</dt><dd>e-Gov 法令API v2（デジタル庁）。法律・政省令・府令の条文と施行/更新日。</dd>`
     + `<dt>規制動向の出典</dt><dd>金融庁・日本銀行・JPX・日本証券業協会・JVCEA・日本公認会計士協会の新着公表、衆議院 議案情報。</dd>`
-    + `<dt>更新頻度</dt><dd>1日3回の自動巡回。各条文画面に「最終確認」時刻を表示し、取得が滞った場合は「更新確認中」を表示します。</dd>`
-    + `<dt>AI要約・解説</dt><dd>Claude（Anthropic）による<b>便宜的な</b>要約・解説です。誤りを含む可能性があり、<b>正文は必ず e-Gov 原文・専門家でご確認ください</b>。</dd>`
-    + `<dt>免責</dt><dd>本ツールは情報提供を目的とし、法的助言ではありません。内容の正確性・完全性・最新性を保証しません。</dd>`
-    + `</dl><div class="methcr">ⓒ finoject, Inc.</div></div>`;
+    + `<dt>更新頻度</dt><dd>1日3回の自動巡回。各条文画面に「最終確認」時刻を表示し、取得が滞れば「更新確認中」を表示。</dd>`
+    + `<dt>AI要約・解説</dt><dd>Claude（Anthropic）による<b>便宜的な</b>補助です。誤りを含む可能性があり、<b>正文は必ず e-Gov 原文・専門家でご確認ください</b>。</dd>`
+    + `<dt>免責</dt><dd>情報提供を目的とし、法的助言ではありません。内容の正確性・完全性・最新性を保証しません。</dd>`
+    + `</dl>`
+    + `<div class="methcr">本Deckは、株式会社finoject が自らの実務で用いる道具を公開したものです。暗号資産・ステーブルコイン・トークンの制度設計や規制対応のご相談は <a href="https://www.finoject.com" target="_blank" rel="noopener">finoject.com ↗</a> へ。　ⓒ finoject, Inc.</div></div>`;
 }
 function goHome(){
   CUR = null;
@@ -1907,11 +1918,48 @@ function lawToMarkdown(d){
   }
   return md.replace(/\n{3,}/g,'\n\n');
 }
+// 現在の（）折り畳み状態のラベル（applyParen と共用）
+function parenStateLabel(){ const mx=curMaxDepth; return (pDepth>mx)?'全文':(pDepth<=1?'基本構造（カッコ省略）':('深さ '+(pDepth-1)+' まで')); }
+// 現在の法令内検索で「画面に出ている」ブロックだけに絞る（見出しは renderDoc と同様に保持）
+function visibleBlocks(d){
+  const k=($('#search')?$('#search').value:'').trim(); const sq=k?parseSearch(k):null;
+  if(!sq) return d.blocks;
+  return d.blocks.filter(b => b.t==='h' ? true : matchSearch(searchText(b), sq));
+}
+// 「画面に表示されている状態そのまま」を Markdown 化（粒度コントロール）。
+//  ・法令内検索で絞り込み中 → 一致した条文だけ。 ・カッコ折り畳み中 → 折り畳んだ見た目（隠れた（）は除外）。
+//  実装は描画済みDOM(#artbody)を走査＝CSSで適用済みの折り畳み/絞り込みをそのまま反映（再実装による齟齬を防ぐ）。
+function lawToMarkdownVisible(d){
+  const body=document.querySelector('#doc #artbody');
+  if(!body || !body.querySelector('.art')) return lawToMarkdown(d);   // 未描画時は従来の全文出力
+  const n=new Date(), ds=n.getFullYear()+'/'+pad2(n.getMonth()+1)+'/'+pad2(n.getDate());
+  const k=($('#search')?$('#search').value:'').trim();
+  let md='# '+(d.title||'')+'\n\n';
+  md+='> '+[d.type,d.law_num].filter(Boolean).join('　')+'  \n';
+  md+='> e-Gov反映: '+((d.updated||'').slice(0,10)||'—')+'  \n';
+  if(d.egov_url) md+='> e-Gov原文: '+d.egov_url+'  \n';
+  if(k) md+='> 抽出条件: 「'+k+'」に一致する条文のみ  \n';
+  md+='> カッコ表示: '+parenStateLabel()+'  \n';
+  md+='> エクスポート: '+ds+'（finoject Financial Regulation Deck・表示状態のまま出力）\n\n---\n\n';
+  for(const el of body.children){
+    if(el.classList.contains('h')){ md += '\n**'+el.textContent.trim()+'**\n\n'; }
+    else if(el.classList.contains('art')){
+      const num=(el.querySelector('.num')?el.querySelector('.num').textContent:el.getAttribute('data-num')||'').trim();
+      const capEl=el.querySelector('.cap'); const cap=capEl?'　'+capEl.textContent.trim():'';
+      const bEl=el.querySelector('.body');
+      let txt=bEl?(bEl.innerText||bEl.textContent||'').replace(/ /g,' '):'';
+      txt=txt.split('\n').map(s=>s.replace(/[ \t　]+$/,'')).join('  \n');
+      md += '## '+num+cap+'\n\n'+txt+'\n\n';
+    }
+  }
+  return md.replace(/\n{3,}/g,'\n\n');
+}
 function lawToJSON(d){
-  // 内部の構造化データをそのまま＋エクスポートメタ。条/項/号は num+body(整形済テキスト)、表は tables[] を構造保持。
-  const out={ _export:{ generatedAt:new Date().toISOString(), source:'finoject 金融関連法令・規制ウォッチ' },
+  // 内部の構造化データ＋エクスポートメタ。**法令内検索で絞り込み中はその条文だけ**（粒度コントロール）。条/項/号は num+body(整形済テキスト)、表は tables[] を構造保持。
+  const blocks=visibleBlocks(d); const k=($('#search')?$('#search').value:'').trim();
+  const out={ _export:{ generatedAt:new Date().toISOString(), source:'finoject Financial Regulation Deck', filter:k||null, articleCount:blocks.filter(b=>b.t!=='h').length },
     law_id:d.law_id, title:d.title, type:d.type, law_num:d.law_num, group:d.group, updated:d.updated, egov_url:d.egov_url,
-    blocks:d.blocks };
+    blocks };
   return JSON.stringify(out, null, 2);
 }
 function downloadFile(name, content, mime){
@@ -1923,7 +1971,7 @@ function exportLaw(fmt){
   if(!CUR) return; const n=new Date();
   const base=fnameSafe(CUR.title)+'_'+n.getFullYear()+pad2(n.getMonth()+1)+pad2(n.getDate());
   if(fmt==='json') downloadFile(base+'.json', lawToJSON(CUR), 'application/json');
-  else downloadFile(base+'.md', lawToMarkdown(CUR), 'text/markdown');
+  else downloadFile(base+'.md', lawToMarkdownVisible(CUR), 'text/markdown');
 }
 $('#expMd').addEventListener('click', ()=>exportLaw('md'));
 $('#expJson').addEventListener('click', ()=>exportLaw('json'));
@@ -1961,7 +2009,10 @@ function applyParen(){
   if (pDepth > mx) doc.removeAttribute('data-pd'); else doc.setAttribute('data-pd', pDepth);   // クラス1発（全走査なし）
   doc.classList.toggle('foldall', pDepth<=mx && pDepth<=1);   // 「基本構造のみ」は定義カッコも含め全て畳む（完全な骨組み）
   const st = $('#pctl-state');
-  if (st) st.textContent = '［状態: ' + ((pDepth > mx) ? '全文' : (pDepth <= 1 ? '基本構造（カッコ省略）' : ('深さ '+(pDepth-1)+' まで'))) + '］';
+  if (st) st.textContent = '［状態: ' + parenStateLabel() + '］';
+  // アクティブな表示モードのボタンを明示（全文／基本構造。畳む・戻すは増減アクションなので非ハイライト）
+  const mode = (pDepth > mx) ? 'all' : (pDepth <= 1 ? 'skel' : null);
+  document.querySelectorAll('#pctl button[data-pa]').forEach(b => b.classList.toggle('active', b.getAttribute('data-pa')===mode));
 }
 $('#pctl').addEventListener('click', e => {
   const a = e.target.getAttribute('data-pa'); if (!a) return;
