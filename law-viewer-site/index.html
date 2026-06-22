@@ -235,6 +235,10 @@
   /* 最上部「本日の更新／直近7日の更新」ポータル */
   .ptop{ background:var(--card); border:1px solid var(--line); border-radius:7px; padding:9px 12px 6px; margin:2px 0 10px; }
   .ptophd{ font-size:12.5px; font-weight:700; letter-spacing:.04em; color:var(--muted); margin-bottom:8px; border-left:2px solid var(--accent2); padding-left:7px; }
+  .psort{ float:right; display:inline-flex; gap:2px; font-weight:400; }
+  .psortb{ font-size:10.5px; color:var(--muted); border:1px solid var(--line); border-radius:4px; padding:1px 7px; cursor:pointer; letter-spacing:0; }
+  .psortb:hover{ border-color:var(--accent); }
+  .psortb.on{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
   .truststat{ font-size:11px; color:var(--muted); margin:0 0 10px; padding:5px 8px; border:1px solid var(--hair); border-radius:5px; cursor:pointer; font-variant-numeric:tabular-nums; display:flex; flex-wrap:wrap; align-items:center; gap:0; }
   .truststat:hover{ border-color:var(--accent); }
   .truststat .ts-k{ color:var(--txh); font-weight:700; margin-right:5px; }
@@ -514,7 +518,7 @@
   <nav id="side">
     <h1 id="brand" title="ホーム">finoject Financial Regulation Deck</h1>
     <div id="lawList"></div>
-    <button id="aboutLink" onclick="showAbout()" title="出典・更新頻度・AI要約・免責">About / 方法論</button>
+    <button id="aboutLink" onclick="showAbout()" title="出典・更新頻度・AI要約・免責・方法論">方法論</button>
   </nav>
   <div id="sideSplit" title="ドラッグで法令一覧の幅を調整"></div>
 
@@ -537,11 +541,11 @@
       </div>
       <input id="search" placeholder="法令内検索" class="hidden">
       <div id="pctl" class="hidden">
-        <span class="pctl-help" title="入れ子のカッコを段階的に畳む">（　）:</span>
-        <button data-pa="all" title="全文（カッコを全て表示）">全文</button>
-        <button data-pa="less" title="深い所から畳む">－ 畳む</button>
+        <span class="pctl-help" title="入れ子のカッコを段階的に畳む。ショートカット: [ 畳む ／ ] 全文 ／ \ 基本構造">（　）:</span>
+        <button data-pa="all" title="全文（カッコを全て表示）｜ ] キー">全文</button>
+        <button data-pa="less" title="深い所から畳む｜ [ キー">－ 畳む</button>
         <button data-pa="more" title="一段戻す">＋ 戻す</button>
-        <button data-pa="skel" title="基本構造（カッコ省略）">基本構造</button>
+        <button data-pa="skel" title="基本構造（カッコ省略）｜ \ キー">基本構造</button>
         <span id="pctl-state"></span>
       </div>
     </div>
@@ -624,6 +628,8 @@ const REG_URL = 'https://finoject.github.io/finoject-reg-monitor/data.json';
 const REG_SITE = 'https://finoject.github.io/finoject-reg-monitor/';
 let REGBYLAW={}, REGBYART={}, REGLAWNEWS={}, REGDIET={}, REGLOADED=false, REG_GEN=null;
 let REGITEMS=[], REGLATEST=null, homeFilterAg='all', homeFilterKw='', FEED_SHOWN=[];   // トップ画面の規制ウォッチ・フィード用（homeFilterKw=簡易キーワード絞り込み）
+let portalSort='date';   // 最新動向の並び順: date=最新順(既定) / sec=§優先 / changed=改正反映優先
+function setPortalSort(s){ portalSort=s; renderPortalTop(); }
 // 外部ページ埋め込み用プロキシ(Cloudflare Worker)。設定すると金融庁/日銀等(X-Frame-Options拒否)も画面内表示できる。
 // デプロイ後にここへ workers.dev のURLを入れる（末尾スラッシュ無し）。空のままでも埋め込み可サイト(JSDA/JVCEA)は表示する。
 const PROXY_BASE = 'https://finoject-proxy.kimihiro-mine.workers.dev';
@@ -685,15 +691,15 @@ function homeRefsHtml(it){
     const k = (g.kind && g.kind!=='その他') ? `<span class="fk k-${g.kind}">${esc(g.kind)}</span>` : '';
     const a = g.art ? "'"+g.art.replace(/'/g,'')+"'" : 'null';
     const href = '?law='+g.id+(g.art?'&art='+encodeURIComponent(g.art):'');
-    return `<a class="fchip" href="${href}" onclick="event.stopPropagation();openLaw('${g.id}',${a});return false;" title="この法令ビューアで開く">§${esc(g.label)}${k}</a>`;
+    return `<a class="fchip" href="${href}" onclick="event.stopPropagation();openLaw('${g.id}',${a});return false;" title="自動検出（本文・PDF解析）。最終判断は原文優先。クリックでこの法令ビューアで開く">§${esc(g.label)}${k}</a>`;
   }).join('')+'</div>';
 }
 function renderFeedChips(){
   const box=document.getElementById('feedchips'); if(!box) return;
-  const chip=(ag,label,extra)=>`<span class="fchipbtn${extra||''}${homeFilterAg===ag?' on':''}" data-ag="${ag}">${esc(label)}</span>`;
+  const chip=(ag,label,extra,tip)=>`<span class="fchipbtn${extra||''}${homeFilterAg===ag?' on':''}" data-ag="${ag}"${tip?` title="${esc(tip)}"`:''}>${esc(label)}</span>`;
   let h = chip('all','すべて');
+  h += chip('__lawlinked__','§',' fc-law','条文への自動リンクがある更新のみ（当アプリ独自）');   // 端末的に「§」一字で前に出す
   for(const ag of REG_AGENCIES) h += chip(ag, REG_SHORT[ag]||ag);
-  h += chip('__lawlinked__','§法令リンク',' fc-law');
   box.innerHTML=h;
   box.querySelectorAll('.fchipbtn').forEach(c=>c.addEventListener('click',()=>{
     const ag=c.dataset.ag;
@@ -924,18 +930,23 @@ function renderPortalTop(){
   const box=document.getElementById('portalTop'); if(!box) return;
   if(!REGITEMS.length && !(INDEX&&INDEX.laws)){ box.innerHTML='<div class="ptop"><div class="hint" style="padding:14px">読み込み中…</div></div>'; return; }
   const today=isoJST(0), wk=isoJST(7);
-  // 重要度（条文に紐づく動向／改正反映の法令＝高）→日付の降順。実務影響の大きい更新を上に出す（毎朝の確認用）
-  const impScore=x=> x.kind==='law' ? (x.changed?2:1) : (x.refs&&x.refs.length?2:0);
-  const all=portalItems().sort((a,b)=> impScore(b)-impScore(a) || b.date.localeCompare(a.date));
+  // 並び順（既定=最新順）。「最新動向」なので日付優先が自然。§優先=条文リンクあり、改正反映=データ変化ありを上に。
+  const secScore=x=> (x.refs&&x.refs.length)?1:0;          // §＝条文への自動リンクあり
+  const chgScore=x=> (x.kind==='law'?x.changed:(x.refs&&x.refs.length))?1:0;   // 改正反映/条文紐づき
+  const all=portalItems();
+  if(portalSort==='sec')         all.sort((a,b)=> secScore(b)-secScore(a) || b.date.localeCompare(a.date));
+  else if(portalSort==='changed') all.sort((a,b)=> chgScore(b)-chgScore(a) || b.date.localeCompare(a.date));
+  else                            all.sort((a,b)=> b.date.localeCompare(a.date));   // 'date'＝最新順（既定）
   const todayItems=all.filter(x=>x.date===today);
   const weekItems=all.filter(x=>x.date<today && x.date>=wk);
   const LIM=8;
   const list=(items,emptyMsg)=> items.length
     ? items.slice(0,LIM).map(portalRow).join('') + (items.length>LIM?`<div class="pmore">ほか ${items.length-LIM}件</div>`:'')
     : `<div class="pnone">${emptyMsg}</div>`;
+  const seg=(s,label)=>`<span class="psortb${portalSort===s?' on':''}" onclick="setPortalSort('${s}')">${label}</span>`;
   box.innerHTML=`<div class="ptop">
     ${trustStatHtml()}
-    <div class="ptophd">最新動向</div>
+    <div class="ptophd">最新動向<span class="psort">${seg('date','最新順')}${seg('sec','§優先')}${seg('changed','改正反映')}</span></div>
     <div class="pcols">
       <div class="pblk"><div class="pblkh">本日 <b>(${todayItems.length})</b><span class="pblksub">${jpDay(today)}</span></div>${list(todayItems,'なし')}</div>
       <div class="pblk"><div class="pblkh">直近7日 <b>(${weekItems.length})</b></div>${list(weekItems,'なし')}</div>
@@ -2043,8 +2054,7 @@ function applyParen(){
   const mode = (pDepth > mx) ? 'all' : (pDepth <= 1 ? 'skel' : null);
   document.querySelectorAll('#pctl button[data-pa]').forEach(b => b.classList.toggle('active', b.getAttribute('data-pa')===mode));
 }
-$('#pctl').addEventListener('click', e => {
-  const a = e.target.getAttribute('data-pa'); if (!a) return;
+function applyParenAction(a){
   let mx = 0; document.querySelectorAll('#doc .p[data-d]').forEach(el=>{ const d=+el.getAttribute('data-d'); if(d>mx) mx=d; });  // 実DOMから最大カッコ深さを都度算出＝curMaxDepth未設定/陳腐化でも確実に動く
   curMaxDepth = mx;
   if (a==='all') pDepth = mx + 1;
@@ -2052,6 +2062,18 @@ $('#pctl').addEventListener('click', e => {
   else if (a==='less') pDepth = Math.max(1, (pDepth > mx ? mx + 1 : pDepth) - 1);
   else if (a==='more') pDepth = Math.min(mx + 1, pDepth + 1);
   applyParen();
+}
+$('#pctl').addEventListener('click', e => { const a = e.target.getAttribute('data-pa'); if (a) applyParenAction(a); });
+// キーボードショートカット（ヘビーユース向け・三根さん/Gemini要望）: [ =畳む / ] =全文 / \ =基本構造。入力中とモーダル表示中は無効。
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target, tag = (t && t.tagName || '').toLowerCase();
+  if (tag==='input' || tag==='textarea' || tag==='select' || (t && t.isContentEditable)) return;
+  if ($('#pctl').classList.contains('hidden')) return;            // 法令を開いている時だけ有効
+  if (document.getElementById('aboutModal')) return;
+  if (e.key==='[')        { applyParenAction('less'); e.preventDefault(); }
+  else if (e.key===']')   { applyParenAction('all');  e.preventDefault(); }
+  else if (e.key==='\\')  { applyParenAction('skel'); e.preventDefault(); }
 });
 $('#burger').addEventListener('click', ()=> $('#side').classList.toggle('open'));
 
