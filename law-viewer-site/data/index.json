@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T23:53:24.707Z",
+  "generatedAt": "2026-06-23T02:24:32.534Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -431,8 +431,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [
-    "外国為替令"
-  ],
+  "changed": [],
   "isFirst": false
 }
