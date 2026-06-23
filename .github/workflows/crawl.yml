@@ -36,9 +36,16 @@ jobs:
         working-directory: law-viewer
         run: node fetcher.js
 
-      - name: 市況データ取得（ドル円/日経平均/NYダウ/ビットコイン）
+      - name: 市況データ取得（為替/株価指数/国債/暗号資産）
         working-directory: law-viewer
         run: node market.js || echo "市況取得は失敗（市況バーは欠落値表示・本体に影響なし）"
+
+      # データ検証ゲート: title=law_id / article_count 0 / revision_id空 / blocks空 / 件数激減 等を検知したら
+      # 非ゼロ終了でこのジョブを失敗させる → 以降のコミット・Pages公開が走らない＝壊れたデータを本番に出さない。
+      # 失敗時は末尾の if:failure() ステップが Slack 通知（SLACK_WEBHOOK_URL 設定時）。
+      - name: データ検証（異常があれば公開を中止）
+        working-directory: law-viewer
+        run: node validate-data.js
 
       - name: 差分データをコミット（蓄積を永続化）
         run: |
