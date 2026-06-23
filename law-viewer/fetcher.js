@@ -49,8 +49,17 @@ const TARGETS = [
   { law_id:'428M60020000003', group:'個人情報', type:'規則' },     // 個人情報の保護に関する法律施行規則
 ];
 
-function curlText(url){
-  return execFileSync('curl', ['-sL','--max-time','60','-A',UA,url], { encoding:'utf8', maxBuffer: 300*1024*1024 });
+function sleepSync(ms){ try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); } catch(e){} }
+// 空応答（e-Govのレート制限/瞬断）に弱いと、正常データが空レコードで上書きされる（例: 外国為替令が空になった事故）。
+// → 空が返ったらバックオフして数回リトライ。それでも空なら呼び出し側が前回の正常データを保持する。
+function curlText(url, tries=4){
+  for (let i=0; i<tries; i++){
+    let out='';
+    try { out = execFileSync('curl', ['-sL','--max-time','60','-A',UA,url], { encoding:'utf8', maxBuffer: 300*1024*1024 }); } catch(e){ out=''; }
+    if (out && out.trim().length > 1) return out;
+    if (i < tries-1) sleepSync(700*(i+1));   // 0.7s,1.4s,2.1s と待って再試行
+  }
+  return '';
 }
 function curlJson(url){ return JSON.parse(curlText(url)); }
 
@@ -398,9 +407,11 @@ function main(){
     try {
       const j = curlJson(`${API}/law_data/${id}`);
       const ri = j.revision_info || {};
-      const title = ri.law_title || id;
+      const title = ri.law_title || '';
       const blocks = extractBlocks(j.law_full_text);
       const articleCount = blocks.filter(b => b.t === 'a').length;
+      // 空応答ガード: タイトル無し or 条文0 は正常な法令ではない（レート制限/瞬断の空応答）→ throwして前回の正常データを保持
+      if (!title || articleCount === 0) throw new Error('空応答（title/条文なし・レート制限の可能性）');
       const rec = {
         law_id: id, title, group: tgt.group, type: tgt.type,
         law_num: kanjiNum((j.law_info && j.law_info.law_num) || ''),
@@ -415,7 +426,12 @@ function main(){
       fs.writeFileSync(path.join(DATA, `${id}.json`), JSON.stringify({ ...rec, blocks }), 'utf8');
       if (prevRev[id] !== rec.revision_id) changed.push(title);
       report.push(`${title}: ${id} / ${articleCount}条 ${prevRev[id]&&prevRev[id]!==rec.revision_id?'(更新)':''}`);
-    } catch(e){ report.push(`${id}: 失敗 ${String(e.message||e).slice(0,60)}`); }
+    } catch(e){
+      // 取得失敗時は前回の正常データを保持（空レコードで上書きしない＝外国為替令の事故の再発防止）。既存JSONも残す。
+      const prev = prevRec[id];
+      if (prev && prev.article_count > 0){ laws.push(prev); report.push(`${id}: 取得失敗→前回値を維持 (${prev.title})`); }
+      else report.push(`${id}: 失敗 ${String(e.message||e).slice(0,60)}`);
+    }
   }
 
   // 金融庁 事務ガイドライン（PDF）を取得して統合
@@ -444,4 +460,7 @@ function main(){
   console.log('=== 取得結果 ==='); report.forEach(r => console.log(' - ' + r));
   console.log(`法令数: ${laws.length} / 更新: ${isFirst?'(初回baseline)':changed.length+'件'} -> ${DATA}`);
 }
-main();
+
+// スクリプトとして実行された時だけ全件巡回。require された時は関数を再利用できるよう公開（単発の再取得・修復に使う）。
+module.exports = { API, UA, curlText, curlJson, extractBlocks, kanjiNum, TARGETS, DATA };
+if (require.main === module) main();
