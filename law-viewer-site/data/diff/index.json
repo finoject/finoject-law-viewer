@@ -1,6 +1,45 @@
 {
-  "generatedAt": "2026-06-24T12:36:27.907Z",
+  "generatedAt": "2026-06-24T23:46:45.758Z",
   "diffs": [
+    {
+      "law_id": "417AC0000000086",
+      "title": "会社法",
+      "group": "会社法",
+      "type": "法律",
+      "to_updated": "2026-06-24T10:58:29+09:00",
+      "generatedAt": "2026-06-24T23:46:39.120Z",
+      "counts": {
+        "changed": 0,
+        "added": 2,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "415AC0000000057",
+      "title": "個人情報の保護に関する法律",
+      "group": "個人情報",
+      "type": "法律",
+      "to_updated": "2026-06-24T10:04:00+09:00",
+      "generatedAt": "2026-06-24T23:46:41.678Z",
+      "counts": {
+        "changed": 0,
+        "added": 2,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "428M60020000003",
+      "title": "個人情報の保護に関する法律施行規則",
+      "group": "個人情報",
+      "type": "規則",
+      "to_updated": "2026-06-24T09:19:41+09:00",
+      "generatedAt": "2026-06-24T23:46:42.601Z",
+      "counts": {
+        "changed": 1,
+        "added": 0,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "_sample",
       "title": "金融商品取引法（表示確認用サンプル）",
