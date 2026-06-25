@@ -1,6 +1,19 @@
 {
-  "generatedAt": "2026-06-24T23:46:45.758Z",
+  "generatedAt": "2026-06-25T08:02:20.922Z",
   "diffs": [
+    {
+      "law_id": "fsa-kantoku-chusho",
+      "title": "中小・地域金融機関向けの総合的な監督指針",
+      "group": "ガイドライン",
+      "type": "監督指針",
+      "to_updated": "2026-06-25",
+      "generatedAt": "2026-06-25T08:02:19.584Z",
+      "counts": {
+        "changed": 21,
+        "added": 3,
+        "deleted": 4
+      }
+    },
     {
       "law_id": "417AC0000000086",
       "title": "会社法",

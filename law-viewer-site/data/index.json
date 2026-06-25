@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-24T23:46:19.736Z",
+  "generatedAt": "2026-06-25T08:01:52.332Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -326,9 +326,9 @@
       "group": "ガイドライン",
       "type": "監督指針",
       "law_num": "",
-      "revision_id": "5bc61dee08d313a4",
-      "updated": "2026-06-16",
-      "article_count": 93,
+      "revision_id": "dfedeeb1ca30f792",
+      "updated": "2026-06-25",
+      "article_count": 92,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/chusho/index.html"
     },
     {
@@ -432,9 +432,7 @@
     }
   ],
   "changed": [
-    "会社法",
-    "個人情報の保護に関する法律",
-    "個人情報の保護に関する法律施行規則"
+    "中小・地域金融機関向けの総合的な監督指針"
   ],
   "isFirst": false
 }
