@@ -1,6 +1,19 @@
 {
-  "generatedAt": "2026-06-29T14:38:06.946Z",
+  "generatedAt": "2026-06-29T23:39:36.730Z",
   "diffs": [
+    {
+      "law_id": "357M50000040010",
+      "title": "銀行法施行規則",
+      "group": "銀行法",
+      "type": "省令",
+      "to_updated": "2026-06-29T10:45:49+09:00",
+      "generatedAt": "2026-06-29T23:39:22.419Z",
+      "counts": {
+        "changed": 6,
+        "added": 0,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "fsa-kantoku-chusho",
       "title": "中小・地域金融機関向けの総合的な監督指針",

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-29T14:37:42.100Z",
+  "generatedAt": "2026-06-29T23:39:07.194Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -161,8 +161,8 @@
       "group": "銀行法",
       "type": "省令",
       "law_num": "昭和57年大蔵省令第10号",
-      "revision_id": "357M50000040010_20260601_508M60000002051",
-      "updated": "2026-06-11T10:48:31+09:00",
+      "revision_id": "357M50000040010_20260615_508M60000002055",
+      "updated": "2026-06-29T10:45:49+09:00",
       "article_count": 597,
       "egov_url": "https://laws.e-gov.go.jp/law/357M50000040010"
     },
@@ -431,6 +431,8 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [],
+  "changed": [
+    "銀行法施行規則"
+  ],
   "isFirst": false
 }
