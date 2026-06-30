@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-29T23:39:07.194Z",
+  "generatedAt": "2026-06-30T08:09:19.315Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -431,8 +431,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [
-    "銀行法施行規則"
-  ],
+  "changed": [],
   "isFirst": false
 }
