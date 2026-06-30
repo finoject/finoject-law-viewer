@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-30T12:31:32.128Z",
+  "generatedAt": "2026-06-30T23:47:25.310Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -18,8 +18,8 @@
       "group": "金商法",
       "type": "政令",
       "law_num": "昭和40年政令第321号",
-      "revision_id": "340CO0000000321_20260601_508CO0000000174",
-      "updated": "2026-06-10T09:50:39+09:00",
+      "revision_id": "340CO0000000321_20260701_508CO0000000174",
+      "updated": "2026-06-10T10:07:55+09:00",
       "article_count": 634,
       "egov_url": "https://laws.e-gov.go.jp/law/340CO0000000321"
     },
@@ -326,8 +326,8 @@
       "group": "ガイドライン",
       "type": "監督指針",
       "law_num": "",
-      "revision_id": "dfedeeb1ca30f792",
-      "updated": "2026-06-25",
+      "revision_id": "567cc326a88d8105",
+      "updated": "2026-06-30",
       "article_count": 92,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/chusho/index.html"
     },
@@ -431,6 +431,9 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [],
+  "changed": [
+    "金融商品取引法施行令",
+    "中小・地域金融機関向けの総合的な監督指針"
+  ],
   "isFirst": false
 }
