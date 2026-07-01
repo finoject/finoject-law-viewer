@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-30T23:47:25.310Z",
+  "generatedAt": "2026-07-01T08:38:47.004Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -173,7 +173,7 @@
       "type": "法律",
       "law_num": "平成17年法律第86号",
       "revision_id": "417AC0000000086_20260624_508AC0000000046",
-      "updated": "2026-06-24T10:58:29+09:00",
+      "updated": "2026-06-24T11:05:47+09:00",
       "article_count": 1155,
       "egov_url": "https://laws.e-gov.go.jp/law/417AC0000000086"
     },
@@ -431,9 +431,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [
-    "金融商品取引法施行令",
-    "中小・地域金融機関向けの総合的な監督指針"
-  ],
+  "changed": [],
   "isFirst": false
 }
