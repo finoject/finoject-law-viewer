@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-09T13:35:11.379Z",
+  "generatedAt": "2026-07-09T23:49:26.183Z",
   "diffs": [
     {
       "law_id": "357M50000040010",
@@ -64,6 +64,19 @@
         "changed": 1,
         "added": 0,
         "deleted": 0
+      }
+    },
+    {
+      "law_id": "419AC0000000022",
+      "title": "犯罪による収益の移転防止に関する法律",
+      "group": "犯収法",
+      "type": "法律",
+      "to_updated": "2026-06-19T11:41:34+09:00",
+      "generatedAt": "2026-07-09T23:49:08.813Z",
+      "counts": {
+        "changed": 10,
+        "added": 6,
+        "deleted": 3
       }
     },
     {

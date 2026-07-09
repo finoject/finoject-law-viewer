@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-09T13:34:40.072Z",
+  "generatedAt": "2026-07-09T23:48:59.777Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -106,9 +106,9 @@
       "group": "犯収法",
       "type": "法律",
       "law_num": "平成19年法律第22号",
-      "revision_id": "419AC0000000022_20260101_507AC1000000065",
-      "updated": "2025-06-27T08:30:19+09:00",
-      "article_count": 107,
+      "revision_id": "419AC0000000022_20260710_508AC0000000034",
+      "updated": "2026-06-19T11:41:34+09:00",
+      "article_count": 110,
       "egov_url": "https://laws.e-gov.go.jp/law/419AC0000000022"
     },
     {
@@ -431,6 +431,8 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [],
+  "changed": [
+    "犯罪による収益の移転防止に関する法律"
+  ],
   "isFirst": false
 }
