@@ -78,19 +78,6 @@
         "added": 0,
         "deleted": 0
       }
-    },
-    {
-      "law_id": "_sample",
-      "title": "金融商品取引法（表示確認用サンプル）",
-      "group": "金商法",
-      "type": "法律",
-      "to_updated": "2025-07-11T19:47:11+09:00",
-      "generatedAt": "2026-06-22T12:26:53.230Z",
-      "counts": {
-        "changed": 1,
-        "added": 0,
-        "deleted": 0
-      }
     }
   ]
 }

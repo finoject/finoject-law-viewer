@@ -120,7 +120,6 @@
   .dhead{ margin:2px 0 14px; }
   .dttl{ font-size:17px; font-weight:800; color:var(--txh); margin:8px 0 3px; }
   .dmeta{ font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
-  .dsample{ font-size:12px; color:var(--txh); background:rgba(201,162,75,.13); border:1px solid var(--accent2); border-radius:6px; padding:8px 11px; margin:0 0 12px; line-height:1.6; }
   .dlist{ display:flex; flex-direction:column; gap:14px; }
   .dart{ border:1px solid var(--line); border-radius:8px; background:var(--card); overflow:hidden; }
   .dhd{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:7px 11px; border-bottom:1px solid var(--hair); background:var(--ctl); }
@@ -988,7 +987,7 @@ function renderPortalTop(){
   const seg=(s,label)=>`<span class="psortb${portalSort===s?' on':''}" onclick="setPortalSort('${s}')">${label}</span>`;
   const diffList=Object.values(DIFF_INDEX);
   const diffStrip = diffList.length ? `<div class="dstrip"><span class="dstrip-h">改正差分</span>`
-    + diffList.slice(0,8).map(e=>{ const c=e.counts||{}; return `<a class="dchip" href="#" onclick="openDiff('${e.law_id}');return false" title="${esc(e.title)} の新旧対照（改正反映 ${esc((e.to_updated||'').slice(0,10))}）">${esc(e.title)}${e.sample?'〔サンプル〕':''}<span class="dchip-c">変${c.changed||0}/追${c.added||0}/削${c.deleted||0}</span></a>`; }).join('')
+    + diffList.slice(0,8).map(e=>{ const c=e.counts||{}; return `<a class="dchip" href="#" onclick="openDiff('${e.law_id}');return false" title="${esc(e.title)} の新旧対照（改正反映 ${esc((e.to_updated||'').slice(0,10))}）">${esc(e.title)}<span class="dchip-c">変${c.changed||0}/追${c.added||0}/削${c.deleted||0}</span></a>`; }).join('')
     + `</div>` : '';
   box.innerHTML=`<div class="ptop">
     ${trustStatHtml()}
@@ -1891,7 +1890,7 @@ function diffBtnHtml(id){
   const e = DIFF_INDEX[id]; if(!e) return '';
   const c = e.counts||{}; const p=[];
   if(c.changed) p.push('変更'+c.changed); if(c.added) p.push('追加'+c.added); if(c.deleted) p.push('削除'+c.deleted);
-  return `　|　<a href="#" class="diffbtn" onclick="openDiff('${id}');return false" title="この法令の改正差分（新旧対照）を表示">改正差分${p.length?'（'+p.join('・')+'）':''}${e.sample?'〔サンプル〕':''}</a>`;
+  return `　|　<a href="#" class="diffbtn" onclick="openDiff('${id}');return false" title="この法令の改正差分（新旧対照）を表示">改正差分${p.length?'（'+p.join('・')+'）':''}</a>`;
 }
 function refreshDiffBtn(){ const s=document.getElementById('diffBtnSlot'); if(s&&CUR) s.innerHTML=diffBtnHtml(CUR.law_id); }
 // 語句レベル差分（文字単位LCS）。巨大本文は行単位にフォールバック（メモリ保護）。返り値 {o,n}=旧/新のHTML。
@@ -1939,11 +1938,10 @@ async function openDiff(id){
 function renderDiffView(d){
   const c={changed:0,added:0,deleted:0}; (d.articles||[]).forEach(a=>{ c[a.status]=(c[a.status]||0)+1; });
   const back = (_diffReturn||CUR) ? `<button class="gback" onclick="closeDiff()">← 条文に戻る</button>` : `<button class="gback" onclick="showHome()">← ホーム</button>`;
-  const sample = d.sample ? `<div class="dsample">⚠ これは表示確認用の<b>サンプル</b>です（当社の整形更新による差分であり、実際の法改正ではありません）。実際の改正が入れば自動で本物の差分に置き換わります。</div>` : '';
   const head = `<div class="dhead">${back}<div class="dttl">改正差分　${esc(d.title)}</div>`
     + `<div class="dmeta">改正反映 ${esc((d.to_updated||'').slice(0,10)||'—')}　|　変更 ${c.changed}・追加 ${c.added}・削除 ${c.deleted}　|　<b>改正条文のみ</b>表示（正文はe-Gov原文を確認）</div></div>`;
   const body = (d.articles||[]).map(diffArticleHtml).join('') || '<div class="hint">差分はありません</div>';
-  $('#doc').innerHTML = `<div class="wrap">${sample}${head}<div class="dlist">${body}</div></div>`;
+  $('#doc').innerHTML = `<div class="wrap">${head}<div class="dlist">${body}</div></div>`;
   const doc=$('#doc'); if(doc) doc.scrollTop=0;
 }
 function closeDiff(){ if(_diffReturn){ openLaw(_diffReturn.lawId, _diffReturn.art); } else if(CUR){ renderDoc(''); } else { showHome(); } }
