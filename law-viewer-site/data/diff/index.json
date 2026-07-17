@@ -1,6 +1,32 @@
 {
-  "generatedAt": "2026-07-17T07:01:27.663Z",
+  "generatedAt": "2026-07-17T11:55:59.473Z",
   "diffs": [
+    {
+      "law_id": "fsa-guide-05",
+      "title": "事務ガイドライン 第三分冊：5 前払式支払手段発行者関係",
+      "group": "ガイドライン",
+      "type": "事務ガイドライン",
+      "to_updated": "2026-07-17",
+      "generatedAt": "2026-07-17T11:55:53.753Z",
+      "counts": {
+        "changed": 8,
+        "added": 5,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "fsa-guide-14",
+      "title": "事務ガイドライン 第三分冊：14 資金移動業者関係",
+      "group": "ガイドライン",
+      "type": "事務ガイドライン",
+      "to_updated": "2026-07-17",
+      "generatedAt": "2026-07-17T11:55:52.774Z",
+      "counts": {
+        "changed": 7,
+        "added": 5,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "357M50000040010",
       "title": "銀行法施行規則",

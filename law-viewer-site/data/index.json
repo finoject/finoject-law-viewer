@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-17T07:01:10.548Z",
+  "generatedAt": "2026-07-17T11:55:34.134Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -271,9 +271,9 @@
       "group": "ガイドライン",
       "type": "事務ガイドライン",
       "law_num": "",
-      "revision_id": "7033459ae29c2950",
-      "updated": "2026-06-16",
-      "article_count": 151,
+      "revision_id": "d9f3e24d2e702e63",
+      "updated": "2026-07-17",
+      "article_count": 156,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/14.pdf"
     },
     {
@@ -304,9 +304,9 @@
       "group": "ガイドライン",
       "type": "事務ガイドライン",
       "law_num": "",
-      "revision_id": "f6fb0e7502b4662a",
-      "updated": "2026-06-16",
-      "article_count": 103,
+      "revision_id": "42f1e8d055aaf4ff",
+      "updated": "2026-07-17",
+      "article_count": 108,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/05.pdf"
     },
     {
@@ -431,6 +431,9 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [],
+  "changed": [
+    "事務ガイドライン 第三分冊：14 資金移動業者関係",
+    "事務ガイドライン 第三分冊：5 前払式支払手段発行者関係"
+  ],
   "isFirst": false
 }
