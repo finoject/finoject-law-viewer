@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21T07:16:18.437Z",
+  "generatedAt": "2026-07-21T12:10:48.262Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -431,8 +431,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [
-    "個人情報の保護に関する法律"
-  ],
+  "changed": [],
   "isFirst": false
 }
