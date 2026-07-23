@@ -1,6 +1,32 @@
 {
-  "generatedAt": "2026-07-23T12:12:54.296Z",
+  "generatedAt": "2026-07-23T23:33:21.630Z",
   "diffs": [
+    {
+      "law_id": "324AC0000000228",
+      "title": "外国為替及び外国貿易法",
+      "group": "外為法",
+      "type": "法律",
+      "to_updated": "2026-07-23T11:39:25+09:00",
+      "generatedAt": "2026-07-23T23:33:05.674Z",
+      "counts": {
+        "changed": 0,
+        "added": 2,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "323AC0000000025",
+      "title": "金融商品取引法",
+      "group": "金商法",
+      "type": "法律",
+      "to_updated": "2026-07-23T11:11:16+09:00",
+      "generatedAt": "2026-07-23T23:33:07.107Z",
+      "counts": {
+        "changed": 0,
+        "added": 2,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "415AC0000000057",
       "title": "個人情報の保護に関する法律",

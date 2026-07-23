@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T12:12:37.835Z",
+  "generatedAt": "2026-07-23T23:32:57.604Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -7,9 +7,9 @@
       "group": "金商法",
       "type": "法律",
       "law_num": "昭和23年法律第25号",
-      "revision_id": "323AC0000000025_20260525_506AC0000000052",
-      "updated": "2025-07-11T19:47:11+09:00",
-      "article_count": 1739,
+      "revision_id": "323AC0000000025_20260723_508AC0000000064",
+      "updated": "2026-07-23T11:11:16+09:00",
+      "article_count": 1741,
       "egov_url": "https://laws.e-gov.go.jp/law/323AC0000000025"
     },
     {
@@ -337,9 +337,9 @@
       "group": "外為法",
       "type": "法律",
       "law_num": "昭和24年法律第228号",
-      "revision_id": "324AC0000000228_20260605_508AC0000000030",
-      "updated": "2026-06-05T14:24:09+09:00",
-      "article_count": 210,
+      "revision_id": "324AC0000000228_20260723_508AC0000000064",
+      "updated": "2026-07-23T11:39:25+09:00",
+      "article_count": 212,
       "egov_url": "https://laws.e-gov.go.jp/law/324AC0000000228"
     },
     {
@@ -431,6 +431,9 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [],
+  "changed": [
+    "外国為替及び外国貿易法",
+    "金融商品取引法"
+  ],
   "isFirst": false
 }
