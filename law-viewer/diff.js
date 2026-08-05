@@ -10,6 +10,22 @@
 const fs = require('fs');
 const path = require('path');
 
+// ※ 同じ展開ロジックが law-viewer-site/index.html の blockPlainText() にもある（Node と ブラウザで
+//    共有できないため意図的な二重実装）。**片方だけ直すと差分検出と検索/AI入力がズレる**。必ず両方直すこと。
+// ブロックの比較・表示用テキスト。本文の表占位子 ⟦TBL:i⟧ を実際の表テキストへ展開する。
+// 別表は本文が占位子だけで実文が tables にあるため、body だけを比較すると
+// 「別表のセルが改正されても差分に一切現れない」という検出漏れになる（条文内の読替表も同じ）。
+// フロントの新旧対照は文字単位LCSなので、展開したテキストをそのまま渡してよい。
+function blockText(b){
+  if (!b) return '';
+  const tbl = i => {
+    const t = b.tables && b.tables[i];
+    if (!t) return '';
+    const rows = t.rows || t;
+    return rows.map(r => ((r && r.cells) || []).map(c => ((c && c.t) || '').replace(/\n/g, ' ')).join(' ｜ ')).join('\n');
+  };
+  return (b.body || '').replace(/⟦TBL:(\d+)⟧/g, (m, i) => tbl(+i));
+}
 // blocks(t:'a') を突き合わせ、変化した条だけ {status,num,cap,old?,new?} の配列で返す。
 function computeArticleDiff(oldBlocks, newBlocks){
   const arts = bs => (bs||[]).filter(b => b && b.t === 'a');
@@ -21,13 +37,14 @@ function computeArticleDiff(oldBlocks, newBlocks){
   for (const nb of newA){
     const q = oldByNum[nb.num];
     const ob = (q && q.length) ? q.shift() : null;          // 同番号は出現順に対応付け
-    if (!ob){ out.push({ status:'added', num:nb.num, cap:nb.cap || '', new:nb.body || '' }); continue; }
+    if (!ob){ out.push({ status:'added', num:nb.num, cap:nb.cap || '', new:blockText(nb) }); continue; }
     used.add(ob);
-    if ((ob.body || '') !== (nb.body || '') || (ob.cap || '') !== (nb.cap || '')){
-      out.push({ status:'changed', num:nb.num, cap:nb.cap || '', oldCap:ob.cap || '', old:ob.body || '', new:nb.body || '' });
+    const oldT = blockText(ob), newT = blockText(nb);       // 表の中身まで含めて比較する（別表・読替表の改正を取りこぼさない）
+    if (oldT !== newT || (ob.cap || '') !== (nb.cap || '')){
+      out.push({ status:'changed', num:nb.num, cap:nb.cap || '', oldCap:ob.cap || '', old:oldT, new:newT });
     }
   }
-  for (const ob of oldA){ if (!used.has(ob)) out.push({ status:'deleted', num:ob.num, cap:ob.cap || '', old:ob.body || '' }); }  // 旧側で対応の付かなかった条＝削除（文書順）
+  for (const ob of oldA){ if (!used.has(ob)) out.push({ status:'deleted', num:ob.num, cap:ob.cap || '', old:blockText(ob) }); }  // 旧側で対応の付かなかった条＝削除（文書順）
   return out;
 }
 

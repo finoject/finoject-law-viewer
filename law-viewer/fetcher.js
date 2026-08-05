@@ -215,6 +215,68 @@ function articleBody(article){
   })(article);
   return lines.join('\n');
 }
+// ===== 附則・付録（別表／別記／様式／書式／別図／付録）=====
+// e-Gov標準XMLでは、本則(MainProvision)の外に 附則(SupplProvision) と付録類がぶら下がる。
+// 従来の extractBlocks はこれらを素通りしており、実務上2つの致命的欠落があった:
+//   ① 附則の区切り見出しが無く、本則条文と附則条文が混在（犯収法=本則40条に対し表示107条。「第1条」が何度も出る）
+//   ② 別表が丸ごと欠落（犯収法の別表＝第4条関係の 特定事業者／特定業務／特定取引。これが無いと第4条は運用できない）
+// 全法令・今後追加分にも自動適用される汎用処理として実装する（個別ハードコードはしない）。
+const APPDX_LABEL = {
+  AppdxTable:'別表', AppdxNote:'別記', AppdxStyle:'様式', AppdxFormat:'書式', AppdxFig:'別図', Appdx:'付録',
+  SupplProvisionAppdxTable:'附則別表', SupplProvisionAppdxStyle:'附則様式', SupplProvisionAppdx:'附則付録',
+};
+// 付録1件を1ブロック化。表は条文と同じ ⟦TBL:i⟧ 機構に載せ、フロントの <table> 描画をそのまま再利用する。
+// 様式(AppdxStyle)の本体は e-Gov の添付ファイル(./pict/*.pdf 等)で、APIからは本文テキストを取得できない
+// （law_data の attached_files_info に src は載るが、実体を返すエンドポイントが公開されていない＝実測で全て404）。
+// その場合は figs に src を残し、フロント側で「本体はe-Govの原本」と明示する＝黙って落とさない。
+function appdxBlock(node, tag){
+  const kind = APPDX_LABEL[tag] || '付録';
+  const kids = node.children || [];
+  const numNode = kids.find(c => c && /Title$/.test(c.tag||'')) || kids.find(c => c && c.tag === 'ArithFormulaNum'); // 付録(Appdx)は番号タグが別
+  const relNode = kids.find(c => c && c.tag === 'RelatedArticleNum');
+  const num = kanjiNum(nodeText(numNode).replace(/\s+/g,' ').trim()) || kind;
+  const cap = kanjiNum(nodeText(relNode).replace(/\s+/g,'').trim());   // 「（第四条関係）」→「（第4条関係）」＝条文側の表記に揃え検索でも一致させる
+  _tables = [];
+  const lines = [], figs = [];
+  // levelSentence() が読み飛ばす下位階層タグ（項・号・イロハ）だけに降りる。articleBody() と同じ考え方。
+  const descend = n => (n.children||[]).forEach(c => { if (c && /^(Item|Subitem\d+|Paragraph)$/.test(c.tag||'')) walk(c); });
+  const walk = n => {
+    if (n == null || typeof n === 'string') return;
+    const t = n.tag || '';
+    if (t === 'TableStruct' || t === 'Table'){
+      const rows = tableData(n);
+      if (rows.length){ lines.push('⟦TBL:'+_tables.length+'⟧'); _tables.push({ rows, yomikae:false }); }
+      return;
+    }
+    if (t === 'Fig'){ const src = ((n.attr||{}).src || '').replace(/^\.\//,''); if (src) figs.push(src); return; }
+    if (/Title$/.test(t) || t === 'RemarksLabel'){ const s = nodeText(n).replace(/\s+/g,' ').trim(); if (s) lines.push(s); return; }  // 様式内の小見出し・備考ラベル
+    // levelSentence() が既にこの階層の Sentence/Title/表を消費しているので、再帰は下位の階層タグだけに限定する。
+    // 全 children を walk すると ItemTitle が /Title$/ 分岐で、Sentence が Sentence 分岐で再度積まれ、本文が二重になる
+    // （貸金業法施行規則の別表〔第11条関係〕で「nは、返済回数」等が2回出力される事象を実データで確認）。
+    if (t === 'Item'){ lines.push('　' + forceNum(childTitle(n,'ItemTitle')) + ' ' + levelSentence(n)); descend(n); return; }
+    if (/^Subitem\d+$/.test(t)){ lines.push('　　' + childTitle(n, t+'Title') + ' ' + levelSentence(n)); descend(n); return; }
+    if (t === 'Paragraph'){ const b = levelSentence(n); if (b) lines.push(b); descend(n); return; }
+    if (t === 'Sentence' || t === 'Column'){ const s = nodeText(n).replace(/\s+/g,' ').trim(); if (s) lines.push(s); return; }
+    (n.children||[]).forEach(walk);
+  };
+  // 見出しと関係条は num/cap 側で出すので本文からは除く（タグ名でなくノード識別子で除外＝入れ子の同名タグを誤って落とさない）
+  kids.forEach(c => { if (c && c !== numNode && c !== relNode) walk(c); });
+  const body = kanjiNum(lines.filter(Boolean).join('\n'));
+  const rec = { t:'a', ap:kind, num, cap, body };
+  if (_tables.length){
+    // 付録自身が読替表かを明示し、かつ ap:true でフロントの構造ヒューリスティックを使わせない。
+    // 別表の第1列は「第2条第2項第1号から第38号までに掲げる者」のように条項参照で始まりがちで、
+    // 読替表と誤判定され「読み替える規定／読み替えられる字句／読み替える字句」という誤った列見出しが付く
+    // （犯収法の別表は 上欄=特定事業者／中欄=特定業務／下欄=特定取引 であり、意味が完全に変わってしまう）。
+    // 付録の表には読替表の列見出しを一切補完しない（yomikae は常に false）。
+    // 付録本文に「読替」の語があるだけで付録内の全表に一律付与すると、読替表でない別表にまで
+    // 誤った見出しが付く（e-Gov 原文にも見出し行は無く、推測でラベルを足す方が有害）。
+    _tables.forEach(t => { t.yomikae = false; t.ap = true; });
+    rec.tables = _tables;
+  }
+  if (figs.length) rec.figs = figs;
+  return rec;
+}
 // 条文・見出しを文書順に blocks 化
 function extractBlocks(root){
   const blocks = [];
@@ -222,10 +284,21 @@ function extractBlocks(root){
   (function walk(n){
     if (!n || typeof n === 'string') return;
     const tag = n.tag;
+    if (tag === 'TOC') return;                        // 目次は本文ではない（TOC*配下を本文化しない）
     if (LV[tag]){
       const t = (n.children||[]).find(c => c && c.tag && /Title$/.test(c.tag));
       if (t) blocks.push({ t:'h', lv:LV[tag], x:kanjiNum(nodeText(t).replace(/\s+/g,' ').trim()) });
     }
+    if (tag === 'SupplProvision'){
+      // 附則の区切り見出し。改正法番号(AmendLawNum)があれば併記し、どの改正の附則かを判別できるようにする。
+      // これが無いと本則と附則の「第1条」が区別できない（章と同じ lv1 で扉的に表示）。
+      const lbl = childTitle(n, 'SupplProvisionLabel') || '附則';
+      const amend = kanjiNum(((n.attr||{}).AmendLawNum || '').trim());
+      blocks.push({ t:'h', lv:1, x: amend ? `${lbl}（${amend}）` : lbl });
+      (n.children||[]).forEach(walk);
+      return;
+    }
+    if (APPDX_LABEL[tag]){ blocks.push(appdxBlock(n, tag)); return; }   // 別表・様式等（内部に条文は無いので降りない）
     if (tag === 'Article'){
       const at  = (n.children||[]).find(c => c && c.tag === 'ArticleTitle');
       const cap = (n.children||[]).find(c => c && c.tag === 'ArticleCaption');
@@ -409,7 +482,7 @@ function main(){
       const ri = j.revision_info || {};
       const title = ri.law_title || '';
       const blocks = extractBlocks(j.law_full_text);
-      const articleCount = blocks.filter(b => b.t === 'a').length;
+      const articleCount = blocks.filter(b => b.t === 'a' && !b.ap).length;   // 別表・様式は「条」ではないので条数に数えない
       // 空応答ガード: タイトル無し or 条文0 は正常な法令ではない（レート制限/瞬断の空応答）→ throwして前回の正常データを保持
       if (!title || articleCount === 0) throw new Error('空応答（title/条文なし・レート制限の可能性）');
       const rec = {

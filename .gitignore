@@ -2,3 +2,7 @@ node_modules/
 law-viewer/lookup.js
 law-viewer/_egov_sample.json
 *.log
+
+# レビュー作業用の一時ファイル（codex/gemini 二重レビュー）
+CODEX_REVIEW*.md
+REVIEW_CONTEXT.md
