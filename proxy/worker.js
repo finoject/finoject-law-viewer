@@ -13,7 +13,7 @@ const ALLOW = ['fsa.go.jp', 'boj.or.jp', 'jpx.co.jp', 'jsda.or.jp', 'jvcea.or.jp
 // ===== AI解説エンドポイント（/ai） =====
 // 法令ビューアの「理解パネル」「条文のやさしく解説」から POST される {task, payload} を受け、Claude messages API を呼んで
 // JSON（task=update→{lines:[]}／task=article→{text,points:[]}）を返す。APIキーはWorker secret(ANTHROPIC_API_KEY)に置き、
-// クライアントには絶対に出さない。モデルは既定 claude-opus-4-8（CLAUDE_MODEL secretで変更可。コスト重視なら claude-haiku-4-5 等）。
+// クライアントには絶対に出さない。モデルは既定 claude-haiku-4-5（最安・短い要約/解説に十分）。CLAUDE_MODEL secretで変更可（品質重視なら claude-sonnet-4-6 等）。
 const AI_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
 function aiJson(obj, status, extra) { return new Response(JSON.stringify(obj), { status: status || 200, headers: { 'content-type': 'application/json; charset=utf-8', ...AI_CORS, ...(extra || {}) } }); }
 async function handleAI(request, env) {
