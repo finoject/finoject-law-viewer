@@ -1,16 +1,29 @@
 {
-  "generatedAt": "2026-08-11T11:25:47.638Z",
+  "generatedAt": "2026-08-11T23:22:13.211Z",
   "diffs": [
+    {
+      "law_id": "419AC0000000022",
+      "title": "犯罪による収益の移転防止に関する法律",
+      "group": "犯収法",
+      "type": "法律",
+      "to_updated": "2026-07-28T11:27:01+09:00",
+      "generatedAt": "2026-08-11T23:21:47.092Z",
+      "counts": {
+        "changed": 0,
+        "added": 1,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "421AC0000000059",
       "title": "資金決済に関する法律",
       "group": "資金決済",
       "type": "法律",
-      "to_updated": "2026-07-23T14:28:57+09:00",
-      "generatedAt": "2026-07-24T07:14:36.224Z",
+      "to_updated": "2026-07-23T14:49:36+09:00",
+      "generatedAt": "2026-08-11T23:21:40.345Z",
       "counts": {
         "changed": 0,
-        "added": 2,
+        "added": 1,
         "deleted": 0
       }
     },
@@ -19,50 +32,11 @@
       "title": "金融サービスの提供及び利用環境の整備等に関する法律",
       "group": "金サ法",
       "type": "法律",
-      "to_updated": "2026-07-23T14:20:57+09:00",
-      "generatedAt": "2026-07-24T07:14:41.061Z",
+      "to_updated": "2026-07-23T14:35:32+09:00",
+      "generatedAt": "2026-08-11T23:21:46.239Z",
       "counts": {
         "changed": 0,
-        "added": 2,
-        "deleted": 0
-      }
-    },
-    {
-      "law_id": "416AC0000000154",
-      "title": "信託業法",
-      "group": "信託業法",
-      "type": "法律",
-      "to_updated": "2026-07-23T11:41:11+09:00",
-      "generatedAt": "2026-07-24T07:14:40.323Z",
-      "counts": {
-        "changed": 0,
-        "added": 2,
-        "deleted": 0
-      }
-    },
-    {
-      "law_id": "324AC0000000228",
-      "title": "外国為替及び外国貿易法",
-      "group": "外為法",
-      "type": "法律",
-      "to_updated": "2026-07-23T11:39:25+09:00",
-      "generatedAt": "2026-07-23T23:33:05.674Z",
-      "counts": {
-        "changed": 0,
-        "added": 2,
-        "deleted": 0
-      }
-    },
-    {
-      "law_id": "419AC0000000022",
-      "title": "犯罪による収益の移転防止に関する法律",
-      "group": "犯収法",
-      "type": "法律",
-      "to_updated": "2026-07-23T11:36:23+09:00",
-      "generatedAt": "2026-07-24T07:14:41.777Z",
-      "counts": {
-        "changed": 0,
-        "added": 2,
+        "added": 1,
         "deleted": 0
       }
     },
@@ -71,11 +45,24 @@
       "title": "会社法",
       "group": "会社法",
       "type": "法律",
-      "to_updated": "2026-07-23T11:28:31+09:00",
-      "generatedAt": "2026-07-24T07:14:48.068Z",
+      "to_updated": "2026-07-23T12:21:44+09:00",
+      "generatedAt": "2026-08-11T23:21:55.787Z",
+      "counts": {
+        "changed": 1,
+        "added": 1,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "416AC0000000154",
+      "title": "信託業法",
+      "group": "信託業法",
+      "type": "法律",
+      "to_updated": "2026-07-23T12:05:01+09:00",
+      "generatedAt": "2026-08-11T23:21:44.704Z",
       "counts": {
         "changed": 0,
-        "added": 2,
+        "added": 1,
         "deleted": 0
       }
     },
@@ -84,11 +71,24 @@
       "title": "金融商品取引法",
       "group": "金商法",
       "type": "法律",
-      "to_updated": "2026-07-23T11:11:16+09:00",
-      "generatedAt": "2026-07-23T23:33:07.107Z",
+      "to_updated": "2026-07-23T12:01:13+09:00",
+      "generatedAt": "2026-08-11T23:21:50.781Z",
+      "counts": {
+        "changed": 3,
+        "added": 1,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "324AC0000000228",
+      "title": "外国為替及び外国貿易法",
+      "group": "外為法",
+      "type": "法律",
+      "to_updated": "2026-07-23T11:54:00+09:00",
+      "generatedAt": "2026-08-11T23:21:49.033Z",
       "counts": {
         "changed": 0,
-        "added": 2,
+        "added": 1,
         "deleted": 0
       }
     },
@@ -97,11 +97,11 @@
       "title": "銀行法",
       "group": "銀行法",
       "type": "法律",
-      "to_updated": "2026-07-23T10:58:59+09:00",
-      "generatedAt": "2026-07-24T07:14:46.070Z",
+      "to_updated": "2026-07-23T11:10:22+09:00",
+      "generatedAt": "2026-08-11T23:21:53.581Z",
       "counts": {
         "changed": 0,
-        "added": 2,
+        "added": 1,
         "deleted": 0
       }
     },
