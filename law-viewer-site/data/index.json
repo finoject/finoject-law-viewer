@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12T11:26:28.870Z",
+  "generatedAt": "2026-08-12T23:20:28.687Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -238,9 +238,9 @@
       "group": "個人情報",
       "type": "政令",
       "law_num": "平成15年政令第507号",
-      "revision_id": "415CO0000000507_20260521_508CO0000000038",
-      "updated": "2026-04-14T09:34:36+09:00",
-      "article_count": 47,
+      "revision_id": "415CO0000000507_20260731_508CO0000000234",
+      "updated": "2026-08-12T13:37:54+09:00",
+      "article_count": 48,
       "egov_url": "https://laws.e-gov.go.jp/law/415CO0000000507"
     },
     {
@@ -431,6 +431,8 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [],
+  "changed": [
+    "個人情報の保護に関する法律施行令"
+  ],
   "isFirst": false
 }
