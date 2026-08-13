@@ -1,6 +1,19 @@
 {
-  "generatedAt": "2026-08-13T11:25:46.809Z",
+  "generatedAt": "2026-08-13T23:22:01.854Z",
   "diffs": [
+    {
+      "law_id": "340CO0000000321",
+      "title": "金融商品取引法施行令",
+      "group": "金商法",
+      "type": "政令",
+      "to_updated": "2026-08-13T11:58:13+09:00",
+      "generatedAt": "2026-08-13T23:21:51.445Z",
+      "counts": {
+        "changed": 1,
+        "added": 0,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "415CO0000000507",
       "title": "個人情報の保護に関する法律施行令",
@@ -190,19 +203,6 @@
       "type": "規則",
       "to_updated": "2026-06-24T09:19:41+09:00",
       "generatedAt": "2026-06-24T23:46:42.601Z",
-      "counts": {
-        "changed": 1,
-        "added": 0,
-        "deleted": 0
-      }
-    },
-    {
-      "law_id": "340CO0000000321",
-      "title": "金融商品取引法施行令",
-      "group": "金商法",
-      "type": "政令",
-      "to_updated": "2026-06-10T10:07:55+09:00",
-      "generatedAt": "2026-06-30T23:47:36.378Z",
       "counts": {
         "changed": 1,
         "added": 0,
