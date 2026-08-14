@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T23:21:40.930Z",
+  "generatedAt": "2026-08-14T06:03:31.171Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -431,8 +431,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [
-    "金融商品取引法施行令"
-  ],
+  "changed": [],
   "isFirst": false
 }
