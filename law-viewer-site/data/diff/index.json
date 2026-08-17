@@ -1,6 +1,58 @@
 {
-  "generatedAt": "2026-08-16T22:53:59.851Z",
+  "generatedAt": "2026-08-17T05:19:46.663Z",
   "diffs": [
+    {
+      "law_id": "fsa-kantoku-chusho",
+      "title": "中小・地域金融機関向けの総合的な監督指針",
+      "group": "ガイドライン",
+      "type": "監督指針",
+      "to_updated": "2026-08-17",
+      "generatedAt": "2026-08-17T05:19:42.514Z",
+      "counts": {
+        "changed": 7,
+        "added": 0,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "fsa-kantoku-city",
+      "title": "主要行等向けの総合的な監督指針",
+      "group": "ガイドライン",
+      "type": "監督指針",
+      "to_updated": "2026-08-17",
+      "generatedAt": "2026-08-17T05:19:41.167Z",
+      "counts": {
+        "changed": 2,
+        "added": 0,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "fsa-guide-05",
+      "title": "事務ガイドライン 第三分冊：5 前払式支払手段発行者関係",
+      "group": "ガイドライン",
+      "type": "事務ガイドライン",
+      "to_updated": "2026-08-17",
+      "generatedAt": "2026-08-17T05:19:36.042Z",
+      "counts": {
+        "changed": 2,
+        "added": 0,
+        "deleted": 0
+      }
+    },
+    {
+      "law_id": "fsa-guide-14",
+      "title": "事務ガイドライン 第三分冊：14 資金移動業者関係",
+      "group": "ガイドライン",
+      "type": "事務ガイドライン",
+      "to_updated": "2026-08-17",
+      "generatedAt": "2026-08-17T05:19:35.005Z",
+      "counts": {
+        "changed": 2,
+        "added": 0,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "340CO0000000321",
       "title": "金融商品取引法施行令",
@@ -145,32 +197,6 @@
       }
     },
     {
-      "law_id": "fsa-guide-05",
-      "title": "事務ガイドライン 第三分冊：5 前払式支払手段発行者関係",
-      "group": "ガイドライン",
-      "type": "事務ガイドライン",
-      "to_updated": "2026-07-17",
-      "generatedAt": "2026-07-17T11:55:53.753Z",
-      "counts": {
-        "changed": 8,
-        "added": 5,
-        "deleted": 0
-      }
-    },
-    {
-      "law_id": "fsa-guide-14",
-      "title": "事務ガイドライン 第三分冊：14 資金移動業者関係",
-      "group": "ガイドライン",
-      "type": "事務ガイドライン",
-      "to_updated": "2026-07-17",
-      "generatedAt": "2026-07-17T11:55:52.774Z",
-      "counts": {
-        "changed": 7,
-        "added": 5,
-        "deleted": 0
-      }
-    },
-    {
       "law_id": "357M50000040010",
       "title": "銀行法施行規則",
       "group": "銀行法",
@@ -181,19 +207,6 @@
         "changed": 6,
         "added": 0,
         "deleted": 0
-      }
-    },
-    {
-      "law_id": "fsa-kantoku-chusho",
-      "title": "中小・地域金融機関向けの総合的な監督指針",
-      "group": "ガイドライン",
-      "type": "監督指針",
-      "to_updated": "2026-06-25",
-      "generatedAt": "2026-06-25T08:02:19.584Z",
-      "counts": {
-        "changed": 21,
-        "added": 3,
-        "deleted": 4
       }
     },
     {

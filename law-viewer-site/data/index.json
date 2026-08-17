@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T22:53:36.527Z",
+  "generatedAt": "2026-08-17T05:19:14.320Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -260,8 +260,8 @@
       "group": "ガイドライン",
       "type": "監督指針",
       "law_num": "",
-      "revision_id": "ae6f5fbb729f7c49",
-      "updated": "2026-06-16",
+      "revision_id": "fb68297168326c0b",
+      "updated": "2026-08-17",
       "article_count": 51,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kinyushohin/index.html"
     },
@@ -271,8 +271,8 @@
       "group": "ガイドライン",
       "type": "事務ガイドライン",
       "law_num": "",
-      "revision_id": "d9f3e24d2e702e63",
-      "updated": "2026-07-17",
+      "revision_id": "2eab904120e350a6",
+      "updated": "2026-08-17",
       "article_count": 156,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/14.pdf"
     },
@@ -304,8 +304,8 @@
       "group": "ガイドライン",
       "type": "事務ガイドライン",
       "law_num": "",
-      "revision_id": "42f1e8d055aaf4ff",
-      "updated": "2026-07-17",
+      "revision_id": "f46126e5131c4012",
+      "updated": "2026-08-17",
       "article_count": 108,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/05.pdf"
     },
@@ -315,8 +315,8 @@
       "group": "ガイドライン",
       "type": "監督指針",
       "law_num": "",
-      "revision_id": "b426ee68e5228429",
-      "updated": "2026-06-16",
+      "revision_id": "db786c997b2bac55",
+      "updated": "2026-08-17",
       "article_count": 45,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/city/index.html"
     },
@@ -326,8 +326,8 @@
       "group": "ガイドライン",
       "type": "監督指針",
       "law_num": "",
-      "revision_id": "567cc326a88d8105",
-      "updated": "2026-06-30",
+      "revision_id": "faeda403afd2d05c",
+      "updated": "2026-08-17",
       "article_count": 92,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/chusho/index.html"
     },
@@ -431,6 +431,12 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [],
+  "changed": [
+    "事務ガイドライン 第三分冊：14 資金移動業者関係",
+    "事務ガイドライン 第三分冊：5 前払式支払手段発行者関係",
+    "主要行等向けの総合的な監督指針",
+    "中小・地域金融機関向けの総合的な監督指針",
+    "金融商品取引業者等向けの総合的な監督指針"
+  ],
   "isFirst": false
 }
