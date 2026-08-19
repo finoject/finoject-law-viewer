@@ -1,6 +1,19 @@
 {
-  "generatedAt": "2026-08-19T10:59:23.988Z",
+  "generatedAt": "2026-08-19T22:57:09.540Z",
   "diffs": [
+    {
+      "law_id": "419M60000002052",
+      "title": "金融商品取引業等に関する内閣府令",
+      "group": "金商法",
+      "type": "内閣府令",
+      "to_updated": "2026-08-19T13:31:15+09:00",
+      "generatedAt": "2026-08-19T22:56:58.775Z",
+      "counts": {
+        "changed": 2,
+        "added": 0,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "fsa-kantoku-chusho",
       "title": "中小・地域金融機関向けの総合的な監督指針",
