@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-16T00:46:10.057Z",
+  "generatedAt": "2026-09-16T09:29:26.645Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -431,8 +431,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [
-    "中小・地域金融機関向けの総合的な監督指針"
-  ],
+  "changed": [],
   "isFirst": false
 }
