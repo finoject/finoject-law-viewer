@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-15T15:15:33.281Z",
+  "generatedAt": "2026-09-16T00:46:10.057Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -326,8 +326,8 @@
       "group": "ガイドライン",
       "type": "監督指針",
       "law_num": "",
-      "revision_id": "faeda403afd2d05c",
-      "updated": "2026-08-17",
+      "revision_id": "1c9661cdef64a9a0",
+      "updated": "2026-09-16",
       "article_count": 92,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/chusho/index.html"
     },
@@ -431,6 +431,8 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [],
+  "changed": [
+    "中小・地域金融機関向けの総合的な監督指針"
+  ],
   "isFirst": false
 }
