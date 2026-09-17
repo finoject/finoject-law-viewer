@@ -26,17 +26,45 @@ function blockText(b){
   };
   return (b.body || '').replace(/⟦TBL:(\d+)⟧/g, (m, i) => tbl(+i));
 }
+// 条を「どの節（本則／どの改正附則）に属するか」で区別するためのキー。
+// 条番号だけでは足りない: 実測で39法令中35法令が同じ条番号を複数持ち、金商法は「第1条」が105回出る。
+// 直前の lv1 見出し（e-Gov の SupplProvision ラベル＝「附　則（令和7年6月13日法律第66号）」等）を接頭辞にする。
+// これが無いと、途中に改正附則が1本挿入されただけで以降の同番号条が1つずつズレて対応し、
+// 実際には無改正の条が大量に changed として差分一覧に立つ。
+const SUPPL_HEAD = /附\s*則/;                                          // 附則の扉（e-Gov の SupplProvisionLabel 由来）
+const AMEND_NUM  = /((?:明治|大正|昭和|平成|令和)[^（）()]*?第[０-９0-9]+号)/;  // 「令和7年6月13日法律第66号」
+const zen2han = t => t.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+// 条が属する節（本則 / どの改正附則か）を表すキー。
+// 見出しの文字列そのものを使うと、全角空白の有無などの表記ゆれだけで別の節と判定され、
+// 無改正の条が changed でなく added+deleted に化ける（2026-09-17 の再レビューで実測）。
+// 改正法令番号だけを取り出して正規化し、番号の無い制定時附則は固定キーにする。
+// 附則以外の lv1 見出し（編・章の扉など）は節の切れ目として扱わない。
+function sectionKey(x){
+  const m = (x || '').match(AMEND_NUM);
+  return m ? zen2han(m[1]).replace(/[\s　]/g, '') : '附則(制定時)';
+}
+function sectionKeys(blocks){
+  const keys = new Map(); let sec = '';
+  for (const b of (blocks||[])){
+    if (!b) continue;
+    if (b.t === 'h'){ if ((b.lv|0) <= 1 && SUPPL_HEAD.test(b.x || '')) sec = sectionKey(b.x); continue; }
+    if (b.t === 'a') keys.set(b, sec + '\u0000' + (b.num || ''));
+  }
+  return keys;
+}
 // blocks(t:'a') を突き合わせ、変化した条だけ {status,num,cap,old?,new?} の配列で返す。
 function computeArticleDiff(oldBlocks, newBlocks){
   const arts = bs => (bs||[]).filter(b => b && b.t === 'a');
   const oldA = arts(oldBlocks), newA = arts(newBlocks);
+  const oldKey = sectionKeys(oldBlocks), newKey = sectionKeys(newBlocks);
   const oldByNum = {};
-  for (const b of oldA){ (oldByNum[b.num] = oldByNum[b.num] || []).push(b); }   // num→出現順キュー
+  for (const b of oldA){ const k = oldKey.get(b) || ('\u0000' + (b.num||'')); (oldByNum[k] = oldByNum[k] || []).push(b); }   // 節+num→出現順キュー
   const used = new Set();
   const out = [];
   for (const nb of newA){
-    const q = oldByNum[nb.num];
-    const ob = (q && q.length) ? q.shift() : null;          // 同番号は出現順に対応付け
+    const k = newKey.get(nb) || ('\u0000' + (nb.num||''));
+    const q = oldByNum[k];
+    const ob = (q && q.length) ? q.shift() : null;          // 同じ節の同番号どうしを出現順に対応付け
     if (!ob){ out.push({ status:'added', num:nb.num, cap:nb.cap || '', new:blockText(nb) }); continue; }
     used.add(ob);
     const oldT = blockText(ob), newT = blockText(nb);       // 表の中身まで含めて比較する（別表・読替表の改正を取りこぼさない）

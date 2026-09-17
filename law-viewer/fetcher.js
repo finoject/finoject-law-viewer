@@ -412,8 +412,26 @@ function kantokuToText(html){
   seg = htmlEnt(seg.replace(/<[^>]+>/g,''));
   return seg.split('\n').map(l => normHeadNum(l.replace(/[　]/g,' ').replace(/\s+/g,' ').trim())).filter(l => l).join('\n');
 }
+// 更新日はJSTの暦日で記録する。nowIso.slice(0,10) はUTC日付なので、
+// 朝の巡回枠（cron 22:37 UTC = 翌07:37 JST）で内容変化を初検知すると1日前の日付が入る。
+function jstDay(iso){ return new Date(new Date(iso).getTime() + 9*3600000).toISOString().slice(0,10); }
+// 取得に失敗したガイドライン/監督指針は、前回の正常レコードを index.json に残す。
+// 残さないと、PDF取得やスクレイピングが一度失敗しただけで一覧・横断検索から丸ごと消える
+// （個別JSONは残るので画面上は「存在しない」ように見えるだけで、誰も気づけない）。
+// e-Gov法令側には同じフォールバックが既にある（下の catch を参照）。非対称だった。
+function keepPrev(prevRec, key, laws, report, label, err){
+  const prev = prevRec[key];
+  if (prev && prev.article_count > 0){
+    // いつから失敗し続けているかを残す。一時障害と、当局側のURL変更・廃止による恒久失敗を
+    // 区別できないと、古い内容を半永久的に正しいものとして出し続ける。validate-data.js が
+    // これを見て、7日続いたら公開を止める。
+    laws.push({ ...prev, stale: true, staleSince: prev.staleSince || new Date().toISOString() });
+    report.push(`${label}: 取得失敗→前回値を維持 (${String(err).slice(0,50)})`);
+  }
+  else report.push(`${label}: 失敗 ${String(err).slice(0,70)}`);
+}
 function fetchKantoku(prevRec, nowIso, laws, changed, report){
-  const today = nowIso.slice(0,10);
+  const today = jstDay(nowIso);
   for (const g of GUIDELINES_HTML){
     try {
       const dir = (g.base.match(/\/([^/]+)\/$/)||[])[1] || '';
@@ -437,11 +455,11 @@ function fetchKantoku(prevRec, nowIso, laws, changed, report){
       fs.writeFileSync(path.join(DATA, `${g.key}.json`), JSON.stringify({ ...rec, blocks }), 'utf8');
       if (!prev || prev.revision_id !== hash) changed.push(g.title);
       report.push(`${g.title}: ${blocks.length}節 (章${chs.length})`);
-    } catch(e){ report.push(`${g.key}: 失敗 ${String(e.message||e).slice(0,70)}`); }
+    } catch(e){ keepPrev(prevRec, g.key, laws, report, g.title || g.key, e.message||e); }
   }
 }
 function fetchGuidelines(prevRec, nowIso, laws, changed, report){
-  const tmp = os.tmpdir(), today = nowIso.slice(0,10);
+  const tmp = os.tmpdir(), today = jstDay(nowIso);
   for (const g of GUIDELINES){
     try {
       const pdf = path.join(tmp, g.key+'.pdf'), txt = path.join(tmp, g.key+'.txt');
@@ -461,7 +479,7 @@ function fetchGuidelines(prevRec, nowIso, laws, changed, report){
       fs.writeFileSync(path.join(DATA, `${g.key}.json`), JSON.stringify({ ...rec, blocks }), 'utf8');
       if (!prev || prev.revision_id !== hash) changed.push(g.title);
       report.push(`${g.title}: ${blocks.length}節 ${prev&&prev.revision_id!==hash?'(更新)':''}`);
-    } catch(e){ report.push(`${g.key}: 失敗 ${String(e.message||e).slice(0,70)}`); }
+    } catch(e){ keepPrev(prevRec, g.key, laws, report, g.title || g.key, e.message||e); }
   }
 }
 

@@ -79,6 +79,27 @@ async function yahoo(symbol){
       change: (isFinite(open) && open) ? ((last - open) / open * 100) : null, source: 'Coinbase', note: 'リアルタイム・USD建', unit: '$' };
   } catch (e){ console.log('btc 取得失敗: ' + (e.message || e)); }
 
-  fs.writeFileSync('../law-viewer-site/data/market.json', JSON.stringify(out));
+  // 全ソースが失敗した回に空の {items:{}} で上書きしない。
+  // DNS障害や外部API側の一時障害は同時に起きるので「全部失敗」は現実に起こる。
+  // 上書きすると市況バーが前回値も失って全項目「—」になる（ワークフローは market.js の
+  // 失敗を `|| echo` で握り潰すため、公開はそのまま進む）。1件でも取れた回だけ書く。
+  const OUTP = '../law-viewer-site/data/market.json';
+  if (!Object.keys(out.items).length){
+    console.log('market.json: 全ソース取得失敗のため書き出しを見送り、前回値を維持します');
+    process.exitCode = 1;
+    return;
+  }
+  // 部分成功の回は、今回取れなかった項目だけ前回値を引き継ぐ（stale フラグを付けて表示側が古さを示せるように）
+  // 引き継ぐのは「今回も取りに行ったが取れなかった」キーだけ。前回ファイルにあるものを無条件に
+  // 拾うと、取得対象から外した銘柄が stale のまま永久に残る。
+  const ATTEMPTED = [...YF.map(x => x[0]), 'jp10y', 'topix', 'btc'];   // 取得対象リストから導く（手書きの一覧だと追加・削除のたびにズレる）
+  try {
+    const prev = JSON.parse(fs.readFileSync(OUTP, 'utf8'));
+    for (const k of ATTEMPTED){
+      const v = (prev.items || {})[k];
+      if (v && !out.items[k]) out.items[k] = { ...v, stale: true, staleSince: v.staleSince || prev.fetchedAt || null };
+    }
+  } catch (e){ /* 前回ファイルが無い/壊れている初回は引き継がない */ }
+  fs.writeFileSync(OUTP, JSON.stringify(out));
   console.log('market.json 書き出し完了:', JSON.stringify(out.items));
 })();
