@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T00:15:51.431Z",
+  "generatedAt": "2026-10-01T01:31:47.262Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -260,8 +260,8 @@
       "group": "ガイドライン",
       "type": "監督指針",
       "law_num": "",
-      "revision_id": "fb68297168326c0b",
-      "updated": "2026-08-17",
+      "revision_id": "09f475efe7eaa06a",
+      "updated": "2026-10-01",
       "article_count": 51,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kinyushohin/index.html"
     },
@@ -271,8 +271,8 @@
       "group": "ガイドライン",
       "type": "事務ガイドライン",
       "law_num": "",
-      "revision_id": "2eab904120e350a6",
-      "updated": "2026-08-17",
+      "revision_id": "492ece7974c68e9f",
+      "updated": "2026-10-01",
       "article_count": 156,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/14.pdf"
     },
@@ -282,8 +282,8 @@
       "group": "ガイドライン",
       "type": "事務ガイドライン",
       "law_num": "",
-      "revision_id": "7ba3e0bdd127087c",
-      "updated": "2026-06-16",
+      "revision_id": "72ff08f1d7576bfe",
+      "updated": "2026-10-01",
       "article_count": 120,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/16.pdf"
     },
@@ -293,8 +293,8 @@
       "group": "ガイドライン",
       "type": "事務ガイドライン",
       "law_num": "",
-      "revision_id": "e4c97dfe892bac10",
-      "updated": "2026-06-16",
+      "revision_id": "dfb1ef17e5f58f57",
+      "updated": "2026-10-01",
       "article_count": 75,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/17.pdf"
     },
@@ -304,8 +304,8 @@
       "group": "ガイドライン",
       "type": "事務ガイドライン",
       "law_num": "",
-      "revision_id": "f46126e5131c4012",
-      "updated": "2026-08-17",
+      "revision_id": "1f52ee4db9ea7c15",
+      "updated": "2026-10-01",
       "article_count": 108,
       "egov_url": "https://www.fsa.go.jp/common/law/guide/kaisya/05.pdf"
     },
@@ -432,7 +432,11 @@
     }
   ],
   "changed": [
-    "個人情報の保護に関する法律"
+    "事務ガイドライン 第三分冊：16 暗号資産交換業者関係",
+    "事務ガイドライン 第三分冊：14 資金移動業者関係",
+    "事務ガイドライン 第三分冊：5 前払式支払手段発行者関係",
+    "事務ガイドライン 第三分冊：17 電子決済手段等取引業者関係",
+    "金融商品取引業者等向けの総合的な監督指針"
   ],
   "isFirst": false
 }
