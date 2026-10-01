@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-30T10:43:01.326Z",
+  "generatedAt": "2026-10-01T00:16:20.560Z",
   "diffs": [
     {
       "law_id": "358M50000040040",
@@ -132,6 +132,19 @@
       }
     },
     {
+      "law_id": "415AC0000000057",
+      "title": "個人情報の保護に関する法律",
+      "group": "個人情報",
+      "type": "法律",
+      "to_updated": "2026-07-24T11:23:39+09:00",
+      "generatedAt": "2026-10-01T00:16:04.030Z",
+      "counts": {
+        "changed": 1,
+        "added": 1,
+        "deleted": 0
+      }
+    },
+    {
       "law_id": "421AC0000000059",
       "title": "資金決済に関する法律",
       "group": "資金決済",
@@ -219,19 +232,6 @@
       "counts": {
         "changed": 0,
         "added": 1,
-        "deleted": 0
-      }
-    },
-    {
-      "law_id": "415AC0000000057",
-      "title": "個人情報の保護に関する法律",
-      "group": "個人情報",
-      "type": "法律",
-      "to_updated": "2026-07-17T10:32:24+09:00",
-      "generatedAt": "2026-07-21T07:16:32.878Z",
-      "counts": {
-        "changed": 1,
-        "added": 4,
         "deleted": 0
       }
     },
