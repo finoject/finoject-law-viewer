@@ -1,6 +1,32 @@
 {
-  "generatedAt": "2026-10-15T15:19:11.500Z",
+  "generatedAt": "2026-10-16T00:43:18.154Z",
   "diffs": [
+    {
+      "law_id": "357M50000040010",
+      "title": "銀行法施行規則",
+      "group": "銀行法",
+      "type": "省令",
+      "to_updated": "2026-10-15T13:37:11+09:00",
+      "generatedAt": "2026-10-16T00:43:09.793Z",
+      "counts": {
+        "changed": 0,
+        "added": 54,
+        "deleted": 52
+      }
+    },
+    {
+      "law_id": "415CO0000000507",
+      "title": "個人情報の保護に関する法律施行令",
+      "group": "個人情報",
+      "type": "政令",
+      "to_updated": "2026-10-15T10:19:43+09:00",
+      "generatedAt": "2026-10-16T00:43:12.750Z",
+      "counts": {
+        "changed": 1,
+        "added": 0,
+        "deleted": 0
+      }
+    },
     {
       "law_id": "355CO0000000260",
       "title": "外国為替令",
@@ -145,19 +171,6 @@
       }
     },
     {
-      "law_id": "415CO0000000507",
-      "title": "個人情報の保護に関する法律施行令",
-      "group": "個人情報",
-      "type": "政令",
-      "to_updated": "2026-08-12T13:37:54+09:00",
-      "generatedAt": "2026-08-12T23:20:43.749Z",
-      "counts": {
-        "changed": 1,
-        "added": 1,
-        "deleted": 0
-      }
-    },
-    {
       "law_id": "419AC0000000022",
       "title": "犯罪による収益の移転防止に関する法律",
       "group": "犯収法",
@@ -271,19 +284,6 @@
       "counts": {
         "changed": 0,
         "added": 1,
-        "deleted": 0
-      }
-    },
-    {
-      "law_id": "357M50000040010",
-      "title": "銀行法施行規則",
-      "group": "銀行法",
-      "type": "省令",
-      "to_updated": "2026-06-29T10:45:49+09:00",
-      "generatedAt": "2026-06-29T23:39:22.419Z",
-      "counts": {
-        "changed": 6,
-        "added": 0,
         "deleted": 0
       }
     },
