@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T00:42:57.884Z",
+  "generatedAt": "2026-10-16T09:15:54.918Z",
   "laws": [
     {
       "law_id": "323AC0000000025",
@@ -431,9 +431,6 @@
       "egov_url": "https://laws.e-gov.go.jp/law/358M50000040040"
     }
   ],
-  "changed": [
-    "銀行法施行規則",
-    "個人情報の保護に関する法律施行令"
-  ],
+  "changed": [],
   "isFirst": false
 }
