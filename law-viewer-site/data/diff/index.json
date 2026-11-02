@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T11:28:38.638Z",
+  "generatedAt": "2026-11-02T00:59:25.820Z",
   "diffs": [
     {
       "law_id": "357M50000040010",
@@ -19,11 +19,11 @@
       "title": "個人情報の保護に関する法律施行令",
       "group": "個人情報",
       "type": "政令",
-      "to_updated": "2026-10-15T10:19:43+09:00",
-      "generatedAt": "2026-10-16T00:43:12.750Z",
+      "to_updated": "2026-10-15T10:24:52+09:00",
+      "generatedAt": "2026-11-02T00:59:20.030Z",
       "counts": {
-        "changed": 1,
-        "added": 0,
+        "changed": 3,
+        "added": 1,
         "deleted": 0
       }
     },
@@ -38,6 +38,19 @@
         "changed": 4,
         "added": 2,
         "deleted": 1
+      }
+    },
+    {
+      "law_id": "415AC0000000057",
+      "title": "個人情報の保護に関する法律",
+      "group": "個人情報",
+      "type": "法律",
+      "to_updated": "2026-10-01T15:14:11+09:00",
+      "generatedAt": "2026-11-02T00:59:19.755Z",
+      "counts": {
+        "changed": 2,
+        "added": 3,
+        "deleted": 0
       }
     },
     {
@@ -179,19 +192,6 @@
       "generatedAt": "2026-08-11T23:21:47.092Z",
       "counts": {
         "changed": 0,
-        "added": 1,
-        "deleted": 0
-      }
-    },
-    {
-      "law_id": "415AC0000000057",
-      "title": "個人情報の保護に関する法律",
-      "group": "個人情報",
-      "type": "法律",
-      "to_updated": "2026-07-24T11:23:39+09:00",
-      "generatedAt": "2026-10-01T00:16:04.030Z",
-      "counts": {
-        "changed": 1,
         "added": 1,
         "deleted": 0
       }
