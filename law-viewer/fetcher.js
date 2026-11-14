@@ -52,10 +52,14 @@ const TARGETS = [
 function sleepSync(ms){ try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); } catch(e){} }
 // 空応答（e-Govのレート制限/瞬断）に弱いと、正常データが空レコードで上書きされる（例: 外国為替令が空になった事故）。
 // → 空が返ったらバックオフして数回リトライ。それでも空なら呼び出し側が前回の正常データを保持する。
-function curlText(url, tries=4){
+// failOnHttpError=true のとき curl に -f を付け、HTTP 404/5xx を「空」として扱う。
+// 付けないと 404 のエラーページ本文（FSAの場合36KB）がそのまま本文として返り、
+// 取得失敗が取得成功と区別できない（2026-11-14追加）。
+function curlText(url, tries=4, failOnHttpError=false){
+  const args = failOnHttpError ? ['-sfL'] : ['-sL'];
   for (let i=0; i<tries; i++){
     let out='';
-    try { out = execFileSync('curl', ['-sL','--max-time','60','-A',UA,url], { encoding:'utf8', maxBuffer: 300*1024*1024 }); } catch(e){ out=''; }
+    try { out = execFileSync('curl', [...args,'--max-time','60','-A',UA,url], { encoding:'utf8', maxBuffer: 300*1024*1024 }); } catch(e){ out=''; }
     if (out && out.trim().length > 1) return out;
     if (i < tries-1) sleepSync(700*(i+1));   // 0.7s,1.4s,2.1s と待って再試行
   }
@@ -331,12 +335,12 @@ const GUIDELINES = [
   { key:'fsa-guide-05', file:'05.pdf', title:'事務ガイドライン 第三分冊：5 前払式支払手段発行者関係' },
   { key:'fsa-guide-17', file:'17.pdf', title:'事務ガイドライン 第三分冊：17 電子決済手段等取引業者関係' },
 ];
-const G_HEAD = /^([Ⅰ-Ⅹ](?:[－\-−][０-９\d〇一二三四五六七八九十]+)+)\s*(.*)$/; // Ⅰ－１－２…（節見出し）
-const G_CHAP = /^([Ⅰ-Ⅹ])[ 　\t]*([^\d０-９\-－−\s].*)$/;                       // Ⅱ全ての…（章見出し＝ローマ数字[+空白]＋ダッシュ/数字以外で始まる題）
+const G_HEAD = /^([Ⅰ-Ⅻ](?:[－\-−][０-９\d〇一二三四五六七八九十]+)+)\s*(.*)$/; // Ⅰ－１－２…（節見出し）
+const G_CHAP = /^([Ⅰ-Ⅻ])[ 　\t]*([^\d０-９\-－−\s].*)$/;                       // Ⅱ全ての…（章見出し＝ローマ数字[+空白]＋ダッシュ/数字以外で始まる題）
 const G_DOTS = /[．\.]{4,}|…/;
 function parseGuideline(text){
   // 本文に連結された章見出し（例:「…該当する。Ⅱ全ての…」）を独立行に分離（ローマ数字の直後がダッシュ/数字でない＝章見出し）
-  text = text.replace(/。[ \t　]*([Ⅰ-Ⅹ])[ \t　]*([^\d０-９\-－−\s])/g, '。\n$1$2');
+  text = text.replace(/。[ \t　]*([Ⅰ-Ⅻ])[ \t　]*([^\d０-９\-－−\s])/g, '。\n$1$2');
   const lines = text.split('\n');
   let lastToc = -1; for (let i=0;i<lines.length;i++) if (G_DOTS.test(lines[i])) lastToc = i; // 目次(ドットリーダー)末尾
   const body = lines.slice(lastToc+1);
@@ -391,7 +395,7 @@ function parseGuideline(text){
 }
 
 // ===== FSA監督指針（HTMLの章別ページ群を取り込む）=====
-const KRN = {I:'Ⅰ',II:'Ⅱ',III:'Ⅲ',IV:'Ⅳ',V:'Ⅴ',VI:'Ⅵ',VII:'Ⅶ',VIII:'Ⅷ',IX:'Ⅸ',X:'Ⅹ'};
+const KRN = {I:'Ⅰ',II:'Ⅱ',III:'Ⅲ',IV:'Ⅳ',V:'Ⅴ',VI:'Ⅵ',VII:'Ⅶ',VIII:'Ⅷ',IX:'Ⅸ',X:'Ⅹ',XI:'Ⅺ',XII:'Ⅻ'};  // 金商業者等向けにⅪ・Ⅻの章が実在する（2026-11-14）
 const GUIDELINES_HTML = [
   { key:'fsa-kantoku-city',   title:'主要行等向けの総合的な監督指針',           base:'https://www.fsa.go.jp/common/law/guide/city/' },
   { key:'fsa-kantoku-chusho', title:'中小・地域金融機関向けの総合的な監督指針', base:'https://www.fsa.go.jp/common/law/guide/chusho/' },
@@ -400,7 +404,9 @@ const GUIDELINES_HTML = [
 function htmlEnt(s){ return s.replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(+n)); }
 // 行頭の見出し番号を正規化: ASCIIローマ→Unicode、番号内の空白除去（「II －１－２」→「Ⅱ－１－２」）
 function normHeadNum(l){
-  return l.replace(/^([IVXⅠ-Ⅹ])[ 　]*((?:[－\-−][ 　]*[０-９0-9]+)+)/, (m,r,rest)=>(KRN[r.toUpperCase()]||r)+rest.replace(/[ 　]/g,'').replace(/-/g,'－'));
+  // ASCIIローマ数字は II / III / VIII のように複数文字になる。1文字クラスだと I/V/X 以外が素通りし、
+  // 後段の G_HEAD（Unicodeローマ数字前提）に当たらずその章が丸ごと落ちる（2026-09-11発見・2026-11-14修正）。
+  return l.replace(/^([IVX]+|[Ⅰ-Ⅻ])[ 　]*((?:[－\-−][ 　]*[０-９0-9]+)+)/, (m,r,rest)=>(KRN[r.toUpperCase()]||r)+rest.replace(/[ 　]/g,'').replace(/[-−]/g,'－'));
 }
 // 監督指針の章HTMLページ→本文テキスト（h1〜footer手前を抽出、ブロック要素を改行に）
 function kantokuToText(html){
@@ -435,13 +441,26 @@ function fetchKantoku(prevRec, nowIso, laws, changed, report){
   for (const g of GUIDELINES_HTML){
     try {
       const dir = (g.base.match(/\/([^/]+)\/$/)||[])[1] || '';
-      const idx = curlText(g.base + 'index.html');
-      // 同一ディレクトリの数字.htmlページ（章）を列挙
-      const re = new RegExp('href="(?:[^"]*\\/'+dir+'\\/|(?:\\.\\/)?)(\\d+)\\.html"','g');
-      const chs = [...new Set([...idx.matchAll(re)].map(m=>+m[1]))].sort((a,b)=>a-b);
+      const idx = curlText(g.base + 'index.html', 4, true);
+      // 同一ディレクトリの章ページを列挙。ファイル名は 01 / 02a / 03c1 / 9 と形が揃っていないので、
+      // 数字始まりのファイル名を「見つかった文字列のまま」拾う。番号に直して組み直すと
+      // 9.html を 09.html と叩いて404になる（2026-09-11発見・2026-11-14修正）。
+      // 日付名のページ（20161207-1.html）は章ではないので、末尾が数字+英数字のものだけに限る。
+      const re = new RegExp('href="(?:[^"]*\\/'+dir+'\\/|(?:\\.\\/)?)(\\d+[0-9a-z]*)\\.html"','g');
+      const chs = [...new Set([...idx.matchAll(re)].map(m=>m[1]))]
+        .sort((a,b)=> (parseInt(a,10)-parseInt(b,10)) || a.localeCompare(b, undefined, {numeric:true}));
       if (!chs.length) throw new Error('章ページ無し');
-      let text = '';
-      for (const c of chs){ const u = g.base + (c<10?('0'+c):(''+c)) + '.html'; try { text += '\n' + kantokuToText(curlText(u)); } catch(_){} }
+      let text = ''; const miss = [];
+      for (const f of chs){
+        const u = g.base + f + '.html';
+        let seg = '';
+        // curlText は失敗時に空文字を返すだけで例外を投げない。-f を付けたうえで中身の有無で判定する。
+        try { seg = kantokuToText(curlText(u, 4, true)); } catch(e){ seg = ''; }
+        if (seg.trim()) text += '\n' + seg; else miss.push(f);
+      }
+      // 1本でも章が取れなければ、欠けたまま上書きせず throw して前回の正常データを残す。
+      // 半分だけ落ちた状態で保存すると、元の欠陥（黙って章が消える）と同じことが起きる。
+      if (miss.length) throw new Error(`章ページ取得失敗 ${miss.length}本 (${miss.join(',')})`);
       const blocks = parseGuideline(text);
       if (blocks.length < 5) throw new Error('章節抽出不足('+blocks.length+')');
       const hash = crypto.createHash('sha1').update(text).digest('hex').slice(0,16);
