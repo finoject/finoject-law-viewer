@@ -1,6 +1,19 @@
 {
-  "generatedAt": "2026-11-24T06:22:15.466Z",
+  "generatedAt": "2026-11-24T19:56:26.602Z",
   "diffs": [
+    {
+      "law_id": "fsa-kantoku-kinsho",
+      "title": "金融商品取引業者等向けの総合的な監督指針",
+      "group": "ガイドライン",
+      "type": "監督指針",
+      "to_updated": "2026-11-25",
+      "generatedAt": "2026-11-24T19:56:26.591Z",
+      "counts": {
+        "changed": 7,
+        "added": 7,
+        "deleted": 10
+      }
+    },
     {
       "law_id": "419M60000002052",
       "title": "金融商品取引業等に関する内閣府令",
