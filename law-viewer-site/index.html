@@ -727,8 +727,12 @@ async function loadRegNews(force){
     if (force && d.generatedAt && d.generatedAt === REG_GEN) return;   // 変化なし→DOMを触らない（読書位置を乱さない）
     REG_GEN = d.generatedAt || REG_GEN;
     REGDIET = d.dietbills || {};
+    // Deck は日本の法令データベース。規制ウォッチの巡回先には米国連邦官報が入っているが、
+    // それは週次レポートの材料として取っているもので、Deck に出すものではない（2026-11-28 三根さん指示）。
+    // ここ1か所で落とせば、フィード・機関チップ・条文バッジ・逆引きパネルの全部から消える。
+    const ITEMS = (d.items||[]).filter(it => it.region !== 'overseas');
     const byLaw={}, byArt={};                                          // 新規オブジェクトに作り直す（重複蓄積を防ぐ）
-    for (const it of (d.items||[])){
+    for (const it of ITEMS){
       for (const r of (it.lawrefs||[])){
         (byLaw[r.id] = byLaw[r.id] || []).push({ it, kind:r.kind, art:r.art });
         if (r.art){ const key = r.id+'|'+r.art; (byArt[key] = byArt[key] || []).push({ it, kind:r.kind }); }
@@ -736,7 +740,7 @@ async function loadRegNews(force){
     }
     for (const id in byLaw) byLaw[id].sort((a,b)=> (b.it.date||'').localeCompare(a.it.date||''));   // 日付降順
     REGBYLAW=byLaw; REGBYART=byArt; REGLAWNEWS=d.lawnews||{};
-    REGITEMS = (d.items||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.detectedAt||'').localeCompare(a.detectedAt||''));
+    REGITEMS = ITEMS.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.detectedAt||'').localeCompare(a.detectedAt||''));
     REGLATEST = REGITEMS.reduce((m,it)=> (it.detectedAt && it.detectedAt>m) ? it.detectedAt : m, '');  // 最新巡回で検知＝NEW判定用
     const sv = document.querySelector('#search');
     if (CUR && !(sv && sv.value)){
