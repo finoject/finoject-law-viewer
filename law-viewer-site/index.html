@@ -6,7 +6,7 @@
 <title>finoject Financial Regulation Deck</title>
 <!-- PWA: デスクトップ／スマホにインストール可能（manifest＋SW）。更新はネットワーク優先で即反映 -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0e1a2e">
+<meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2370,7 +2370,7 @@ $('#expPrint').addEventListener('click', ()=>{ closeLawView && closeLawView(); w
 document.body.classList.remove('mode-learner');
 
 // ===== ライト/ダーク テーマ切替（LexisNexis 風の明るい配色も選べる） =====
-let theme = localStorage.getItem('theme') || 'dark';
+let theme = localStorage.getItem('theme') || 'light';   // 既定はライト（2026-11-28 三根さん指示。初見の人に社内ツールに見えないようにする）
 function applyTheme(){
   document.body.classList.toggle('light', theme==='light');
   const b=document.getElementById('themeBtn');
